@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: helix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: helix
+      POSTGRES_PASSWORD: helix_dev
+      POSTGRES_DB: helix_registry
+    ports:
+      - "5433:5432"
+    volumes:
+      - helix_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helix -d helix_registry"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  helix_postgres_data:

@@ -1,0 +1,31 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("REGISTRY_DATABASE_URL")
+}
+
+model AgentDefinition {
+  id           String   @id @default(uuid()) @db.Uuid
+  orgId        String?  @map("org_id") @db.Uuid
+  role         String   @db.Text
+  version      Int
+  name         String   @db.Text
+  description  String?  @db.Text
+  systemPrompt Json     @map("system_prompt")
+  modelPolicy  Json     @map("model_policy")
+  tools        Json
+  guardrails   Json
+  outputSchema Json?    @map("output_schema")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([orgId, role, version])
+  @@index([orgId, role, deletedAt])
+  @@map("agent_definitions")
+}
