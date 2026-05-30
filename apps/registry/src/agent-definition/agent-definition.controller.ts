@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -27,12 +26,7 @@ import {
   ListAgentDefinitionsQueryDto,
 } from './dto/agent-definition-http.dto';
 import { AgentDefinitionPayload } from './dto/agent-definition.types';
-
-/** A blank/whitespace `x-org-id` header maps to the shared (null-org) namespace. */
-function normalizeOrgId(raw?: string): string | null {
-  const v = (raw ?? '').trim();
-  return v.length > 0 ? v : null;
-}
+import { ORG_HEADER, OrgId } from './org-id.decorator';
 
 function asBool(v?: string): boolean {
   return v === 'true' || v === '1';
@@ -43,35 +37,39 @@ function asInt(v: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-const ORG_HEADER = 'x-org-id';
+/** Documents the optional tenant header on org-scoped routes (see {@link OrgId}). */
+const ApiOrgHeader = () =>
+  ApiHeader({
+    name: ORG_HEADER,
+    required: false,
+    description: 'Tenant org UUID; omit for the shared namespace',
+  });
 
 @ApiTags('agent-definitions')
-@ApiHeader({ name: ORG_HEADER, required: false, description: 'Tenant org UUID; omit for the shared namespace' })
 @Controller('agents')
 export class AgentDefinitionController {
   constructor(private readonly service: AgentDefinitionService) {}
 
   @Post()
+  @ApiOrgHeader()
   @ApiOperation({ summary: 'Create the first version of an agent definition for a role' })
   @ApiCreatedResponse({ type: AgentDefinitionResponseDto })
   create(
     @Body() body: AgentDefinitionBodyDto,
-    @Headers(ORG_HEADER) orgId?: string,
+    @OrgId() orgId: string | null,
   ): Promise<AgentDefinition> {
-    return this.service.create({
-      orgId: normalizeOrgId(orgId),
-      payload: body as unknown as AgentDefinitionPayload,
-    });
+    return this.service.create({ orgId, payload: body as unknown as AgentDefinitionPayload });
   }
 
   @Get()
+  @ApiOrgHeader()
   @ApiOperation({ summary: 'List agent definitions (latest per role by default)' })
   @ApiOkResponse({ type: AgentDefinitionResponseDto, isArray: true })
   findAll(
     @Query() query: ListAgentDefinitionsQueryDto,
-    @Headers(ORG_HEADER) orgId?: string,
+    @OrgId() orgId: string | null,
   ): Promise<AgentDefinition[]> {
-    return this.service.findAll(normalizeOrgId(orgId), {
+    return this.service.findAll(orgId, {
       role: query.role,
       includeAllVersions: asBool(query.includeAllVersions),
       includeDeleted: asBool(query.includeDeleted),
@@ -81,14 +79,15 @@ export class AgentDefinitionController {
   }
 
   @Get('latest')
+  @ApiOrgHeader()
   @ApiOperation({ summary: 'Get the latest active definition for a role' })
   @ApiQuery({ name: 'role', required: true })
   @ApiOkResponse({ type: AgentDefinitionResponseDto })
   findLatest(
     @Query('role') role: string,
-    @Headers(ORG_HEADER) orgId?: string,
+    @OrgId() orgId: string | null,
   ): Promise<AgentDefinition> {
-    return this.service.findLatest(normalizeOrgId(orgId), role);
+    return this.service.findLatest(orgId, role);
   }
 
   @Get(':id')
