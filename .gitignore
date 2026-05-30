@@ -141,3 +141,10 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Nx
+.nx/cache
+.nx/workspace-data
+
+# Prisma generated client
+node_modules/.prisma/

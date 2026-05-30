@@ -1,0 +1,27 @@
+packages:
+  - 'apps/*'
+  - 'libs/*'
+
+allowBuilds:
+  '@nestjs/core': set this to true or false
+  '@parcel/watcher': set this to true or false
+  '@prisma/client': set this to true or false
+  '@prisma/engines': set this to true or false
+  '@swc/core': set this to true or false
+  cpu-features: set this to true or false
+  less: set this to true or false
+  nx: set this to true or false
+  prisma: set this to true or false
+  protobufjs: set this to true or false
+  ssh2: set this to true or false
+  unrs-resolver: set this to true or false
+
+onlyBuiltDependencies:
+  - nx
+  - unrs-resolver
+  - esbuild
+  - '@swc/core'
+  - '@nestjs/core'
+  - '@prisma/client'
+  - prisma
+  - '@prisma/engines'
