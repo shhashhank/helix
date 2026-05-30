@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "f3c1d8e2-7c4a-4f6b-9a1d-23ab9d6e0f01",
+  "name": "Planning Agent",
+  "description": "Converts a natural-language request into a validated requirements spec and a structured implementation plan.",
+  "role": "planning",
+  "version": "1.0.0",
+  "systemPrompt": {
+    "template": "You are the Helix planning agent. Convert the user's request into an implementation plan with dependency-ordered tasks. Each task must include done-criteria. Repository: {{repo_name}}. Detected stack: {{stack}}. Constraints: {{constraints}}.",
+    "templateEngine": "mustache",
+    "variables": [
+      { "name": "repo_name", "type": "string", "description": "Target repository slug (org/repo)." },
+      { "name": "stack",     "type": "string", "description": "Detected primary stack (e.g., 'nestjs-typescript')." },
+      { "name": "constraints","type": "array", "required": false, "default": [] }
+    ]
+  },
+  "modelPolicy": {
+    "tier": "opus",
+    "primaryModel": "claude-opus-4-7",
+    "fallbackModels": ["claude-sonnet-4-6"],
+    "maxOutputTokens": 16000,
+    "temperature": 0.2,
+    "thinking": { "enabled": true, "budgetTokens": 8000 },
+    "costCeilingUsd": 0.75
+  },
+  "tools": [],
+  "guardrails": {
+    "maxSteps": 8,
+    "maxTokensPerRun": 60000,
+    "stopSequences": [],
+    "piiRedaction": true,
+    "loopDetection": { "enabled": true, "windowSize": 4, "similarityThreshold": 0.92 }
+  },
+  "outputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ImplementationPlan",
+    "type": "object",
+    "required": ["tasks", "stack", "acceptanceCriteria"],
+    "properties": {
+      "stack": { "type": "string" },
+      "acceptanceCriteria": { "type": "array", "items": { "type": "string" } },
+      "tasks": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": ["id", "title", "doneWhen"],
+          "properties": {
+            "id":        { "type": "string" },
+            "title":     { "type": "string" },
+            "dependsOn": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "files":     { "type": "array", "items": { "type": "string" }, "default": [] },
+            "doneWhen":  { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "createdBy": "platform-team",
+    "createdAt": "2026-05-30T11:00:00Z",
+    "tags": ["mvp", "planning"]
+  }
+}

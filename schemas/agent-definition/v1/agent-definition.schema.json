@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.dev/schemas/agent-definition/v1.0.0/agent-definition.schema.json",
+  "title": "AgentDefinition",
+  "description": "Declarative definition of a Helix agent: role, prompt, allowed tools, model routing policy, and guardrails. Stored in the agent registry and resolved by the execution runtime at run time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "name",
+    "role",
+    "version",
+    "systemPrompt",
+    "modelPolicy",
+    "tools",
+    "guardrails"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Version of this schema document. Pin the schema version a definition was authored against."
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable identifier for this agent definition row (matches agent_definitions.id)."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Human-readable label."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "role": {
+      "type": "string",
+      "enum": ["planning", "coding", "code_review", "testing", "deployment", "custom"],
+      "description": "Functional role; drives default routing and is part of the registry uniqueness key (org_id, role, version)."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Semantic version (SemVer 2.0.0) of this agent definition instance."
+    },
+    "systemPrompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template"],
+      "properties": {
+        "template": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Prompt template. Variables substituted by the prompt template engine (HELIX-52)."
+        },
+        "templateEngine": {
+          "type": "string",
+          "enum": ["mustache", "handlebars", "plain"],
+          "default": "mustache"
+        },
+        "variables": {
+          "type": "array",
+          "description": "Declared inputs the template expects. Validated at render time.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["string", "number", "boolean", "object", "array"]
+              },
+              "description": { "type": "string" },
+              "required": { "type": "boolean", "default": true },
+              "default": {}
+            }
+          }
+        }
+      }
+    },
+    "modelPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier"],
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": ["opus", "sonnet", "haiku"],
+          "description": "Routing tier consumed by the LLM gateway router (HELIX-13)."
+        },
+        "primaryModel": {
+          "type": "string",
+          "description": "Optional override pinning a specific model id (e.g., claude-opus-4-7)."
+        },
+        "fallbackModels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200000
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "thinking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "budgetTokens": { "type": "integer", "minimum": 1024 }
+          }
+        },
+        "costCeilingUsd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Per-call cost cap. Enforced by the gateway."
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "description": "Allowed tools by MCP-registered name. Empty array means no tool use.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Tool identifier as registered in the MCP server registry (HELIX-22)."
+          },
+          "scopes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          },
+          "approvalRequired": {
+            "type": "boolean",
+            "default": false,
+            "description": "When true, tool calls route through the Approval Service (HELIX-86)."
+          }
+        }
+      }
+    },
+    "guardrails": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 25
+        },
+        "maxTokensPerRun": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "maxToolCalls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stopSequences": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "disallowedPatterns": {
+          "type": "array",
+          "items": { "type": "string", "format": "regex" },
+          "default": [],
+          "description": "Regexes that, if matched in model output, abort the step."
+        },
+        "piiRedaction": {
+          "type": "boolean",
+          "default": true
+        },
+        "loopDetection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "windowSize": { "type": "integer", "minimum": 2, "default": 5 },
+            "similarityThreshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.95
+            }
+          }
+        }
+      }
+    },
+    "outputSchema": {
+      "type": "object",
+      "description": "JSON Schema fragment describing the agent's final structured output. Validated by HELIX-60."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

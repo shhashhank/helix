@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "9a7c2b14-0f55-4e3d-87aa-1c8b6e4d9f02",
+  "name": "Coding Agent",
+  "description": "Generates and edits multi-file code in an isolated sandbox to satisfy an implementation plan, then opens a pull request.",
+  "role": "coding",
+  "version": "1.0.0",
+  "systemPrompt": {
+    "template": "You are the Helix coding agent. Implement the plan in {{language}} for repository {{repo_name}} on branch {{branch}}. Make minimal, plan-conformant changes. Run lint and tests after each edit; iterate on failures until clean.",
+    "templateEngine": "mustache",
+    "variables": [
+      { "name": "language",  "type": "string" },
+      { "name": "repo_name", "type": "string" },
+      { "name": "branch",    "type": "string" }
+    ]
+  },
+  "modelPolicy": {
+    "tier": "sonnet",
+    "primaryModel": "claude-sonnet-4-6",
+    "fallbackModels": ["claude-opus-4-7"],
+    "maxOutputTokens": 32000,
+    "temperature": 0.1,
+    "costCeilingUsd": 1.50
+  },
+  "tools": [
+    { "name": "github.read_file",   "scopes": ["repo:read"] },
+    { "name": "github.list_tree",   "scopes": ["repo:read"] },
+    { "name": "github.write_file",  "scopes": ["repo:write"] },
+    { "name": "github.create_branch","scopes": ["repo:write"] },
+    { "name": "github.commit",      "scopes": ["repo:write"] },
+    { "name": "github.create_pr",   "scopes": ["repo:write"], "approvalRequired": true },
+    { "name": "sandbox.exec",       "scopes": ["sandbox:run"] },
+    { "name": "sandbox.read_file",  "scopes": ["sandbox:read"] },
+    { "name": "sandbox.write_file", "scopes": ["sandbox:write"] }
+  ],
+  "guardrails": {
+    "maxSteps": 60,
+    "maxTokensPerRun": 400000,
+    "maxToolCalls": 200,
+    "stopSequences": [],
+    "disallowedPatterns": [
+      "AKIA[0-9A-Z]{16}",
+      "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"
+    ],
+    "piiRedaction": true,
+    "loopDetection": { "enabled": true, "windowSize": 6, "similarityThreshold": 0.95 }
+  },
+  "metadata": {
+    "createdBy": "platform-team",
+    "createdAt": "2026-05-30T11:00:00Z",
+    "tags": ["mvp", "coding"]
+  }
+}
