@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: lint + typecheck + test
+    name: typecheck + build + test
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +26,17 @@ jobs:
 
       - name: Generate Prisma client (registry)
         run: pnpm exec prisma generate --schema apps/registry/prisma/schema.prisma
+
+      # Direct tsc (not `nx typecheck`, whose sync generator needs a root
+      # tsconfig.json this workspace doesn't have). The spec config covers all
+      # of src including the test files.
+      - name: Typecheck (registry)
+        run: pnpm exec tsc --noEmit -p apps/registry/tsconfig.spec.json
+
+      # Production build — catches issues jest never sees (e.g. test files
+      # leaking into the app compile). Must run after prisma generate.
+      - name: Build (registry)
+        run: pnpm exec nx build registry
 
       - name: Unit + integration tests
         run: pnpm exec jest --config apps/registry/jest.config.ts --ci
