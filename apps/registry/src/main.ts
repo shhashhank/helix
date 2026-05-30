@@ -1,14 +1,27 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app/app.module';
 
-// HELIX-51 ships persistence + service only — HTTP controllers land with HELIX-53.
-// Bootstrap as a standalone application so the module graph initializes
-// (Prisma onModuleInit etc.) without binding an HTTP port.
+// HELIX-53 adds the HTTP surface for the agent registry: REST endpoints under
+// /api/agents plus OpenAPI docs at /api/docs.
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  Logger.log('Registry application context initialized (no HTTP listener — HELIX-53 will add controllers).');
-  await app.close();
+  const app = await NestFactory.create(AppModule);
+
+  const globalPrefix = 'api';
+  app.setGlobalPrefix(globalPrefix);
+
+  const config = new DocumentBuilder()
+    .setTitle('Helix Agent Registry')
+    .setDescription('CRUD + versioning API for declarative agent definitions')
+    .setVersion('1.0')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup(`${globalPrefix}/docs`, app, document);
+
+  const port = process.env.REGISTRY_PORT ?? 3000;
+  await app.listen(port);
+  Logger.log(`Registry listening on http://localhost:${port}/${globalPrefix} (docs at /${globalPrefix}/docs)`);
 }
 
 bootstrap();
