@@ -6,3 +6,4 @@ export * from './lib/events';
 export * from './lib/memory';
 export * from './lib/embeddings';
 export * from './lib/vector-store';
+export * from './lib/retriever';
