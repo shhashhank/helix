@@ -127,8 +127,9 @@ The piece that actually calls the AI models — adapter, routing, resilience, an
   ([token_usage](../apps/registry/prisma/schema.prisma)) and the saver in
   [../apps/registry/src/token-usage/](../apps/registry/src/token-usage/).
 
-### Story: Agent Execution Runtime (Agent Loop)  🛠️ in progress
-The part that makes an agent actually *work*: think, use a tool, look at the result, repeat.
+### Story: Agent Execution Runtime (Agent Loop)  ✅ done
+The part that makes an agent actually *work*: think, use a tool, look at the result, repeat —
+with safety limits, output checking, and a live event stream.
 
 #### HELIX-58 — Core agent loop  ✅
 - **What it is:** the "engine" of an agent. You give it a goal and a set of tools; it asks
@@ -163,8 +164,15 @@ The part that makes an agent actually *work*: think, use a tool, look at the res
 - **Where it lives:** [../libs/agent/src/lib/output.ts](../libs/agent/src/lib/output.ts),
   surfaced on the run result when an agent declares an `outputSchema`.
 
-#### Remaining in this story  ⬜
-HELIX-61 step events.
+#### HELIX-61 — Step event emitter  ✅
+- **What it is:** a live play-by-play of an agent run. As the agent works, it announces each
+  moment — run started, thinking, called a tool, got a result, step finished, run ended
+  (with the final reason and token/cost totals). Anything can listen in.
+- **Why it matters:** it's how a UI shows progress in real time, and how tracing and
+  monitoring (a later story) will record what happened. Listening is optional and never
+  affects the run.
+- **Where it lives:** [../libs/agent/src/lib/events.ts](../libs/agent/src/lib/events.ts);
+  the loop emits via an `onEvent` handler.
 
 ### Story: Agent Memory & Context Store, Tracing  ⬜ not started
 
@@ -203,6 +211,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-58 | Core agent loop (the agent engine) | ✅ | #13 |
 | HELIX-59 | Budget & guardrail enforcement | ✅ | #14 |
 | HELIX-60 | Structured output parser/validator | ✅ | #15 |
+| HELIX-61 | Step event emitter (live run events) | ✅ | #16 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -212,10 +221,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 ## What's next
 
 Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model Router**),
-and the **Agent Execution Runtime** is nearly done — the core agent loop (HELIX-58),
-budget/guardrail enforcement (HELIX-59), and structured-output validation (HELIX-60) are in.
-One sub-task left: **HELIX-61** step events. After that come the workflow engine, GitHub
-access, sandboxes, human approvals, and the user-facing website.
+and the **Agent Execution Runtime** is complete — the core agent loop (HELIX-58),
+budget/guardrail enforcement (HELIX-59), structured-output validation (HELIX-60), and the
+step event stream (HELIX-61) are all in. Three of the five Core Agent Platform stories are
+done; the remaining two are **Agent Memory & Context Store** (HELIX-15) and **Agent Tracing
+& Cost Accounting** (HELIX-16). After this epic come the workflow engine, GitHub access,
+sandboxes, human approvals, and the user-facing website.
 
 ---
 
