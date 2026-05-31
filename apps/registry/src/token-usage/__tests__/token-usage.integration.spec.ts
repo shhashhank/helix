@@ -32,7 +32,8 @@ describe('TokenUsage persistence — integration (real Postgres via testcontaine
   let sink: PrismaUsageSink;
 
   beforeAll(async () => {
-    container = await new PostgreSqlContainer('postgres:16-alpine').start();
+    // pgvector image (superset of postgres:16) so the vector-extension migration applies.
+    container = await new PostgreSqlContainer('pgvector/pgvector:pg16').start();
     const url = container.getConnectionUri();
     process.env.REGISTRY_DATABASE_URL = url;
 
