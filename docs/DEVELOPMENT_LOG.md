@@ -325,6 +325,26 @@ Making a running workflow survive crashes so a long, expensive run isn't lost.
   is the first piece whose tests reach beyond pure-offline — CI downloads the Temporal test
   server (it runs in-memory, no separate service needed).
 
+#### HELIX-72 — Idempotency keys for side effects  ✅
+- **What it is:** a safety latch so a *retried* step doesn't repeat its real-world actions.
+  When Temporal retries a step (HELIX-71), the step might have already done something with a
+  side effect — charged a card, opened a PR, sent an email. Each such action gets a stable
+  **idempotency key**; before doing it, we check "have we already done *this exact* action?"
+  If yes, we replay the remembered result instead of doing it again.
+- **Why it matters:** automatic retries are only safe if they don't double-act. Without this,
+  a crash-and-retry could open two PRs or bill twice. The key is derived from the run + step
+  (stable across retries, unique per action), so the dedupe survives exactly the situations
+  retries create. It also single-flights concurrent calls and deliberately does **not**
+  remember failures (so a genuine retry of a failed action can still happen).
+- **Where it lives:** [../libs/workflow/src/lib/idempotency.ts](../libs/workflow/src/lib/idempotency.ts)
+  — `IdempotencyGuard.runOnce(key, fn)` over a pluggable store (in-memory now; Prisma/Redis
+  later) — plus [temporal/idempotency-key.ts](../libs/workflow/src/lib/temporal/idempotency-key.ts)
+  which derives the stable key from the running activity's context.
+- **Honest limit:** the result is recorded only *after* the action succeeds, so a crash in the
+  tiny window between acting and recording can still repeat it. The real fix is to hand the
+  same key to the external service so *it* dedupes (the Stripe model) — this makes that key
+  available; full at-most-once is out of scope here.
+
 ---
 
 ## Fixes & hardening
@@ -371,6 +391,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-69 | DAG compiler + scheduler (runs the graph) | ✅ | #26 |
 | HELIX-70 | Workflow versioning (pin a recipe per run) | ✅ | #27 |
 | HELIX-71 | Temporal integration (durable execution) | ✅ | #28 |
+| HELIX-72 | Idempotency keys (retries don't double-act) | ✅ | #29 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -390,8 +411,8 @@ The **Workflow Engine** (HELIX-2) is now underway. Its first story — **Workflo
 branching + parallelism (HELIX-69), and version it so runs are reproducible (HELIX-70). The
 second story — **Durable Execution & State Persistence** — is now in progress: workflows now
 run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its last completed
-step. Still to come in this story: **idempotency keys** so a retried step doesn't double its
-side effects (HELIX-72), and **crash-recovery tests** (HELIX-73). Then: **pause/resume**,
+step, and a retried step won't repeat its side effects (**idempotency keys**, HELIX-72). Still
+to come in this story: **crash-recovery / chaos-restart tests** (HELIX-73). Then: **pause/resume**,
 **retries**, and the **orchestrator run API & status** — the first point a user can kick off
 and watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs

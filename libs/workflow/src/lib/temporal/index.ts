@@ -9,4 +9,5 @@ export * from './shared';
 export * from './activities';
 export * from './worker';
 export * from './client';
+export * from './idempotency-key';
 export { executeWorkflow } from './workflows';
