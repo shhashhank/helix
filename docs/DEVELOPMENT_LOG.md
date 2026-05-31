@@ -174,8 +174,9 @@ with safety limits, output checking, and a live event stream.
 - **Where it lives:** [../libs/agent/src/lib/events.ts](../libs/agent/src/lib/events.ts);
   the loop emits via an `onEvent` handler.
 
-### Story: Agent Memory & Context Store  🛠️ in progress
-Giving agents memory: a short-term scratchpad now, longer-term recall next.
+### Story: Agent Memory & Context Store  ✅ done
+Giving agents memory: a short-term scratchpad, long-term recall by meaning, and a
+retrieval API that ranks and cites what it finds.
 
 #### HELIX-62 — Working-memory store  ✅
 - **What it is:** a per-run scratchpad — small notes an agent can jot down and read back
@@ -202,8 +203,15 @@ Giving agents memory: a short-term scratchpad now, longer-term recall next.
   + [embeddings.ts](../libs/agent/src/lib/embeddings.ts); the Postgres/pgvector store in
   [../apps/registry/src/vector-store/](../apps/registry/src/vector-store/).
 
-#### Remaining in this story  ⬜
-HELIX-64 retrieval API + ranking (hybrid search with citations).
+#### HELIX-64 — Retrieval API + ranking  ✅
+- **What it is:** the "search" front door over the memory store. Given a question, it finds
+  the most relevant saved snippets two ways — by meaning (similarity) *and* by matching the
+  actual words — blends the two into one ranked list, and returns each result with a
+  citation (where it came from).
+- **Why it matters:** meaning-search alone can miss exact terms (names, IDs, error codes),
+  and word-search alone misses paraphrases; combining them gives better results than either.
+  The citations let an agent show its sources rather than make claims out of thin air.
+- **Where it lives:** [../libs/agent/src/lib/retriever.ts](../libs/agent/src/lib/retriever.ts).
 
 ### Story: Agent Tracing & Cost Accounting  ⬜ not started
 
@@ -245,6 +253,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-61 | Step event emitter (live run events) | ✅ | #16 |
 | HELIX-62 | Working-memory store (per-run scratchpad) | ✅ | #17 |
 | HELIX-63 | Vector store (pgvector similarity recall) | ✅ | #18 |
+| HELIX-64 | Retrieval API + ranking (hybrid + citations) | ✅ | #19 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -257,11 +266,11 @@ Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model
 and the **Agent Execution Runtime** is complete — the core agent loop (HELIX-58),
 budget/guardrail enforcement (HELIX-59), structured-output validation (HELIX-60), and the
 step event stream (HELIX-61) are all in. Three of the five Core Agent Platform stories are
-done, and **Agent Memory & Context Store** (HELIX-15) is nearly complete — the working-memory
-scratchpad (HELIX-62) and the pgvector similarity store (HELIX-63) are in; one sub-task left,
-**HELIX-64** retrieval API + ranking. The last story is **Agent Tracing & Cost Accounting**
-(HELIX-16). After this epic come the workflow engine, GitHub access, sandboxes, human
-approvals, and the user-facing website.
+done, and **Agent Memory & Context Store** (HELIX-15) is now complete too — scratchpad
+(HELIX-62), pgvector similarity store (HELIX-63), and the hybrid retrieval API (HELIX-64).
+**Four of the five** Core Agent Platform stories are done; the last is **Agent Tracing &
+Cost Accounting** (HELIX-16). After this epic come the workflow engine, GitHub access,
+sandboxes, human approvals, and the user-facing website.
 
 ---
 
