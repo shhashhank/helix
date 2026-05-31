@@ -20,9 +20,14 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
   'claude-haiku-4-5': { inputPerMTok: 1, outputPerMTok: 5 },
 };
 
-/** Returns pricing for a model id, or `undefined` if it isn't in the table. */
+/**
+ * Returns pricing for a model id, or `undefined` if it isn't in the table.
+ * The Messages API echoes back dated snapshot ids (e.g.
+ * `claude-haiku-4-5-20251001`) even when called by alias, so on a miss we strip
+ * a trailing `-YYYYMMDD` and retry against the alias-keyed table.
+ */
 export function getPricing(model: string): ModelPricing | undefined {
-  return MODEL_PRICING[model];
+  return MODEL_PRICING[model] ?? MODEL_PRICING[model.replace(/-\d{8}$/, '')];
 }
 
 /**
