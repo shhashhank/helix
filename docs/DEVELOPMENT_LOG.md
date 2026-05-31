@@ -127,7 +127,24 @@ The piece that actually calls the AI models — adapter, routing, resilience, an
   ([token_usage](../apps/registry/prisma/schema.prisma)) and the saver in
   [../apps/registry/src/token-usage/](../apps/registry/src/token-usage/).
 
-### Story: Agent Execution Runtime, Memory, Tracing  ⬜ not started
+### Story: Agent Execution Runtime (Agent Loop)  🛠️ in progress
+The part that makes an agent actually *work*: think, use a tool, look at the result, repeat.
+
+#### HELIX-58 — Core agent loop  ✅
+- **What it is:** the "engine" of an agent. You give it a goal and a set of tools; it asks
+  the AI what to do, runs any tool the AI asks for, hands the result back, and keeps going
+  until the AI says it's finished (or it hits a safety cap on the number of rounds).
+- **Why it matters:** it's the first piece where everything so far comes together — it uses
+  the model gateway (the previous story) to do the thinking, and turns a one-shot AI answer
+  into a multi-step worker that can look things up and act. If a tool is missing or breaks,
+  it tells the AI "that failed" and carries on instead of crashing.
+- **Where it lives:** [../libs/agent/](../libs/agent/) — `runAgent()` in
+  [agent-loop.ts](../libs/agent/src/lib/agent-loop.ts).
+
+#### Remaining in this story  ⬜
+HELIX-59 budget/guardrail limits · HELIX-60 structured-output checking · HELIX-61 step events.
+
+### Story: Agent Memory & Context Store, Tracing  ⬜ not started
 
 ---
 
@@ -161,6 +178,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-55 | Model dispatcher + cost limits (routing) | ✅ | #9 |
 | HELIX-56 | Retry / failover / timeout safety wrapper | ✅ | #10 |
 | HELIX-57 | Token & cost meter (usage table) | ✅ | #11 |
+| HELIX-58 | Core agent loop (the agent engine) | ✅ | #13 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -169,11 +187,10 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 
 ## What's next
 
-Two stories are now complete: **Agent Definition & Registry** and the **LLM Gateway & Model
-Router** (adapter, routing, resilience, metering — HELIX-54/55/56/57 all in). The next
-brick in the Core Agent Platform epic is the **Agent Execution Runtime** — the loop that
-lets an agent reason, call tools, observe results, and produce a validated output, built on
-the gateway that's now in place. After that come the workflow engine, GitHub access,
+Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model Router**),
+and the **Agent Execution Runtime** is now underway — the core agent loop (HELIX-58) is in.
+Next in that story: **HELIX-59** budget/guardrail enforcement, **HELIX-60** structured-output
+validation, and **HELIX-61** step events. After that come the workflow engine, GitHub access,
 sandboxes, human approvals, and the user-facing website.
 
 ---
