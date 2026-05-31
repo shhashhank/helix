@@ -227,8 +227,19 @@ A replayable record of what each run did, plus cost roll-ups — the last story 
 - **Where it lives:** [../libs/agent/src/lib/trace.ts](../libs/agent/src/lib/trace.ts)
   (`buildSpans` + `TraceCollector`).
 
+#### HELIX-66 — OpenTelemetry instrumentation  ✅
+- **What it is:** sends those run traces out in the **industry-standard OpenTelemetry**
+  format, so they show up in normal observability tools (Jaeger, Grafana Tempo, etc.) next
+  to everything else. It also adds the standard "trace ID" plumbing (`traceparent`) so a
+  single request can be followed *across* services, not just within one run.
+- **Why it matters:** teams already have dashboards and alerting for OpenTelemetry — this
+  plugs Helix into them instead of inventing a private format, and lets one user request be
+  traced end-to-end through every service it touches.
+- **Where it lives:** [../libs/agent/src/lib/otel-trace-sink.ts](../libs/agent/src/lib/otel-trace-sink.ts)
+  (export) + [correlation.ts](../libs/agent/src/lib/correlation.ts) (cross-service IDs).
+
 #### Remaining in this story  ⬜
-HELIX-66 OpenTelemetry export · HELIX-67 cost roll-up jobs.
+HELIX-67 cost roll-up jobs.
 
 ---
 
@@ -270,6 +281,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-63 | Vector store (pgvector similarity recall) | ✅ | #18 |
 | HELIX-64 | Retrieval API + ranking (hybrid + citations) | ✅ | #19 |
 | HELIX-65 | Trace schema + writer (run spans) | ✅ | #20 |
+| HELIX-66 | OpenTelemetry export + correlation | ✅ | #21 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -285,9 +297,10 @@ step event stream (HELIX-61) are all in. Three of the five Core Agent Platform s
 done, and **Agent Memory & Context Store** (HELIX-15) is now complete too — scratchpad
 (HELIX-62), pgvector similarity store (HELIX-63), and the hybrid retrieval API (HELIX-64).
 **Four of the five** Core Agent Platform stories are done, and the last — **Agent Tracing &
-Cost Accounting** (HELIX-16) — is underway: the trace schema + writer (HELIX-65) is in; next
-are OpenTelemetry export (HELIX-66) and cost roll-up jobs (HELIX-67). After this epic come
-the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing website.
+Cost Accounting** (HELIX-16) — is almost done: the trace schema + writer (HELIX-65) and
+OpenTelemetry export (HELIX-66) are in; one sub-task left, **HELIX-67** cost roll-up jobs.
+After this epic come the workflow engine, GitHub access, sandboxes, human approvals, and the
+user-facing website.
 
 ---
 
