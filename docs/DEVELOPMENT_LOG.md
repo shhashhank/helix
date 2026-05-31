@@ -103,6 +103,17 @@ The piece that actually calls the AI models. First brick below.
   (the job→model rules) and [../libs/llm/src/lib/pricing.ts](../libs/llm/src/lib/pricing.ts)
   (prices + budget checks).
 
+#### HELIX-56 — Retry / fallback / timeout middleware  ✅
+- **What it is:** a safety wrapper around the AI-model calls. If a call fails for a
+  temporary reason (the service is busy or briefly down), it waits a moment and tries
+  again; if one model provider keeps failing, it switches to a backup; and it gives up on
+  a call that hangs too long. It also stops hammering a provider that's clearly broken for
+  a little while ("circuit breaker").
+- **Why it matters:** AI APIs occasionally hiccup. This makes the platform shrug those off
+  automatically instead of failing the user's request — without retrying genuine mistakes
+  (like a malformed request), which would just fail again.
+- **Where it lives:** [../libs/llm/src/lib/resilience.ts](../libs/llm/src/lib/resilience.ts).
+
 ### Story: Agent Execution Runtime, Memory, Tracing  ⬜ not started
 
 ---
@@ -130,6 +141,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-52 | Blank-filler (prompt templates) | ✅ | #4 |
 | HELIX-54 | AI-model plug (Anthropic adapter) | ✅ | #8 |
 | HELIX-55 | Model dispatcher + cost limits (routing) | ✅ | #9 |
+| HELIX-56 | Retry / failover / timeout safety wrapper | ✅ | #10 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 
@@ -137,10 +149,10 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 
 ## What's next
 
-The "Agent Definition & Registry" story is done, and the **LLM Gateway** story is underway —
-the Anthropic model plug (HELIX-54) and the routing policy (HELIX-55) are in. Next in that
-story: **HELIX-56 — retries/fallback/timeout** (transparently retry transient failures) and
-**HELIX-57 — token & cost meter** (record real spend per call/run). After that come the agent
+The "Agent Definition & Registry" story is done, and the **LLM Gateway** story is nearly
+complete — the Anthropic model plug (HELIX-54), routing policy (HELIX-55), and the
+retry/failover safety wrapper (HELIX-56) are in. One sub-task left: **HELIX-57 — token &
+cost meter** (record real spend per call/run to a usage table). After that come the agent
 loop, the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing
 website.
 
