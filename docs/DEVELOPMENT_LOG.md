@@ -91,6 +91,18 @@ The piece that actually calls the AI models. First brick below.
   [types.ts](../libs/llm/src/lib/types.ts) and the Anthropic plug in
   [anthropic.provider.ts](../libs/llm/src/lib/anthropic.provider.ts).
 
+#### HELIX-55 — Routing policy engine  ✅
+- **What it is:** the "dispatcher" that decides *which* AI model to use for a given kind of
+  job, and how hard it's allowed to think — and sets a dollar limit per call. Planning and
+  coding get the most capable (and pricey) model; quick jobs like classification get the
+  cheap, fast one.
+- **Why it matters:** it keeps quality high where it counts and cost low where it doesn't,
+  automatically, instead of every caller hard-coding a model. It also knows each model's
+  price, so it can estimate what a call cost and refuse calls that blow past a budget.
+- **Where it lives:** [../libs/llm/src/lib/routing.ts](../libs/llm/src/lib/routing.ts)
+  (the job→model rules) and [../libs/llm/src/lib/pricing.ts](../libs/llm/src/lib/pricing.ts)
+  (prices + budget checks).
+
 ### Story: Agent Execution Runtime, Memory, Tracing  ⬜ not started
 
 ---
@@ -117,6 +129,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-53 | Front desk (web API) | ✅ | #3 |
 | HELIX-52 | Blank-filler (prompt templates) | ✅ | #4 |
 | HELIX-54 | AI-model plug (Anthropic adapter) | ✅ | #8 |
+| HELIX-55 | Model dispatcher + cost limits (routing) | ✅ | #9 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 
@@ -125,10 +138,11 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 ## What's next
 
 The "Agent Definition & Registry" story is done, and the **LLM Gateway** story is underway —
-the Anthropic model plug (HELIX-54) is in. Next in that story: **HELIX-55 — routing policy**
-(pick the right model tier per task within cost limits), then **HELIX-56 — retries/fallback**
-and **HELIX-57 — token & cost meter**. After that come the agent loop, the workflow engine,
-GitHub access, sandboxes, human approvals, and the user-facing website.
+the Anthropic model plug (HELIX-54) and the routing policy (HELIX-55) are in. Next in that
+story: **HELIX-56 — retries/fallback/timeout** (transparently retry transient failures) and
+**HELIX-57 — token & cost meter** (record real spend per call/run). After that come the agent
+loop, the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing
+website.
 
 ---
 
