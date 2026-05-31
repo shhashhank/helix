@@ -6,7 +6,9 @@
  */
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { WorkflowStepRunner } from '../runner';
+import { ApprovalRequestSink } from '../approval-request';
 import { createStepActivities } from './activities';
+import { createApprovalActivities } from './approval-activities';
 import { HELIX_TASK_QUEUE } from './shared';
 
 export interface WorkflowWorkerOptions {
@@ -18,6 +20,8 @@ export interface WorkflowWorkerOptions {
   connection?: NativeConnection;
   /** Temporal namespace. Defaults to `default`. */
   namespace?: string;
+  /** If set, the worker also hosts the approval-request emit activity (HELIX-75). */
+  approvalSink?: ApprovalRequestSink;
 }
 
 /**
@@ -31,6 +35,9 @@ export function createWorkflowWorker(opts: WorkflowWorkerOptions): Promise<Worke
     namespace: opts.namespace,
     taskQueue: opts.taskQueue ?? HELIX_TASK_QUEUE,
     workflowsPath: require.resolve('./workflows'),
-    activities: createStepActivities(opts.execute),
+    activities: {
+      ...createStepActivities(opts.execute),
+      ...(opts.approvalSink ? createApprovalActivities(opts.approvalSink) : {}),
+    },
   });
 }

@@ -11,4 +11,5 @@ export * from './worker';
 export * from './client';
 export * from './idempotency-key';
 export * from './approval';
-export { executeWorkflow, approvalGateWorkflow } from './workflows';
+export * from './approval-activities';
+export { executeWorkflow, approvalGateWorkflow, requestApprovalWorkflow } from './workflows';
