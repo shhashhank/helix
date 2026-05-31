@@ -272,8 +272,21 @@ How a workflow is described and checked before it runs.
 - **Where it lives:** [../libs/workflow/src/lib/types.ts](../libs/workflow/src/lib/types.ts)
   (the format) + [validator.ts](../libs/workflow/src/lib/validator.ts) (the checks).
 
+#### HELIX-69 — DAG compiler + scheduler  ✅
+- **What it is:** the engine that actually *runs* a workflow. It works out the order — which
+  steps can run at the same time vs. which must wait — then executes them, following the
+  arrows: only run a step if the branch leading to it was taken (e.g. run "fix" only if
+  "code" failed), and skip the branches that weren't. If a step blows up, that counts as a
+  "failure" so a recovery branch can kick in. Independent steps run in parallel.
+- **Why it matters:** this is what turns a workflow *drawing* into real multi-agent
+  execution — plan → code → (review or fix) → … — with the right ordering, branching, and
+  parallelism handled for you. The per-step work is plugged in (it'll be the agent loop), so
+  this layer just orchestrates.
+- **Where it lives:** [../libs/workflow/src/lib/compiler.ts](../libs/workflow/src/lib/compiler.ts)
+  (ordering into parallel levels) + [runner.ts](../libs/workflow/src/lib/runner.ts) (running it).
+
 #### Remaining in this story  ⬜
-HELIX-69 DAG compiler/scheduler · HELIX-70 workflow versioning.
+HELIX-70 workflow versioning.
 
 ---
 
@@ -318,6 +331,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-66 | OpenTelemetry export + correlation | ✅ | #21 |
 | HELIX-67 | Cost roll-up jobs (run/org/day totals) | ✅ | #22 |
 | HELIX-68 | Workflow DSL + validator (DAG definition) | ✅ | #25 |
+| HELIX-69 | DAG compiler + scheduler (runs the graph) | ✅ | #26 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
