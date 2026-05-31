@@ -8,6 +8,7 @@ import type {
   LlmToolDef,
   ModelTier,
 } from '@helix/llm';
+import type { AgentEventHandler } from './events';
 import type { OutputValidationResult } from './output';
 
 /** A tool the model asked to call (normalized from a `tool_use` block). */
@@ -94,8 +95,10 @@ export interface RunAgentOptions {
   guardrails?: Guardrails;
   /** Attribution forwarded to the provider (and its usage meter). */
   context?: LlmCallContext;
-  /** Observation hook, called once per completed step (seam for HELIX-61). */
+  /** Observation hook, called once per completed step (the coarse `AgentStep`). */
   onStep?: (step: AgentStep) => void;
+  /** Fine-grained `agent.*` event stream (HELIX-61); pass `bus.emit`. */
+  onEvent?: AgentEventHandler;
 }
 
 export interface AgentRunResult {
