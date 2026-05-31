@@ -7,7 +7,9 @@
  */
 import { proxyActivities } from '@temporalio/workflow';
 import type { StepActivities } from './activities';
+import type { ApprovalActivities } from './approval-activities';
 import { WorkflowDefinition } from '../types';
+import { ApprovalRequest } from '../approval-request';
 import { runWorkflow, WorkflowRunResult } from '../runner';
 import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval';
 
@@ -19,6 +21,12 @@ import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval'
 const { runStep } = proxyActivities<StepActivities>({
   startToCloseTimeout: '10 minutes',
   retry: { maximumAttempts: 3 },
+});
+
+/** Publishing the approval request is a quick, retryable side effect. */
+const { emitApprovalRequest } = proxyActivities<ApprovalActivities>({
+  startToCloseTimeout: '1 minute',
+  retry: { maximumAttempts: 5 },
 });
 
 /**
@@ -39,4 +47,22 @@ export async function executeWorkflow(def: WorkflowDefinition): Promise<Workflow
  */
 export async function approvalGateWorkflow(opts: AwaitApprovalOptions): Promise<ApprovalResult> {
   return awaitApproval(opts);
+}
+
+export interface RequestApprovalInput {
+  /** The request to publish so a human knows sign-off is needed. */
+  request: ApprovalRequest;
+  /** Wait/timeout policy for the pause. */
+  options?: AwaitApprovalOptions;
+}
+
+/**
+ * Approval gate that **emits an approval request, then pauses** (HELIX-75 + HELIX-74):
+ * publishes the request via the `emitApprovalRequest` activity so a person/UI is
+ * notified, then durably waits for the decision. The emit is durable + retried,
+ * so the notification isn't lost across a crash.
+ */
+export async function requestApprovalWorkflow(input: RequestApprovalInput): Promise<ApprovalResult> {
+  await emitApprovalRequest(input.request);
+  return awaitApproval(input.options);
 }
