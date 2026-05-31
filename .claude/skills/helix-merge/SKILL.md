@@ -26,6 +26,8 @@ Use `mcp__github__list_pull_requests` or `mcp__github__search_pull_requests` to 
 
 If no open PR, refuse — run `/helix-pr` first.
 
+Backstop: confirm `docs/DEVELOPMENT_LOG.md` already has an entry for `$KEY` (the `/helix-pr` step adds it). If it's missing, add the plain-words entry on the branch and push before merging, so the doc lands with this PR rather than drifting.
+
 ### 2. Poll CI to green
 
 Use `mcp__github__pull_request_read` with `method: get_check_runs` to get current state. If `status: completed, conclusion: success` → proceed.
