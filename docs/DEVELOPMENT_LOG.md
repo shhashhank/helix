@@ -174,7 +174,25 @@ with safety limits, output checking, and a live event stream.
 - **Where it lives:** [../libs/agent/src/lib/events.ts](../libs/agent/src/lib/events.ts);
   the loop emits via an `onEvent` handler.
 
-### Story: Agent Memory & Context Store, Tracing  ⬜ not started
+### Story: Agent Memory & Context Store  🛠️ in progress
+Giving agents memory: a short-term scratchpad now, longer-term recall next.
+
+#### HELIX-62 — Working-memory store  ✅
+- **What it is:** a per-run scratchpad — small notes an agent can jot down and read back
+  while it works (e.g. "the user's repo is X", "step 2 done"). Each run gets its own private
+  space, so parallel runs never mix up notes.
+- **Why it matters:** agents need somewhere to keep track of what they've figured out across
+  steps. There's a simple in-memory version for tests/single-machine use, and a
+  Redis-backed one so the scratchpad is shared and survives across worker processes, with
+  notes auto-expiring so old runs don't pile up.
+- **Where it lives:** the interface + in-memory version in
+  [../libs/agent/src/lib/memory.ts](../libs/agent/src/lib/memory.ts); the Redis version in
+  [../apps/registry/src/working-memory/](../apps/registry/src/working-memory/).
+
+#### Remaining in this story  ⬜
+HELIX-63 vector store (long-term recall) · HELIX-64 retrieval API + ranking.
+
+### Story: Agent Tracing & Cost Accounting  ⬜ not started
 
 ---
 
@@ -212,6 +230,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-59 | Budget & guardrail enforcement | ✅ | #14 |
 | HELIX-60 | Structured output parser/validator | ✅ | #15 |
 | HELIX-61 | Step event emitter (live run events) | ✅ | #16 |
+| HELIX-62 | Working-memory store (per-run scratchpad) | ✅ | #17 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -224,9 +243,11 @@ Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model
 and the **Agent Execution Runtime** is complete — the core agent loop (HELIX-58),
 budget/guardrail enforcement (HELIX-59), structured-output validation (HELIX-60), and the
 step event stream (HELIX-61) are all in. Three of the five Core Agent Platform stories are
-done; the remaining two are **Agent Memory & Context Store** (HELIX-15) and **Agent Tracing
-& Cost Accounting** (HELIX-16). After this epic come the workflow engine, GitHub access,
-sandboxes, human approvals, and the user-facing website.
+done, and **Agent Memory & Context Store** (HELIX-15) is underway — the working-memory
+scratchpad (HELIX-62) is in; next are the vector store (HELIX-63) and retrieval API
+(HELIX-64). The last story is **Agent Tracing & Cost Accounting** (HELIX-16). After this
+epic come the workflow engine, GitHub access, sandboxes, human approvals, and the
+user-facing website.
 
 ---
 
