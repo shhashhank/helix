@@ -364,6 +364,24 @@ Making a running workflow survive crashes so a long, expensive run isn't lost.
 (HELIX-71), don't double-act on retries (HELIX-72), and a killed worker resumes from the last
 checkpoint (HELIX-73).
 
+### Story: Human-in-the-Loop Pause/Resume  🛠️ in progress
+Letting a workflow stop and wait for a person to approve a risky action before continuing.
+
+#### HELIX-74 — Pause/await-signal primitive  ✅
+- **What it is:** a way for a workflow to **pause and wait for a human's yes/no**, then carry
+  on. A step calls `awaitApproval(...)` and the run simply *stops there* — durably — until
+  someone sends an "approved"/"rejected" decision (a Temporal **signal**). If nobody answers
+  within a time limit, a **timeout policy** decides for them (default: rejected, the safe choice).
+- **Why it matters:** some actions shouldn't happen without sign-off (deploying, spending money,
+  deleting things). Because the wait is durable, a run can sit paused for hours or days — across
+  restarts — without burning resources, and resume the instant a decision arrives. The timeout
+  keeps a forgotten approval from blocking forever (or, if you choose, from auto-proceeding).
+- **Where it lives:** [../libs/workflow/src/lib/temporal/approval.ts](../libs/workflow/src/lib/temporal/approval.ts)
+  — `awaitApproval()` + the `approvalSignal` definition (the channel a decision comes in on) —
+  plus a thin `approvalGateWorkflow` in [workflows.ts](../libs/workflow/src/lib/temporal/workflows.ts).
+  Next in this story: an **approval-request emitter** (HELIX-75) to tell a person/UI that
+  sign-off is needed, and a **resume-on-decision handler** (HELIX-76) to deliver their answer.
+
 ---
 
 ## Fixes & hardening
@@ -412,6 +430,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-71 | Temporal integration (durable execution) | ✅ | #28 |
 | HELIX-72 | Idempotency keys (retries don't double-act) | ✅ | #29 |
 | HELIX-73 | Crash-recovery tests (killed worker resumes) | ✅ | #30 |
+| HELIX-74 | Pause/await-signal primitive (human approval) | ✅ | #31 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -433,10 +452,12 @@ second story — **Durable Execution & State Persistence** — is now in progres
 run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its last completed
 step; a retried step won't repeat its side effects (**idempotency keys**, HELIX-72); and a
 crash-recovery test proves a killed worker resumes from the last checkpoint (HELIX-73) — so
-the **Durable Execution & State Persistence** story is ✅ done. Next stories in this epic:
-**Human-in-the-Loop Pause/Resume** (HELIX-19), **Retries** (HELIX-20), and the **Workflow
-Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and watch a
-workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
+the **Durable Execution & State Persistence** story is ✅ done. The third story —
+**Human-in-the-Loop Pause/Resume** (HELIX-19) — is now in progress: a workflow can durably
+pause for a human approval (HELIX-74), with an approval-request emitter (HELIX-75) and
+resume-on-decision handler (HELIX-76) still to come. Then: **Retries** (HELIX-20) and the
+**Workflow Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and
+watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
 all this from a UI.
 
