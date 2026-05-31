@@ -257,7 +257,7 @@ A replayable record of what each run did, exported to standard tooling, plus cos
 
 Chaining agents into multi-step pipelines (e.g. plan → code → review), defined as a graph.
 
-### Story: Workflow Definition & DAG Engine  🛠️ in progress
+### Story: Workflow Definition & DAG Engine  ✅ done
 How a workflow is described and checked before it runs.
 
 #### HELIX-68 — Workflow DSL + validator  ✅
@@ -285,8 +285,23 @@ How a workflow is described and checked before it runs.
 - **Where it lives:** [../libs/workflow/src/lib/compiler.ts](../libs/workflow/src/lib/compiler.ts)
   (ordering into parallel levels) + [runner.ts](../libs/workflow/src/lib/runner.ts) (running it).
 
-#### Remaining in this story  ⬜
-HELIX-70 workflow versioning.
+#### HELIX-70 — Workflow versioning  ✅
+- **What it is:** a versioned filing system for workflow recipes. Each time you save a
+  workflow it gets a new version number (1, 2, 3 …) and the old versions are kept, never
+  overwritten. When a run starts it "pins" the version it's using and remembers that pin —
+  so it always re-reads the *exact* recipe it began with, even if someone changes the
+  workflow later.
+- **Why it matters:** runs become reproducible and auditable. If you edit a workflow halfway
+  through a long-running job, the in-flight run isn't silently changed underneath it — it
+  keeps using the version it started on. And you can always look back at precisely which
+  recipe produced a given result.
+- **Where it lives:** [../libs/workflow/src/lib/registry.ts](../libs/workflow/src/lib/registry.ts)
+  — `WorkflowRegistry` (publish → next version, get/latest, `pin` a version for a run,
+  `resolve` a pin back to the saved recipe). Stored versions are deep-frozen so they can't
+  be tampered with after the fact.
+
+✅ **Story complete** — Workflow Definition & DAG Engine (HELIX-17): define a workflow
+(HELIX-68), compile + run it (HELIX-69), and version it for reproducible runs (HELIX-70).
 
 ---
 
@@ -332,6 +347,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-67 | Cost roll-up jobs (run/org/day totals) | ✅ | #22 |
 | HELIX-68 | Workflow DSL + validator (DAG definition) | ✅ | #25 |
 | HELIX-69 | DAG compiler + scheduler (runs the graph) | ✅ | #26 |
+| HELIX-70 | Workflow versioning (pin a recipe per run) | ✅ | #27 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -346,11 +362,14 @@ Memory & Context Store, and Agent Tracing & Cost Accounting. An agent can now be
 routed to a model, run a tool-using loop within budget, return validated output, remember
 across runs, recall by similarity, and be traced and costed end-to-end.
 
-The **Workflow Engine** (HELIX-2) is now underway — the workflow DSL + validator (HELIX-68)
-is in; next in that story are the DAG compiler/scheduler (HELIX-69) and workflow versioning
-(HELIX-70), then durable execution, pause/resume, and the orchestrator run API. After that:
-**MCP Integration / GitHub access**, **sandboxes**, **human approvals**, and the
-**user-facing SaaS** (auth, run dashboard) — which is where a user can run all this from a UI.
+The **Workflow Engine** (HELIX-2) is now underway. Its first story — **Workflow Definition
+& DAG Engine** — is ✅ done: you can define a workflow (HELIX-68), compile and run it with
+branching + parallelism (HELIX-69), and version it so runs are reproducible (HELIX-70).
+Next in this epic: **durable execution** (a run survives a crash/restart), **pause/resume**,
+**retries**, and the **orchestrator run API & status** — the first point a user can kick off
+and watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
+**human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
+all this from a UI.
 
 ---
 
