@@ -364,7 +364,7 @@ Making a running workflow survive crashes so a long, expensive run isn't lost.
 (HELIX-71), don't double-act on retries (HELIX-72), and a killed worker resumes from the last
 checkpoint (HELIX-73).
 
-### Story: Human-in-the-Loop Pause/Resume  🛠️ in progress
+### Story: Human-in-the-Loop Pause/Resume  ✅ done
 Letting a workflow stop and wait for a person to approve a risky action before continuing.
 
 #### HELIX-74 — Pause/await-signal primitive  ✅
@@ -393,7 +393,24 @@ Letting a workflow stop and wait for a person to approve a risky action before c
   (the request shape + a pluggable `ApprovalRequestSink` — the "approval service" seam, in-memory
   for now) + [temporal/approval-activities.ts](../libs/workflow/src/lib/temporal/approval-activities.ts)
   (the publish activity) + a `requestApprovalWorkflow` that **emits then pauses**.
-  Still to come: the **resume-on-decision handler** (HELIX-76) to deliver the human's answer back in.
+
+#### HELIX-76 — Resume-on-decision handler  ✅
+- **What it is:** the *inbound* half — taking a person's "approved/rejected" answer and **delivering
+  it into the paused run** so it continues. Two small client helpers: `submitApprovalDecision(...)`
+  (send the decision — under the hood, a Temporal signal) and `getApprovalStatus(...)` (ask a run
+  whether it's still waiting, or what was decided).
+- **Why it matters:** it closes the loop. HELIX-74 made a run *wait*, HELIX-75 *announced* the wait;
+  this is how the answer actually gets back in, from an API/UI, to resume the run. The status query
+  lets a dashboard show "awaiting approval" and, afterwards, the recorded decision — even on a
+  finished run. (Submitting after a run already decided/timed out fails loudly: the decision came
+  too late.)
+- **Where it lives:** [../libs/workflow/src/lib/temporal/decision.ts](../libs/workflow/src/lib/temporal/decision.ts)
+  (`submitApprovalDecision`, `getApprovalStatus`) + the `approvalStatusQuery` added to
+  [approval.ts](../libs/workflow/src/lib/temporal/approval.ts).
+
+✅ **Story complete** — Human-in-the-Loop Pause/Resume (HELIX-19): a workflow durably pauses for
+approval (HELIX-74), announces it (HELIX-75), and resumes when a human's decision is delivered back
+in (HELIX-76).
 
 ---
 
@@ -445,6 +462,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-73 | Crash-recovery tests (killed worker resumes) | ✅ | #30 |
 | HELIX-74 | Pause/await-signal primitive (human approval) | ✅ | #31 |
 | HELIX-75 | Approval request emitter (announce sign-off) | ✅ | #32 |
+| HELIX-76 | Resume-on-decision handler (deliver the answer) | ✅ | #33 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -467,11 +485,11 @@ run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its l
 step; a retried step won't repeat its side effects (**idempotency keys**, HELIX-72); and a
 crash-recovery test proves a killed worker resumes from the last checkpoint (HELIX-73) — so
 the **Durable Execution & State Persistence** story is ✅ done. The third story —
-**Human-in-the-Loop Pause/Resume** (HELIX-19) — is now in progress: a workflow can durably
-pause for a human approval (HELIX-74) and announce that sign-off is needed (HELIX-75), with the
-resume-on-decision handler (HELIX-76) still to come. Then: **Retries** (HELIX-20) and the
-**Workflow Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and
-watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
+**Human-in-the-Loop Pause/Resume** (HELIX-19) — is ✅ done: a workflow durably pauses for
+approval (HELIX-74), announces it (HELIX-75), and resumes when the human's decision is delivered
+back in (HELIX-76). Remaining in this epic: **Retries** (HELIX-20) and the **Workflow
+Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and watch a
+workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
 all this from a UI.
 

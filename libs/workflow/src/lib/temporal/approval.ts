@@ -10,7 +10,7 @@
  * ({@link approvalSignal}) is also safe to import from client/worker code to send
  * the decision (`handle.signal(approvalSignal, …)`).
  */
-import { condition, defineSignal, setHandler } from '@temporalio/workflow';
+import { condition, defineQuery, defineSignal, setHandler } from '@temporalio/workflow';
 import type { Duration } from '@temporalio/common';
 
 export type ApprovalDecision = 'approved' | 'rejected';
@@ -47,8 +47,23 @@ export interface AwaitApprovalOptions {
   onTimeout?: ApprovalDecision;
 }
 
+/** Whether the gate is still waiting, or has a decision recorded. */
+export type ApprovalState = 'pending' | 'decided';
+
+/** Observable status of an approval gate, readable via {@link approvalStatusQuery}. */
+export interface ApprovalStatus {
+  state: ApprovalState;
+  decision?: ApprovalDecision;
+  decidedBy?: string;
+  /** True when the recorded decision came from the timeout policy. */
+  timedOut?: boolean;
+}
+
 /** The signal a paused workflow receives its human decision through. */
 export const approvalSignal = defineSignal<[ApprovalSignalPayload]>('approvalDecision');
+
+/** Query a workflow for whether it's awaiting approval (and any recorded decision). */
+export const approvalStatusQuery = defineQuery<ApprovalStatus>('approvalStatus');
 
 /**
  * Pause the calling workflow until an {@link approvalSignal} arrives or the
@@ -58,21 +73,37 @@ export const approvalSignal = defineSignal<[ApprovalSignalPayload]>('approvalDec
  */
 export async function awaitApproval(opts: AwaitApprovalOptions = {}): Promise<ApprovalResult> {
   let payload: ApprovalSignalPayload | undefined;
+  let result: ApprovalResult | undefined;
+
   setHandler(approvalSignal, (p) => {
     if (payload === undefined) payload = p; // first decision wins
   });
+  // Expose status so callers (e.g. a UI) can see a run is awaiting sign-off and,
+  // afterwards, what was decided — queryable even on the completed workflow.
+  setHandler(approvalStatusQuery, (): ApprovalStatus =>
+    result === undefined
+      ? { state: 'pending' }
+      : {
+          state: 'decided',
+          decision: result.decision,
+          decidedBy: result.decidedBy,
+          timedOut: result.timedOut,
+        },
+  );
 
   if (opts.timeout === undefined) {
     await condition(() => payload !== undefined);
   } else if (!(await condition(() => payload !== undefined, opts.timeout))) {
-    return { decision: opts.onTimeout ?? 'rejected', timedOut: true };
+    result = { decision: opts.onTimeout ?? 'rejected', timedOut: true };
+    return result;
   }
 
   const decided = payload as ApprovalSignalPayload;
-  return {
+  result = {
     decision: decided.decision,
     timedOut: false,
     decidedBy: decided.decidedBy,
     reason: decided.reason,
   };
+  return result;
 }
