@@ -117,6 +117,17 @@ describe('AnthropicProvider.complete', () => {
     expect(create.mock.calls[1][0].system).toBe('You are X');
   });
 
+  it('forwards effort as output_config only when set', async () => {
+    const { provider, create } = makeProvider();
+    create.mockResolvedValue(fakeMessage());
+
+    await provider.complete(baseReq({ effort: 'xhigh' }));
+    expect(create.mock.calls[0][0].output_config).toEqual({ effort: 'xhigh' });
+
+    await provider.complete(baseReq());
+    expect(create.mock.calls[1][0].output_config).toBeUndefined();
+  });
+
   it('forwards tools and tool_choice', async () => {
     const { provider, create } = makeProvider();
     create.mockResolvedValue(fakeMessage());

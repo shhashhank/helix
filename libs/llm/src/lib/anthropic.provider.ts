@@ -115,6 +115,7 @@ export class AnthropicProvider implements LlmProvider {
     if (request.tools?.length) body.tools = request.tools.map(toAnthropicTool);
     if (request.toolChoice) body.tool_choice = toAnthropicToolChoice(request.toolChoice);
     if (request.stopSequences?.length) body.stop_sequences = request.stopSequences;
+    if (request.effort) body.output_config = { effort: request.effort };
     return body;
   }
 

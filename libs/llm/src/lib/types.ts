@@ -9,6 +9,14 @@
 /** Model capability tier; mapped to a concrete model id by each provider. */
 export type ModelTier = 'opus' | 'sonnet' | 'haiku';
 
+/**
+ * Reasoning effort (Anthropic `output_config.effort`). Opus-tier supports the
+ * full range incl. `xhigh`/`max`; Sonnet supports up to `high`; Haiku does not
+ * support effort at all. The routing policy is responsible for only emitting
+ * effort on tiers that accept it.
+ */
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 export type LlmRole = 'user' | 'assistant';
 
 export interface LlmTextPart {
@@ -58,6 +66,8 @@ export interface LlmCompletionRequest {
   toolChoice?: LlmToolChoice;
   maxTokens?: number;
   stopSequences?: string[];
+  /** Reasoning effort. Only set on tiers that support it (opus/sonnet). */
+  effort?: Effort;
   /** Add an ephemeral cache breakpoint on the system prompt (prompt caching). */
   cacheSystemPrompt?: boolean;
 }
