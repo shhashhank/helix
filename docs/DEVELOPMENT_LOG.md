@@ -303,6 +303,28 @@ How a workflow is described and checked before it runs.
 ✅ **Story complete** — Workflow Definition & DAG Engine (HELIX-17): define a workflow
 (HELIX-68), compile + run it (HELIX-69), and version it for reproducible runs (HELIX-70).
 
+### Story: Durable Execution & State Persistence  🛠️ in progress
+Making a running workflow survive crashes so a long, expensive run isn't lost.
+
+#### HELIX-71 — Temporal integration (workflows + activities)  ✅
+- **What it is:** we now run workflows on top of [Temporal](https://temporal.io), a battle-tested
+  engine for *durable* execution. Each step of our graph becomes a Temporal **activity** (a
+  unit of work Temporal records and can retry), and the overall graph runs as a Temporal
+  **workflow**. Crucially, this reuses the exact same ordering/branching logic from HELIX-69 —
+  we just swapped "call the step in-process" for "run the step as a durable activity."
+- **Why it matters:** if the machine running a workflow crashes or is restarted halfway
+  through, Temporal **resumes from the last completed step** instead of starting the whole
+  (often long and costly) run over. It also gives us automatic retries for transient errors,
+  while a deliberate "this step failed" result still routes the failure branch as before.
+  This is the backbone for the rest of this story (idempotency, crash-recovery tests).
+- **Where it lives:** [../libs/workflow/src/lib/temporal/](../libs/workflow/src/lib/temporal/)
+  — `workflows.ts` (the durable graph, sandbox-safe), `activities.ts` (a step → activity),
+  `worker.ts` (the process that runs them), `client.ts` (start/await a run). Verified end-to-end
+  against a real in-memory Temporal test server.
+- **Note:** Temporal ships a native binary and the tests spin up a local test server, so this
+  is the first piece whose tests reach beyond pure-offline — CI downloads the Temporal test
+  server (it runs in-memory, no separate service needed).
+
 ---
 
 ## Fixes & hardening
@@ -348,6 +370,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-68 | Workflow DSL + validator (DAG definition) | ✅ | #25 |
 | HELIX-69 | DAG compiler + scheduler (runs the graph) | ✅ | #26 |
 | HELIX-70 | Workflow versioning (pin a recipe per run) | ✅ | #27 |
+| HELIX-71 | Temporal integration (durable execution) | ✅ | #28 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -364,8 +387,11 @@ across runs, recall by similarity, and be traced and costed end-to-end.
 
 The **Workflow Engine** (HELIX-2) is now underway. Its first story — **Workflow Definition
 & DAG Engine** — is ✅ done: you can define a workflow (HELIX-68), compile and run it with
-branching + parallelism (HELIX-69), and version it so runs are reproducible (HELIX-70).
-Next in this epic: **durable execution** (a run survives a crash/restart), **pause/resume**,
+branching + parallelism (HELIX-69), and version it so runs are reproducible (HELIX-70). The
+second story — **Durable Execution & State Persistence** — is now in progress: workflows now
+run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its last completed
+step. Still to come in this story: **idempotency keys** so a retried step doesn't double its
+side effects (HELIX-72), and **crash-recovery tests** (HELIX-73). Then: **pause/resume**,
 **retries**, and the **orchestrator run API & status** — the first point a user can kick off
 and watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
