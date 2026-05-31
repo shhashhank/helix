@@ -29,3 +29,27 @@ model AgentDefinition {
   @@index([orgId, role, deletedAt])
   @@map("agent_definitions")
 }
+
+/// One metered LLM call (HELIX-57): token usage + estimated cost + attribution.
+/// Written by the gateway's usage meter; rolled up by later cost-accounting work.
+model TokenUsage {
+  id                       String   @id @default(uuid()) @db.Uuid
+  orgId                    String?  @map("org_id") @db.Text
+  runId                    String?  @map("run_id") @db.Text
+  agentRole                String?  @map("agent_role") @db.Text
+  taskClass                String?  @map("task_class") @db.Text
+  provider                 String   @db.Text
+  model                    String   @db.Text
+  inputTokens              Int      @map("input_tokens")
+  outputTokens             Int      @map("output_tokens")
+  cacheCreationInputTokens Int      @default(0) @map("cache_creation_input_tokens")
+  cacheReadInputTokens     Int      @default(0) @map("cache_read_input_tokens")
+  costUsd                  Decimal? @map("cost_usd") @db.Decimal(12, 6)
+  latencyMs                Int?     @map("latency_ms")
+  streamed                 Boolean  @default(false)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([orgId, createdAt])
+  @@index([runId])
+  @@map("token_usage")
+}

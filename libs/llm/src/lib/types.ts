@@ -55,6 +55,18 @@ export interface LlmToolDef {
 
 export type LlmToolChoice = 'auto' | 'any' | 'none' | { name: string };
 
+/**
+ * Optional attribution for a call — who/what it's on behalf of. Carried on the
+ * request and recorded by the usage meter (HELIX-57) so spend can be attributed
+ * to a run / org / agent. Ignored by providers themselves.
+ */
+export interface LlmCallContext {
+  runId?: string;
+  orgId?: string | null;
+  agentRole?: string;
+  taskClass?: string;
+}
+
 export interface LlmCompletionRequest {
   /** Capability tier; ignored when `model` is set. Defaults to `opus`. */
   tier?: ModelTier;
@@ -70,6 +82,8 @@ export interface LlmCompletionRequest {
   effort?: Effort;
   /** Add an ephemeral cache breakpoint on the system prompt (prompt caching). */
   cacheSystemPrompt?: boolean;
+  /** Attribution for usage metering (HELIX-57); ignored by the provider itself. */
+  context?: LlmCallContext;
 }
 
 export interface LlmUsage {
