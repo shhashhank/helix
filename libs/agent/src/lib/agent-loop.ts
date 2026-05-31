@@ -1,8 +1,10 @@
-import type { LlmContentPart, LlmMessage } from '@helix/llm';
+import type { LlmCompletion, LlmContentPart, LlmMessage } from '@helix/llm';
+import { GuardrailMonitor } from './guardrails';
 import {
   AgentRunResult,
   AgentStep,
   AgentStopReason,
+  GuardrailBreach,
   RunAgentOptions,
   ToolCall,
   ToolExecutor,
@@ -13,13 +15,13 @@ const DEFAULT_MAX_ITERATIONS = 10;
 
 /**
  * The core agent loop (HELIX-58): reason → call tools → observe → repeat, until
- * the model ends its turn or the iteration cap is hit.
+ * the model ends its turn, the iteration cap is hit, or a guardrail trips.
  *
- * Each turn calls the provider; if the model emitted `tool_use` blocks they're
- * executed and fed back as `tool_result`s, then the loop continues. With no
- * tool calls, the turn is final. Budget/guardrail enforcement (HELIX-59),
- * output validation (HELIX-60), and the event bus (HELIX-61) layer on top — the
- * loop exposes an `onStep` hook and an iteration cap as their seams.
+ * Guardrails (HELIX-59) — max steps, token/cost ceilings, and repeated-tool-call
+ * loop detection — are enforced via {@link GuardrailMonitor}: the loop records
+ * each turn and stops with the matching reason + breach when a limit is crossed.
+ * Output validation (HELIX-60) and the event bus (HELIX-61) layer on top via the
+ * `onStep` hook and the raw final content.
  */
 export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult> {
   const {
@@ -31,14 +33,21 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
     onStep,
   } = options;
 
+  const monitor = new GuardrailMonitor(options.guardrails ?? { loopDetection: false });
   const messages: LlmMessage[] =
     typeof options.input === 'string'
       ? [{ role: 'user', content: options.input }]
       : [...options.input];
 
   const steps: AgentStep[] = [];
+  let last: LlmCompletion | undefined;
 
   for (let index = 0; index < maxIterations; index++) {
+    const stepBreach = monitor.stepBreach(index);
+    if (stepBreach) {
+      return finish('max_steps', last, messages, steps, index, monitor, stepBreach);
+    }
+
     const completion = await provider.complete({
       system: agent.system,
       tier: agent.tier,
@@ -48,17 +57,30 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
       messages,
       context,
     });
-
-    // Record the assistant turn verbatim so tool_use ids round-trip.
+    last = completion;
     messages.push({ role: 'assistant', content: completion.content });
+    monitor.recordCompletion(completion);
 
     const toolCalls = toToolCalls(completion.content);
 
+    // Model ended its turn — natural completion wins over any budget state.
     if (toolCalls.length === 0) {
-      const step: AgentStep = { index, completion, toolCalls: [], toolResults: [] };
-      steps.push(step);
-      onStep?.(step);
-      return finish(completion.stopReason ?? 'end_turn', completion, messages, steps, index + 1);
+      pushStep(steps, onStep, { index, completion, toolCalls: [], toolResults: [] });
+      return finish(completion.stopReason ?? 'end_turn', completion, messages, steps, index + 1, monitor);
+    }
+
+    // Token / cost ceiling — stop after this turn, before doing more work.
+    const budget = monitor.budgetBreach();
+    if (budget) {
+      pushStep(steps, onStep, { index, completion, toolCalls, toolResults: [] });
+      return finish(budget.type, completion, messages, steps, index + 1, monitor, budget);
+    }
+
+    // Loop detection — stop before re-running the repeated tools.
+    const loop = monitor.loopBreach(toolCalls);
+    if (loop) {
+      pushStep(steps, onStep, { index, completion, toolCalls, toolResults: [] });
+      return finish('loop_detected', completion, messages, steps, index + 1, monitor, loop);
     }
 
     const toolResults: { call: ToolCall; result: ToolResult }[] = [];
@@ -74,15 +96,15 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
       });
     }
     messages.push({ role: 'user', content: resultParts });
-
-    const step: AgentStep = { index, completion, toolCalls, toolResults };
-    steps.push(step);
-    onStep?.(step);
+    pushStep(steps, onStep, { index, completion, toolCalls, toolResults });
   }
 
-  // Iteration cap reached with the model still wanting to act.
-  const last = steps[steps.length - 1].completion;
-  return finish('max_iterations', last, messages, steps, maxIterations);
+  return finish('max_iterations', last, messages, steps, maxIterations, monitor);
+}
+
+function pushStep(steps: AgentStep[], onStep: RunAgentOptions['onStep'], step: AgentStep): void {
+  steps.push(step);
+  onStep?.(step);
 }
 
 function toToolCalls(content: LlmContentPart[]): ToolCall[] {
@@ -104,17 +126,21 @@ async function runTool(executor: ToolExecutor | undefined, call: ToolCall): Prom
 
 function finish(
   stopReason: AgentStopReason,
-  last: AgentRunResult['steps'][number]['completion'],
+  last: LlmCompletion | undefined,
   messages: LlmMessage[],
   steps: AgentStep[],
   iterations: number,
+  monitor: GuardrailMonitor,
+  breach?: GuardrailBreach,
 ): AgentRunResult {
   return {
-    finalText: last.text,
-    finalContent: last.content,
+    finalText: last?.text ?? '',
+    finalContent: last?.content ?? [],
     messages,
     steps,
     iterations,
     stopReason,
+    breach,
+    totals: { tokens: monitor.tokens, costUsd: monitor.costUsd },
   };
 }

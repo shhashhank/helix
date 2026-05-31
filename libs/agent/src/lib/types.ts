@@ -38,7 +38,37 @@ export interface AgentSpec {
   tools?: LlmToolDef[];
 }
 
-export type AgentStopReason = 'end_turn' | 'max_iterations' | 'stop_sequence' | 'refusal' | string;
+export type AgentStopReason =
+  | 'end_turn'
+  | 'max_iterations'
+  | 'max_steps'
+  | 'token_budget'
+  | 'cost_budget'
+  | 'loop_detected'
+  | 'stop_sequence'
+  | 'refusal'
+  | string;
+
+/**
+ * Run-level limits enforced by the loop (HELIX-59). Any breach stops the run
+ * with the matching {@link AgentStopReason} and a {@link GuardrailBreach}.
+ */
+export interface Guardrails {
+  /** Max model turns. Stops with `max_steps` (distinct from the loop's hard `maxIterations`). */
+  maxSteps?: number;
+  /** Cumulative token ceiling across the run (input + output + cache). */
+  maxTokens?: number;
+  /** Cumulative estimated USD-cost ceiling across the run. */
+  maxCostUsd?: number;
+  /** Stop if the model repeats the same tool call(s). `true` uses defaults. */
+  loopDetection?: boolean | { windowSize?: number };
+}
+
+export type GuardrailBreach =
+  | { type: 'max_steps'; limit: number; observed: number }
+  | { type: 'token_budget'; limit: number; observed: number }
+  | { type: 'cost_budget'; limit: number; observed: number }
+  | { type: 'loop_detected'; signature: string; repeats: number };
 
 /** One iteration of the loop: the model turn plus any tools run from it. */
 export interface AgentStep {
@@ -57,6 +87,8 @@ export interface RunAgentOptions {
   executors?: Record<string, ToolExecutor>;
   /** Hard cap on model turns before stopping. Default 10. */
   maxIterations?: number;
+  /** Run-level budgets/limits (HELIX-59); enforced on top of `maxIterations`. */
+  guardrails?: Guardrails;
   /** Attribution forwarded to the provider (and its usage meter). */
   context?: LlmCallContext;
   /** Observation hook, called once per completed step (seam for HELIX-61). */
@@ -73,4 +105,8 @@ export interface AgentRunResult {
   steps: AgentStep[];
   iterations: number;
   stopReason: AgentStopReason;
+  /** Set when the run stopped because a guardrail tripped. */
+  breach?: GuardrailBreach;
+  /** Cumulative token + estimated cost totals for the run. */
+  totals: { tokens: number; costUsd: number };
 }
