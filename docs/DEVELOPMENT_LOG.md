@@ -141,8 +141,19 @@ The part that makes an agent actually *work*: think, use a tool, look at the res
 - **Where it lives:** [../libs/agent/](../libs/agent/) — `runAgent()` in
   [agent-loop.ts](../libs/agent/src/lib/agent-loop.ts).
 
+#### HELIX-59 — Budget & guardrail enforcement  ✅
+- **What it is:** safety limits on an agent run. You can cap how many steps it takes, how
+  many tokens or dollars it's allowed to spend, and it automatically stops if it gets stuck
+  repeating the same action ("loop detection"). When a limit is hit, the run stops cleanly
+  and says exactly which limit and by how much.
+- **Why it matters:** without this, a confused or looping agent could rack up a huge bill
+  or run forever. This keeps every run bounded and predictable, and reports the running
+  token/cost total for each run.
+- **Where it lives:** [../libs/agent/src/lib/guardrails.ts](../libs/agent/src/lib/guardrails.ts),
+  wired into `runAgent()`.
+
 #### Remaining in this story  ⬜
-HELIX-59 budget/guardrail limits · HELIX-60 structured-output checking · HELIX-61 step events.
+HELIX-60 structured-output checking · HELIX-61 step events.
 
 ### Story: Agent Memory & Context Store, Tracing  ⬜ not started
 
@@ -179,6 +190,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-56 | Retry / failover / timeout safety wrapper | ✅ | #10 |
 | HELIX-57 | Token & cost meter (usage table) | ✅ | #11 |
 | HELIX-58 | Core agent loop (the agent engine) | ✅ | #13 |
+| HELIX-59 | Budget & guardrail enforcement | ✅ | #14 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -188,9 +200,9 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 ## What's next
 
 Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model Router**),
-and the **Agent Execution Runtime** is now underway — the core agent loop (HELIX-58) is in.
-Next in that story: **HELIX-59** budget/guardrail enforcement, **HELIX-60** structured-output
-validation, and **HELIX-61** step events. After that come the workflow engine, GitHub access,
+and the **Agent Execution Runtime** is underway — the core agent loop (HELIX-58) and its
+budget/guardrail enforcement (HELIX-59) are in. Two sub-tasks left: **HELIX-60** structured-output
+validation and **HELIX-61** step events. After that come the workflow engine, GitHub access,
 sandboxes, human approvals, and the user-facing website.
 
 ---
