@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@helix/llm": ["libs/llm/src/index.ts"]
+      "@helix/llm": ["libs/llm/src/index.ts"],
+      "@helix/agent": ["libs/agent/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

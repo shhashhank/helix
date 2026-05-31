@@ -36,6 +36,9 @@ jobs:
       - name: Typecheck (llm lib)
         run: pnpm exec tsc --noEmit -p libs/llm/tsconfig.spec.json
 
+      - name: Typecheck (agent lib)
+        run: pnpm exec tsc --noEmit -p libs/agent/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -46,3 +49,6 @@ jobs:
 
       - name: Unit tests (llm lib)
         run: pnpm exec jest --config libs/llm/jest.config.ts --ci
+
+      - name: Unit tests (agent lib)
+        run: pnpm exec jest --config libs/agent/jest.config.ts --ci
