@@ -303,7 +303,7 @@ How a workflow is described and checked before it runs.
 ✅ **Story complete** — Workflow Definition & DAG Engine (HELIX-17): define a workflow
 (HELIX-68), compile + run it (HELIX-69), and version it for reproducible runs (HELIX-70).
 
-### Story: Durable Execution & State Persistence  🛠️ in progress
+### Story: Durable Execution & State Persistence  ✅ done
 Making a running workflow survive crashes so a long, expensive run isn't lost.
 
 #### HELIX-71 — Temporal integration (workflows + activities)  ✅
@@ -344,6 +344,25 @@ Making a running workflow survive crashes so a long, expensive run isn't lost.
   tiny window between acting and recording can still repeat it. The real fix is to hand the
   same key to the external service so *it* dedupes (the Stripe model) — this makes that key
   available; full at-most-once is out of scope here.
+
+#### HELIX-73 — State persistence + recovery (chaos restart)  ✅
+- **What it is:** the proof that all the above actually survives a crash. The test starts a
+  real workflow, lets one worker do the first steps and begin the middle step, then **kills
+  that worker mid-run** and brings up a fresh one. It checks three things: the run *finishes*
+  on the new worker, the already-done first step is **not redone**, and the side effect from
+  the middle step is **not repeated**.
+- **Why it matters:** "durable" is a claim that's easy to get subtly wrong, so it needs a test
+  that genuinely pulls the plug. This one does — and proves the whole story end-to-end:
+  Temporal keeps the run's state (HELIX-71), the new worker resumes from the last checkpoint
+  rather than restarting, and idempotency keys (HELIX-72) stop the retried step from acting
+  twice. It's the safety net under every long, expensive multi-agent run.
+- **Where it lives:** [../libs/workflow/src/__tests__/temporal-recovery.spec.ts](../libs/workflow/src/__tests__/temporal-recovery.spec.ts).
+  Uses a real local Temporal server so the crash + retry timing is deterministic (the
+  in-memory test server can't fast-forward an in-flight step's timeout).
+
+✅ **Story complete** — Durable Execution & State Persistence (HELIX-18): run on Temporal
+(HELIX-71), don't double-act on retries (HELIX-72), and a killed worker resumes from the last
+checkpoint (HELIX-73).
 
 ---
 
@@ -392,6 +411,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-70 | Workflow versioning (pin a recipe per run) | ✅ | #27 |
 | HELIX-71 | Temporal integration (durable execution) | ✅ | #28 |
 | HELIX-72 | Idempotency keys (retries don't double-act) | ✅ | #29 |
+| HELIX-73 | Crash-recovery tests (killed worker resumes) | ✅ | #30 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -411,10 +431,12 @@ The **Workflow Engine** (HELIX-2) is now underway. Its first story — **Workflo
 branching + parallelism (HELIX-69), and version it so runs are reproducible (HELIX-70). The
 second story — **Durable Execution & State Persistence** — is now in progress: workflows now
 run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its last completed
-step, and a retried step won't repeat its side effects (**idempotency keys**, HELIX-72). Still
-to come in this story: **crash-recovery / chaos-restart tests** (HELIX-73). Then: **pause/resume**,
-**retries**, and the **orchestrator run API & status** — the first point a user can kick off
-and watch a workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
+step; a retried step won't repeat its side effects (**idempotency keys**, HELIX-72); and a
+crash-recovery test proves a killed worker resumes from the last checkpoint (HELIX-73) — so
+the **Durable Execution & State Persistence** story is ✅ done. Next stories in this epic:
+**Human-in-the-Loop Pause/Resume** (HELIX-19), **Retries** (HELIX-20), and the **Workflow
+Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and watch a
+workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
 all this from a UI.
 
