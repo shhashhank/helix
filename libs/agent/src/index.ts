@@ -8,3 +8,5 @@ export * from './lib/embeddings';
 export * from './lib/vector-store';
 export * from './lib/retriever';
 export * from './lib/trace';
+export * from './lib/correlation';
+export * from './lib/otel-trace-sink';
