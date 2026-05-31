@@ -5,6 +5,7 @@ export * from './lib/output';
 export * from './lib/events';
 export * from './lib/memory';
 export * from './lib/embeddings';
+export * from './lib/voyage-embedder';
 export * from './lib/vector-store';
 export * from './lib/retriever';
 export * from './lib/trace';

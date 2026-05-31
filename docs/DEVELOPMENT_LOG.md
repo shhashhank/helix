@@ -197,11 +197,15 @@ retrieval API that ranks and cites what it finds.
   this?" — the basis for an agent recalling relevant past notes/snippets.
 - **Why it matters:** keyword search misses paraphrases; similarity search finds related
   content even when the words differ. There's a simple in-memory version for tests and a
-  Postgres-backed one for real use. (The embedding generator is a deterministic stand-in
-  for now — a real embeddings model drops in later behind the same interface.)
+  Postgres-backed one for real use.
+- **Embeddings:** a deterministic stand-in (`HashingEmbedder`) is the default so tests run
+  offline; a **real** embeddings model — `VoyageEmbedder` (Voyage AI, 1024-dim) — drops in
+  behind the same interface, selected by `getEmbedder()` when `VOYAGE_API_KEY` is set.
+  *Note:* the persistent pgvector column is `vector(64)` (sized for the stand-in); using the
+  real 1024-dim embedder with the Postgres store needs a one-line dimension migration.
 - **Where it lives:** [../libs/agent/src/lib/vector-store.ts](../libs/agent/src/lib/vector-store.ts)
-  + [embeddings.ts](../libs/agent/src/lib/embeddings.ts); the Postgres/pgvector store in
-  [../apps/registry/src/vector-store/](../apps/registry/src/vector-store/).
+  + [embeddings.ts](../libs/agent/src/lib/embeddings.ts) + [voyage-embedder.ts](../libs/agent/src/lib/voyage-embedder.ts);
+  the Postgres/pgvector store in [../apps/registry/src/vector-store/](../apps/registry/src/vector-store/).
 
 #### HELIX-64 — Retrieval API + ranking  ✅
 - **What it is:** the "search" front door over the memory store. Given a question, it finds
