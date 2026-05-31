@@ -28,24 +28,38 @@ git log origin/main..HEAD --oneline
 
 ## Steps
 
-### 1. Push the branch
+### 1. Update the development log
+
+Before pushing, refresh `docs/DEVELOPMENT_LOG.md` so the plain-words documentation ships inside this same PR (this is how the doc stays current — see the drift hook `.claude/hooks/check-devlog-drift.sh`):
+
+- Add or update the entry for this sub-task's `HELIX-<n>` under its Story, in simple, non-jargon words: **What it is / Why it matters / Where it lives** (link the key files). Match the readable, non-engineer tone of the existing entries.
+- Flip its row in the summary status table to ✅ (note the PR number once known — fine to fill in after step 5).
+- Even if the sub-task changed nothing user-facing, add a one-line entry so the drift hook stays satisfied.
+- Commit it on the branch:
+
+```bash
+KEY=$(git branch --show-current | grep -oE '^HELIX-[0-9]+')
+git add docs/DEVELOPMENT_LOG.md && git commit -q -m "docs: log ${KEY} in DEVELOPMENT_LOG"
+```
+
+### 2. Push the branch
 
 ```bash
 git push -u origin "$(git branch --show-current)"
 ```
 
-### 2. Extract HELIX key from branch name
+### 3. Extract HELIX key from branch name
 
 ```bash
 BRANCH=$(git branch --show-current)
 KEY=$(echo "$BRANCH" | grep -oE '^HELIX-[0-9]+')
 ```
 
-### 3. Fetch Jira ticket details for the PR body
+### 4. Fetch Jira ticket details for the PR body
 
 Use the Atlassian token (refresh first if older than ~50 min — see `/helix-start` step 1). Get summary, parent chain, AC if present in the description.
 
-### 4. Open the PR via the GitHub MCP
+### 5. Open the PR via the GitHub MCP
 
 Use `mcp__github__create_pull_request` with:
 - owner: `shhashhank`
@@ -66,7 +80,7 @@ PR body template:
 
 ## What's in
 
-<bulleted list of the actual changes — pull from commit messages or ask the user>
+<bulleted list of the actual changes — pull from commit messages or ask the user; include the docs/DEVELOPMENT_LOG.md entry added in step 1>
 
 ## Out of scope
 
@@ -82,7 +96,7 @@ PR body template:
 
 Capture the PR number from the response.
 
-### 5. Comment on the Jira ticket with the PR URL
+### 6. Comment on the Jira ticket with the PR URL
 
 ```bash
 TOKEN=$(cat /tmp/atl_token.txt)
@@ -93,7 +107,7 @@ curl -s -o /dev/null -w "comment HTTP %{http_code}\n" -X POST \
   -d "$(python3 -c "import json; print(json.dumps({'body': {'type': 'doc', 'version': 1, 'content': [{'type': 'paragraph', 'content': [{'type': 'text', 'text': 'PR: '}, {'type': 'text', 'text': '$PR_URL', 'marks': [{'type': 'link', 'attrs': {'href': '$PR_URL'}}]}, {'type': 'text', 'text': '  •  Branch: $BRANCH. Awaiting CI before merge.'}]}]}}))")"
 ```
 
-### 6. Report
+### 7. Report
 
 Print:
 - PR URL
