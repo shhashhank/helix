@@ -9,6 +9,7 @@ import { proxyActivities } from '@temporalio/workflow';
 import type { StepActivities } from './activities';
 import { WorkflowDefinition } from '../types';
 import { runWorkflow, WorkflowRunResult } from '../runner';
+import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval';
 
 /**
  * Activity proxy. `startToCloseTimeout` bounds a single step; the retry policy
@@ -29,4 +30,13 @@ const { runStep } = proxyActivities<StepActivities>({
  */
 export async function executeWorkflow(def: WorkflowDefinition): Promise<WorkflowRunResult> {
   return runWorkflow(def, (step, ctx) => runStep({ step, ctx }));
+}
+
+/**
+ * Minimal human-in-the-loop workflow (HELIX-74): durably pauses for an approval
+ * decision (via {@link approvalSignal}) and returns the outcome. Useful on its
+ * own as an approval gate, and the unit under test for {@link awaitApproval}.
+ */
+export async function approvalGateWorkflow(opts: AwaitApprovalOptions): Promise<ApprovalResult> {
+  return awaitApproval(opts);
 }

@@ -50,6 +50,7 @@
     "@prisma/client": "^6.19.3",
     "@temporalio/activity": "1.17.2",
     "@temporalio/client": "1.17.2",
+    "@temporalio/common": "1.17.2",
     "@temporalio/worker": "1.17.2",
     "@temporalio/workflow": "1.17.2",
     "ajv": "^8.20.0",
