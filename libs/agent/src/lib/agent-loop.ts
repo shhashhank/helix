@@ -1,7 +1,9 @@
 import type { LlmCompletion, LlmContentPart, LlmMessage } from '@helix/llm';
 import { GuardrailMonitor } from './guardrails';
+import { validateOutput } from './output';
 import {
   AgentRunResult,
+  AgentSpec,
   AgentStep,
   AgentStopReason,
   GuardrailBreach,
@@ -45,7 +47,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
   for (let index = 0; index < maxIterations; index++) {
     const stepBreach = monitor.stepBreach(index);
     if (stepBreach) {
-      return finish('max_steps', last, messages, steps, index, monitor, stepBreach);
+      return finish('max_steps', last, messages, steps, index, monitor, agent.outputSchema, stepBreach);
     }
 
     const completion = await provider.complete({
@@ -66,21 +68,21 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
     // Model ended its turn — natural completion wins over any budget state.
     if (toolCalls.length === 0) {
       pushStep(steps, onStep, { index, completion, toolCalls: [], toolResults: [] });
-      return finish(completion.stopReason ?? 'end_turn', completion, messages, steps, index + 1, monitor);
+      return finish(completion.stopReason ?? 'end_turn', completion, messages, steps, index + 1, monitor, agent.outputSchema);
     }
 
     // Token / cost ceiling — stop after this turn, before doing more work.
     const budget = monitor.budgetBreach();
     if (budget) {
       pushStep(steps, onStep, { index, completion, toolCalls, toolResults: [] });
-      return finish(budget.type, completion, messages, steps, index + 1, monitor, budget);
+      return finish(budget.type, completion, messages, steps, index + 1, monitor, agent.outputSchema, budget);
     }
 
     // Loop detection — stop before re-running the repeated tools.
     const loop = monitor.loopBreach(toolCalls);
     if (loop) {
       pushStep(steps, onStep, { index, completion, toolCalls, toolResults: [] });
-      return finish('loop_detected', completion, messages, steps, index + 1, monitor, loop);
+      return finish('loop_detected', completion, messages, steps, index + 1, monitor, agent.outputSchema, loop);
     }
 
     const toolResults: { call: ToolCall; result: ToolResult }[] = [];
@@ -99,7 +101,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentRunResult
     pushStep(steps, onStep, { index, completion, toolCalls, toolResults });
   }
 
-  return finish('max_iterations', last, messages, steps, maxIterations, monitor);
+  return finish('max_iterations', last, messages, steps, maxIterations, monitor, agent.outputSchema);
 }
 
 function pushStep(steps: AgentStep[], onStep: RunAgentOptions['onStep'], step: AgentStep): void {
@@ -131,10 +133,12 @@ function finish(
   steps: AgentStep[],
   iterations: number,
   monitor: GuardrailMonitor,
+  outputSchema: AgentSpec['outputSchema'],
   breach?: GuardrailBreach,
 ): AgentRunResult {
+  const finalText = last?.text ?? '';
   return {
-    finalText: last?.text ?? '',
+    finalText,
     finalContent: last?.content ?? [],
     messages,
     steps,
@@ -142,5 +146,6 @@ function finish(
     stopReason,
     breach,
     totals: { tokens: monitor.tokens, costUsd: monitor.costUsd },
+    output: outputSchema ? validateOutput(finalText, outputSchema) : undefined,
   };
 }
