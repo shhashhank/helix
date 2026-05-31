@@ -213,7 +213,22 @@ retrieval API that ranks and cites what it finds.
   The citations let an agent show its sources rather than make claims out of thin air.
 - **Where it lives:** [../libs/agent/src/lib/retriever.ts](../libs/agent/src/lib/retriever.ts).
 
-### Story: Agent Tracing & Cost Accounting  ⬜ not started
+### Story: Agent Tracing & Cost Accounting  🛠️ in progress
+A replayable record of what each run did, plus cost roll-ups — the last story in this epic.
+
+#### HELIX-65 — Trace schema + writer  ✅
+- **What it is:** turns the live play-by-play of a run (the event stream) into a tidy,
+  structured **trace** — a timeline of "spans": the whole run, each step inside it, and each
+  model call and tool call inside those, with start/end times, how long each took, whether
+  it succeeded, and useful details (model, tokens, tool name, why it stopped).
+- **Why it matters:** when a run misbehaves or costs too much, you need to see exactly what
+  happened and where the time/tokens went. This is the debugging + audit backbone; the next
+  pieces export it to standard tools and roll the costs up.
+- **Where it lives:** [../libs/agent/src/lib/trace.ts](../libs/agent/src/lib/trace.ts)
+  (`buildSpans` + `TraceCollector`).
+
+#### Remaining in this story  ⬜
+HELIX-66 OpenTelemetry export · HELIX-67 cost roll-up jobs.
 
 ---
 
@@ -254,6 +269,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-62 | Working-memory store (per-run scratchpad) | ✅ | #17 |
 | HELIX-63 | Vector store (pgvector similarity recall) | ✅ | #18 |
 | HELIX-64 | Retrieval API + ranking (hybrid + citations) | ✅ | #19 |
+| HELIX-65 | Trace schema + writer (run spans) | ✅ | #20 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -268,9 +284,10 @@ budget/guardrail enforcement (HELIX-59), structured-output validation (HELIX-60)
 step event stream (HELIX-61) are all in. Three of the five Core Agent Platform stories are
 done, and **Agent Memory & Context Store** (HELIX-15) is now complete too — scratchpad
 (HELIX-62), pgvector similarity store (HELIX-63), and the hybrid retrieval API (HELIX-64).
-**Four of the five** Core Agent Platform stories are done; the last is **Agent Tracing &
-Cost Accounting** (HELIX-16). After this epic come the workflow engine, GitHub access,
-sandboxes, human approvals, and the user-facing website.
+**Four of the five** Core Agent Platform stories are done, and the last — **Agent Tracing &
+Cost Accounting** (HELIX-16) — is underway: the trace schema + writer (HELIX-65) is in; next
+are OpenTelemetry export (HELIX-66) and cost roll-up jobs (HELIX-67). After this epic come
+the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing website.
 
 ---
 
