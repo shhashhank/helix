@@ -76,8 +76,8 @@ finished, so this story is complete.
   built yet.
 - **Where it lives:** [../apps/registry/src/prompt-template/](../apps/registry/src/prompt-template/).
 
-### Story: LLM Gateway & Model Router (Anthropic)  🛠️ in progress
-The piece that actually calls the AI models. First brick below.
+### Story: LLM Gateway & Model Router (Anthropic)  ✅ done
+The piece that actually calls the AI models — adapter, routing, resilience, and metering.
 
 #### HELIX-54 — Provider adapter (Anthropic)  ✅
 - **What it is:** a single, tidy "plug" for talking to an AI model. The rest of Helix asks
@@ -114,6 +114,19 @@ The piece that actually calls the AI models. First brick below.
   (like a malformed request), which would just fail again.
 - **Where it lives:** [../libs/llm/src/lib/resilience.ts](../libs/llm/src/lib/resilience.ts).
 
+#### HELIX-57 — Token & cost meter  ✅
+- **What it is:** a meter that records every AI call — how many tokens it used, the
+  estimated dollar cost, how long it took, and who it was for (which run/org/agent) — and
+  saves it to a database table.
+- **Why it matters:** it's the raw data for billing and for spotting runaway costs. It
+  wraps the model calls invisibly, so usage is captured automatically without each caller
+  having to remember. Failed calls aren't charged, and a database hiccup never breaks the
+  actual AI call.
+- **Where it lives:** the meter in
+  [../libs/llm/src/lib/metering.ts](../libs/llm/src/lib/metering.ts); the database table
+  ([token_usage](../apps/registry/prisma/schema.prisma)) and the saver in
+  [../apps/registry/src/token-usage/](../apps/registry/src/token-usage/).
+
 ### Story: Agent Execution Runtime, Memory, Tracing  ⬜ not started
 
 ---
@@ -142,6 +155,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-54 | AI-model plug (Anthropic adapter) | ✅ | #8 |
 | HELIX-55 | Model dispatcher + cost limits (routing) | ✅ | #9 |
 | HELIX-56 | Retry / failover / timeout safety wrapper | ✅ | #10 |
+| HELIX-57 | Token & cost meter (usage table) | ✅ | #11 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 
@@ -149,12 +163,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 
 ## What's next
 
-The "Agent Definition & Registry" story is done, and the **LLM Gateway** story is nearly
-complete — the Anthropic model plug (HELIX-54), routing policy (HELIX-55), and the
-retry/failover safety wrapper (HELIX-56) are in. One sub-task left: **HELIX-57 — token &
-cost meter** (record real spend per call/run to a usage table). After that come the agent
-loop, the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing
-website.
+Two stories are now complete: **Agent Definition & Registry** and the **LLM Gateway & Model
+Router** (adapter, routing, resilience, metering — HELIX-54/55/56/57 all in). The next
+brick in the Core Agent Platform epic is the **Agent Execution Runtime** — the loop that
+lets an agent reason, call tools, observe results, and produce a validated output, built on
+the gateway that's now in place. After that come the workflow engine, GitHub access,
+sandboxes, human approvals, and the user-facing website.
 
 ---
 
