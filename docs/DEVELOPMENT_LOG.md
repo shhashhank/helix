@@ -29,7 +29,7 @@ A handy way to picture the finished foundation:
 
 ---
 
-## Epic: Core Agent Platform  🛠️ in progress
+## Epic: Core Agent Platform  ✅ done
 
 ### Story: Agent Definition & Registry  ✅ done
 Everything needed to define and manage agent recipes. All four sub-tasks below are
@@ -253,6 +253,30 @@ A replayable record of what each run did, exported to standard tooling, plus cos
 
 ---
 
+## Epic: Workflow Engine  🛠️ in progress
+
+Chaining agents into multi-step pipelines (e.g. plan → code → review), defined as a graph.
+
+### Story: Workflow Definition & DAG Engine  🛠️ in progress
+How a workflow is described and checked before it runs.
+
+#### HELIX-68 — Workflow DSL + validator  ✅
+- **What it is:** the "recipe format" for a workflow. You describe it as boxes (**steps** —
+  each runs an agent) joined by arrows (**edges** — "after step A succeeds, do step B"),
+  optionally branching on success/failure. The validator then checks the recipe makes sense
+  *before* anything runs: every arrow points to a real step, names are unique, nothing loops
+  back on itself, and there's a clear starting point.
+- **Why it matters:** catching a broken workflow at definition time (a typo'd step, an
+  accidental loop) is far cheaper than failing halfway through a live, paid run. It's the
+  contract the next pieces (the scheduler that actually runs the graph) build on.
+- **Where it lives:** [../libs/workflow/src/lib/types.ts](../libs/workflow/src/lib/types.ts)
+  (the format) + [validator.ts](../libs/workflow/src/lib/validator.ts) (the checks).
+
+#### Remaining in this story  ⬜
+HELIX-69 DAG compiler/scheduler · HELIX-70 workflow versioning.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -293,6 +317,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-65 | Trace schema + writer (run spans) | ✅ | #20 |
 | HELIX-66 | OpenTelemetry export + correlation | ✅ | #21 |
 | HELIX-67 | Cost roll-up jobs (run/org/day totals) | ✅ | #22 |
+| HELIX-68 | Workflow DSL + validator (DAG definition) | ✅ | #25 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -307,9 +332,11 @@ Memory & Context Store, and Agent Tracing & Cost Accounting. An agent can now be
 routed to a model, run a tool-using loop within budget, return validated output, remember
 across runs, recall by similarity, and be traced and costed end-to-end.
 
-Next epics, per the product plan: the **Workflow Engine** (chaining agents into durable
-pipelines), then **MCP Integration / GitHub access**, **sandboxes**, **human approvals**,
-and the **user-facing SaaS** (auth, run dashboard).
+The **Workflow Engine** (HELIX-2) is now underway — the workflow DSL + validator (HELIX-68)
+is in; next in that story are the DAG compiler/scheduler (HELIX-69) and workflow versioning
+(HELIX-70), then durable execution, pause/resume, and the orchestrator run API. After that:
+**MCP Integration / GitHub access**, **sandboxes**, **human approvals**, and the
+**user-facing SaaS** (auth, run dashboard) — which is where a user can run all this from a UI.
 
 ---
 
