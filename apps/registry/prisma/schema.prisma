@@ -57,16 +57,17 @@ model TokenUsage {
 }
 
 /// Long-term agent memory (HELIX-63): text chunks + their embedding vector for
-/// similarity recall. The `embedding` column is pgvector `vector(64)` — written
-/// and queried via raw SQL since Prisma has no native vector type. Dimension is
-/// fixed to the MVP HashingEmbedder; a real embedder would change it.
+/// similarity recall. The `embedding` column is pgvector `vector(1024)` — sized
+/// for the VoyageEmbedder (voyage-3.5, 1024-dim). Written/queried via raw SQL
+/// since Prisma has no native vector type. Changing the dimension requires a
+/// migration that truncates the table (vectors can't be re-cast across sizes).
 model MemoryEmbedding {
   id        String                 @id @default(uuid()) @db.Uuid
   orgId     String?                @map("org_id") @db.Text
   namespace String                 @db.Text
   content   String                 @db.Text
   metadata  Json?
-  embedding Unsupported("vector(64)")
+  embedding Unsupported("vector(1024)")
   createdAt DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([orgId, namespace])

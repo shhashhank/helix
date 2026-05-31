@@ -7,9 +7,10 @@ import { PgVectorStore } from '../pg-vector-store';
 
 const SCHEMA_PATH = resolve(__dirname, '..', '..', '..', 'prisma', 'schema.prisma');
 
-/** 64-dim one-hot vector (orthogonal vectors → cosine 0; same index → cosine 1). */
+/** 1024-dim one-hot vector (orthogonal vectors → cosine 0; same index → cosine 1). */
+const EMBEDDING_DIM = 1024;
 function oneHot(index: number): number[] {
-  const v = new Array<number>(64).fill(0);
+  const v = new Array<number>(EMBEDDING_DIM).fill(0);
   v[index] = 1;
   return v;
 }
