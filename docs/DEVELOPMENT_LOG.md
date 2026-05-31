@@ -213,8 +213,8 @@ retrieval API that ranks and cites what it finds.
   The citations let an agent show its sources rather than make claims out of thin air.
 - **Where it lives:** [../libs/agent/src/lib/retriever.ts](../libs/agent/src/lib/retriever.ts).
 
-### Story: Agent Tracing & Cost Accounting  🛠️ in progress
-A replayable record of what each run did, plus cost roll-ups — the last story in this epic.
+### Story: Agent Tracing & Cost Accounting  ✅ done
+A replayable record of what each run did, exported to standard tooling, plus cost roll-ups.
 
 #### HELIX-65 — Trace schema + writer  ✅
 - **What it is:** turns the live play-by-play of a run (the event stream) into a tidy,
@@ -238,8 +238,14 @@ A replayable record of what each run did, plus cost roll-ups — the last story 
 - **Where it lives:** [../libs/agent/src/lib/otel-trace-sink.ts](../libs/agent/src/lib/otel-trace-sink.ts)
   (export) + [correlation.ts](../libs/agent/src/lib/correlation.ts) (cross-service IDs).
 
-#### Remaining in this story  ⬜
-HELIX-67 cost roll-up jobs.
+#### HELIX-67 — Cost roll-up jobs  ✅
+- **What it is:** adds up all those per-call cost records into totals — per run, per
+  organization, and per day. Ask "what did run X cost?" or "what did org Y spend each day
+  this month?" and get tokens + dollars back.
+- **Why it matters:** the meter records every call individually; this turns that firehose
+  into the numbers billing and cost dashboards actually need. Unpriced calls are skipped so
+  totals stay honest.
+- **Where it lives:** [../apps/registry/src/token-usage/token-usage-rollup.service.ts](../apps/registry/src/token-usage/token-usage-rollup.service.ts).
 
 ---
 
@@ -282,6 +288,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-64 | Retrieval API + ranking (hybrid + citations) | ✅ | #19 |
 | HELIX-65 | Trace schema + writer (run spans) | ✅ | #20 |
 | HELIX-66 | OpenTelemetry export + correlation | ✅ | #21 |
+| HELIX-67 | Cost roll-up jobs (run/org/day totals) | ✅ | #22 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -290,17 +297,15 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 
 ## What's next
 
-Two stories are complete (**Agent Definition & Registry**, **LLM Gateway & Model Router**),
-and the **Agent Execution Runtime** is complete — the core agent loop (HELIX-58),
-budget/guardrail enforcement (HELIX-59), structured-output validation (HELIX-60), and the
-step event stream (HELIX-61) are all in. Three of the five Core Agent Platform stories are
-done, and **Agent Memory & Context Store** (HELIX-15) is now complete too — scratchpad
-(HELIX-62), pgvector similarity store (HELIX-63), and the hybrid retrieval API (HELIX-64).
-**Four of the five** Core Agent Platform stories are done, and the last — **Agent Tracing &
-Cost Accounting** (HELIX-16) — is almost done: the trace schema + writer (HELIX-65) and
-OpenTelemetry export (HELIX-66) are in; one sub-task left, **HELIX-67** cost roll-up jobs.
-After this epic come the workflow engine, GitHub access, sandboxes, human approvals, and the
-user-facing website.
+🎉 **The Core Agent Platform epic (HELIX-1) is complete** — all five stories done:
+Agent Definition & Registry, LLM Gateway & Model Router, Agent Execution Runtime, Agent
+Memory & Context Store, and Agent Tracing & Cost Accounting. An agent can now be defined,
+routed to a model, run a tool-using loop within budget, return validated output, remember
+across runs, recall by similarity, and be traced and costed end-to-end.
+
+Next epics, per the product plan: the **Workflow Engine** (chaining agents into durable
+pipelines), then **MCP Integration / GitHub access**, **sandboxes**, **human approvals**,
+and the **user-facing SaaS** (auth, run dashboard).
 
 ---
 
