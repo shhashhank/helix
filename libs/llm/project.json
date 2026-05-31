@@ -1,0 +1,7 @@
+{
+  "name": "llm",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/llm/src",
+  "projectType": "library",
+  "targets": {}
+}

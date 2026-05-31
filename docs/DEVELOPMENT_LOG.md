@@ -76,8 +76,20 @@ finished, so this story is complete.
   built yet.
 - **Where it lives:** [../apps/registry/src/prompt-template/](../apps/registry/src/prompt-template/).
 
-### Story: LLM Gateway & Model Router (Anthropic)  ⬜ not started
-The next target — the piece that actually calls the AI models.
+### Story: LLM Gateway & Model Router (Anthropic)  🛠️ in progress
+The piece that actually calls the AI models. First brick below.
+
+#### HELIX-54 — Provider adapter (Anthropic)  ✅
+- **What it is:** a single, tidy "plug" for talking to an AI model. The rest of Helix asks
+  it for a response in one common shape; the plug translates that to Anthropic's API and
+  back. Swapping in another AI vendor later means writing another plug, not changing
+  everything else.
+- **Why it matters:** it's the foundation for everything that *runs* agents. It handles
+  ordinary requests and live "streaming" replies (text arriving word-by-word), lets the
+  model use tools, and records how many tokens each call used (for cost tracking later).
+- **Where it lives:** [../libs/llm/](../libs/llm/) — the common interface in
+  [types.ts](../libs/llm/src/lib/types.ts) and the Anthropic plug in
+  [anthropic.provider.ts](../libs/llm/src/lib/anthropic.provider.ts).
 
 ### Story: Agent Execution Runtime, Memory, Tracing  ⬜ not started
 
@@ -104,6 +116,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-51 | Filing cabinet + database (storage) | ✅ | #1 |
 | HELIX-53 | Front desk (web API) | ✅ | #3 |
 | HELIX-52 | Blank-filler (prompt templates) | ✅ | #4 |
+| HELIX-54 | AI-model plug (Anthropic adapter) | ✅ | #8 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 
@@ -111,11 +124,11 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 
 ## What's next
 
-The "Agent Definition & Registry" story is done. The next brick is **HELIX-13 — LLM
-Gateway & Model Router**: the piece that actually talks to the AI models (Anthropic
-first), with consistent routing, retries, and cost tracking. After that come the agent
-loop, the workflow engine, GitHub access, sandboxes, human approvals, and the user-facing
-website.
+The "Agent Definition & Registry" story is done, and the **LLM Gateway** story is underway —
+the Anthropic model plug (HELIX-54) is in. Next in that story: **HELIX-55 — routing policy**
+(pick the right model tier per task within cost limits), then **HELIX-56 — retries/fallback**
+and **HELIX-57 — token & cost meter**. After that come the agent loop, the workflow engine,
+GitHub access, sandboxes, human approvals, and the user-facing website.
 
 ---
 
