@@ -39,6 +39,19 @@ describe('getPricing', () => {
     expect(getPricing('claude-sonnet-4-6')).toEqual({ inputPerMTok: 3, outputPerMTok: 15 });
     expect(getPricing('nope')).toBeUndefined();
   });
+
+  it('resolves dated snapshot ids by stripping the -YYYYMMDD suffix', () => {
+    // The API echoes back dated ids even when called by alias (HELIX-57 cost bug).
+    expect(getPricing('claude-haiku-4-5-20251001')).toEqual({ inputPerMTok: 1, outputPerMTok: 5 });
+    expect(getPricing('claude-sonnet-4-6-20251114')).toEqual({ inputPerMTok: 3, outputPerMTok: 15 });
+  });
+
+  it('prices a dated model id instead of returning null cost', () => {
+    // 1M haiku input @ $1/M = $1 — previously this threw / metered as null.
+    expect(
+      estimateCostUsd('claude-haiku-4-5-20251001', usage({ inputTokens: 1_000_000 })),
+    ).toBeCloseTo(1.0, 6);
+  });
 });
 
 describe('assertWithinCeiling', () => {

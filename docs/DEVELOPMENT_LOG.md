@@ -141,6 +141,11 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 - **Duplicate API-doc header fix** (PR #6) — the Swagger docs listed the `x-org-id` header
   twice on some endpoints. Fixed so each shows it once (and endpoints that ignore it don't
   list it).
+- **Cost-meter pricing fix** (PR #12) — a real Haiku test call revealed the cost meter
+  recorded **$0** (null) instead of the real cost: the AI returns a dated model name
+  (`claude-haiku-4-5-20251001`) but our price list was keyed by the short name. Now we
+  strip the date and match, so dated models price correctly. Caught only by a live call —
+  the mocked tests used the short name — so a regression test was added.
 
 ---
 
@@ -158,6 +163,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-57 | Token & cost meter (usage table) | ✅ | #11 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
+| — | Cost-meter dated-model pricing fix | ✅ | #12 |
 
 ---
 
