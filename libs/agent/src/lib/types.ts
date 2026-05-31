@@ -8,6 +8,7 @@ import type {
   LlmToolDef,
   ModelTier,
 } from '@helix/llm';
+import type { OutputValidationResult } from './output';
 
 /** A tool the model asked to call (normalized from a `tool_use` block). */
 export interface ToolCall {
@@ -36,6 +37,8 @@ export interface AgentSpec {
   effort?: Effort;
   maxTokens?: number;
   tools?: LlmToolDef[];
+  /** JSON Schema the final output is coerced + validated against (HELIX-60). */
+  outputSchema?: Record<string, unknown>;
 }
 
 export type AgentStopReason =
@@ -109,4 +112,6 @@ export interface AgentRunResult {
   breach?: GuardrailBreach;
   /** Cumulative token + estimated cost totals for the run. */
   totals: { tokens: number; costUsd: number };
+  /** Coerced + schema-validated final output, when `agent.outputSchema` is set (HELIX-60). */
+  output?: OutputValidationResult;
 }
