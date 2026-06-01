@@ -1,6 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { Client, WorkflowIdReusePolicy } from '@temporalio/client';
-import { WorkflowDefinition } from '@helix/workflow';
+import { lastValueFrom } from 'rxjs';
+import { toArray } from 'rxjs/operators';
+import { WorkflowDefinition, WorkflowProgress } from '@helix/workflow';
 import { WorkflowRunService } from '../workflow-run.service';
 
 const validDef: WorkflowDefinition = {
@@ -21,12 +23,22 @@ function mockClient() {
       closeTime: undefined,
     }),
     cancel: jest.fn().mockResolvedValue(undefined),
+    query: jest.fn(),
   };
   const start = jest.fn().mockResolvedValue(handle);
   const getHandle = jest.fn().mockReturnValue(handle);
   const client = { workflow: { start, getHandle } } as unknown as Client;
   return { client, handle, start, getHandle };
 }
+
+const progress = (over: Partial<WorkflowProgress> = {}): WorkflowProgress => ({
+  steps: {},
+  completed: [],
+  skipped: [],
+  levels: [['plan'], ['code']],
+  done: false,
+  ...over,
+});
 
 describe('WorkflowRunService', () => {
   it('start validates, dispatches executeWorkflow, and returns the ids', async () => {
@@ -80,5 +92,22 @@ describe('WorkflowRunService', () => {
     const opts = start.mock.calls[0][1];
     expect(opts.workflowId).toBe('run-1');
     expect(opts.workflowIdReusePolicy).toBe(WorkflowIdReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY);
+  });
+
+  it('streamProgress polls the query, emits only on change, and completes when done', async () => {
+    const { client, handle } = mockClient();
+    const running = progress({ completed: ['plan'] });
+    const finished = progress({ completed: ['plan', 'code'], done: true });
+    handle.query
+      .mockResolvedValueOnce(running)
+      .mockResolvedValueOnce(running) // unchanged → filtered out
+      .mockResolvedValue(finished);
+
+    const emitted = await lastValueFrom(
+      new WorkflowRunService(client).streamProgress('run-1', 5).pipe(toArray()),
+    );
+
+    expect(emitted).toEqual([running, finished]); // duplicate dropped; ends after the done snapshot
+    expect(handle.query).toHaveBeenCalledWith('workflowProgress');
   });
 });

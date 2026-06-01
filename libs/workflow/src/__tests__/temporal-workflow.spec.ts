@@ -3,7 +3,7 @@ import { Runtime, Worker } from '@temporalio/worker';
 import { WorkflowDefinition } from '../lib/types';
 import { WorkflowStepRunner } from '../lib/runner';
 import { createWorkflowWorker } from '../lib/temporal/worker';
-import { executeWorkflowRun } from '../lib/temporal/client';
+import { executeWorkflowRun, getWorkflowProgress, startWorkflowRun } from '../lib/temporal/client';
 
 /**
  * End-to-end durable execution against a real (in-memory, time-skipping) Temporal
@@ -77,5 +77,19 @@ describe('Temporal workflow — durable DAG execution', () => {
     expect(r.skipped).toEqual([]);
     expect(r.steps.code.status).toBe('failure');
     expect(r.steps.fix.ran).toBe(true);
+  }, 30_000);
+
+  it('exposes live per-step progress via query (HELIX-79)', async () => {
+    const handle = await startWorkflowRun(testEnv.client, branching(), {
+      workflowId: 'wf-progress',
+      taskQueue,
+    });
+    await handle.result();
+
+    const progress = await getWorkflowProgress(testEnv.client, 'wf-progress');
+    expect(progress.done).toBe(true);
+    expect(progress.completed.sort()).toEqual(['code', 'plan', 'review']);
+    expect(progress.skipped).toEqual(['fix']);
+    expect(progress.steps.code.status).toBe('success');
   }, 30_000);
 });

@@ -8,8 +8,8 @@
 import { Client, WorkflowHandleWithFirstExecutionRunId, WorkflowIdReusePolicy } from '@temporalio/client';
 import type { executeWorkflow } from './workflows';
 import { WorkflowDefinition } from '../types';
-import { WorkflowRunResult } from '../runner';
-import { EXECUTE_WORKFLOW_TYPE, HELIX_TASK_QUEUE } from './shared';
+import { WorkflowProgress, WorkflowRunResult } from '../runner';
+import { EXECUTE_WORKFLOW_TYPE, HELIX_TASK_QUEUE, WORKFLOW_PROGRESS_QUERY } from './shared';
 
 export interface StartWorkflowOptions {
   /** Unique id for this run — Temporal dedupes/identifies runs by it. */
@@ -66,6 +66,14 @@ export async function describeWorkflowRun(client: Client, workflowId: string): P
 /** Request cancellation of a running workflow (graceful — the workflow observes it). */
 export async function cancelWorkflowRun(client: Client, workflowId: string): Promise<void> {
   await client.workflow.getHandle(workflowId).cancel();
+}
+
+/**
+ * Read a run's live per-step progress (HELIX-79). Queries by name (no workflow-code
+ * import) so this stays worker-free; queryable on a running or completed workflow.
+ */
+export function getWorkflowProgress(client: Client, workflowId: string): Promise<WorkflowProgress> {
+  return client.workflow.getHandle(workflowId).query<WorkflowProgress, []>(WORKFLOW_PROGRESS_QUERY);
 }
 
 /**

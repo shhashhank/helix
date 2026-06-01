@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { lastValueFrom, of } from 'rxjs';
+import { toArray } from 'rxjs/operators';
 import request from 'supertest';
 import { WorkflowRunController } from '../workflow-run.controller';
 import { WorkflowRunService } from '../workflow-run.service';
@@ -8,6 +10,7 @@ const workflow = { name: 'wf', steps: [{ id: 'a', agentRole: 'x' }], edges: [] }
 
 describe('WorkflowRunController', () => {
   let app: INestApplication;
+  let controller: WorkflowRunController;
   let service: jest.Mocked<WorkflowRunService>;
 
   beforeEach(async () => {
@@ -16,6 +19,7 @@ describe('WorkflowRunController', () => {
       get: jest.fn(),
       cancel: jest.fn(),
       retry: jest.fn(),
+      streamProgress: jest.fn(),
     } as unknown as jest.Mocked<WorkflowRunService>;
 
     const moduleRef = await Test.createTestingModule({
@@ -23,6 +27,7 @@ describe('WorkflowRunController', () => {
       providers: [{ provide: WorkflowRunService, useValue: service }],
     }).compile();
 
+    controller = moduleRef.get(WorkflowRunController);
     app = moduleRef.createNestApplication();
     await app.init();
   });
@@ -62,5 +67,16 @@ describe('WorkflowRunController', () => {
       .expect(201);
     expect(res.body).toEqual({ workflowId: 'run-1', runId: 'rid-2' });
     expect(service.retry).toHaveBeenCalledWith('run-1', workflow);
+  });
+
+  it('GET /runs/:id/stream maps progress snapshots to SSE message events', async () => {
+    const p1 = { steps: {}, completed: ['plan'], skipped: [], levels: [['plan']], done: false };
+    const p2 = { steps: {}, completed: ['plan'], skipped: [], levels: [['plan']], done: true };
+    service.streamProgress.mockReturnValue(of(p1, p2));
+
+    const events = await lastValueFrom(controller.stream('run-1').pipe(toArray()));
+
+    expect(events).toEqual([{ data: p1 }, { data: p2 }]);
+    expect(service.streamProgress).toHaveBeenCalledWith('run-1');
   });
 });

@@ -38,6 +38,19 @@ export interface WorkflowRunResult {
   levels: string[][];
 }
 
+/** A live snapshot of run progress, emitted as steps finish (HELIX-79). */
+export interface WorkflowProgress {
+  steps: Record<string, StepOutcome>;
+  completed: string[];
+  skipped: string[];
+  levels: string[][];
+  /** True once the whole run has finished (set by the caller after {@link runWorkflow} returns). */
+  done: boolean;
+}
+
+/** Called after each step settles, with a snapshot of progress so far (`done: false`). */
+export type ProgressObserver = (progress: WorkflowProgress) => void;
+
 /** An incoming edge's condition is met only if the parent actually ran with a matching outcome. */
 function conditionMet(when: EdgeCondition | undefined, parent: StepOutcome | undefined): boolean {
   if (!parent || !parent.ran) return false;
@@ -63,6 +76,7 @@ function conditionMet(when: EdgeCondition | undefined, parent: StepOutcome | und
 export async function runWorkflow(
   def: WorkflowDefinition,
   runner: WorkflowStepRunner,
+  onProgress?: ProgressObserver,
 ): Promise<WorkflowRunResult> {
   const plan = compileWorkflow(def);
   const stepById = new Map(def.steps.map((s) => [s.id, s]));
@@ -71,6 +85,17 @@ export async function runWorkflow(
   for (const e of def.edges) incoming.get(e.to)!.push({ from: e.from, when: e.when });
 
   const outcomes: Record<string, StepOutcome> = {};
+  const emit = () => {
+    if (!onProgress) return;
+    const all = Object.values(outcomes);
+    onProgress({
+      steps: { ...outcomes },
+      completed: all.filter((o) => o.ran).map((o) => o.id),
+      skipped: all.filter((o) => !o.ran).map((o) => o.id),
+      levels: plan.levels,
+      done: false,
+    });
+  };
 
   for (const level of plan.levels) {
     await Promise.all(
@@ -79,6 +104,7 @@ export async function runWorkflow(
         const eligible = inc.length === 0 || inc.some((e) => conditionMet(e.when, outcomes[e.from]));
         if (!eligible) {
           outcomes[id] = { id, ran: false };
+          emit();
           return;
         }
         const results: Record<string, StepRunResult> = {};
@@ -91,6 +117,7 @@ export async function runWorkflow(
         } catch (err) {
           outcomes[id] = { id, ran: true, status: 'failure', error: err instanceof Error ? err.message : String(err) };
         }
+        emit();
       }),
     );
   }

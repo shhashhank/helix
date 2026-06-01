@@ -13,6 +13,9 @@ export const HELIX_TASK_QUEUE = 'helix-workflows';
 /** Registered name of the DAG-executing workflow (the `executeWorkflow` function). */
 export const EXECUTE_WORKFLOW_TYPE = 'executeWorkflow';
 
+/** Query name a running DAG workflow answers with its live per-step {@link WorkflowProgress}. */
+export const WORKFLOW_PROGRESS_QUERY = 'workflowProgress';
+
 /** Input to the per-step activity: the step to run plus the prior-results context. */
 export interface RunStepInput {
   step: WorkflowStep;

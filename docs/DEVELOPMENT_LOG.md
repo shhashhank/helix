@@ -253,7 +253,7 @@ A replayable record of what each run did, exported to standard tooling, plus cos
 
 ---
 
-## Epic: Workflow Engine  🛠️ in progress
+## Epic: Workflow Engine  ✅ done
 
 Chaining agents into multi-step pipelines (e.g. plan → code → review), defined as a graph.
 
@@ -432,7 +432,7 @@ Per-step control over what happens when a step errors.
 ✅ **Story complete** — Retries (HELIX-20): configurable per-step retries with backoff and
 retryable-error classification.
 
-### Story: Workflow Orchestrator API & Status  🛠️ in progress
+### Story: Workflow Orchestrator API & Status  ✅ done
 The first **user-facing** surface for the engine — an HTTP API to drive workflow runs.
 
 #### HELIX-78 — Run lifecycle API  ✅
@@ -449,7 +449,31 @@ The first **user-facing** surface for the engine — an HTTP API to drive workfl
   [workflow-run.service.ts](../apps/orchestrator/src/workflow-run/workflow-run.service.ts), over a
   Temporal client. The client-only helpers live behind a worker-free entrypoint
   `@helix/workflow/temporal-client` so the API never loads the heavy worker runtime.
-  Next in this story: a **live status stream** (SSE/WebSocket) pushing per-step transitions (HELIX-79).
+
+#### HELIX-79 — Live status stream (SSE)  ✅
+- **What it is:** a **`GET /api/runs/:id/stream`** endpoint that streams a run's **per-step progress
+  live** (Server-Sent Events) — which steps have completed, which were skipped, and when the whole
+  run finishes — so a UI can watch a workflow unfold instead of repeatedly asking "are we there yet?".
+- **Why it matters:** it's what makes the engine feel *alive* to a user. Combined with the lifecycle
+  API (HELIX-78), a person can now start a run **and watch it progress step-by-step** in real time —
+  the full "kick it off and watch it" experience the story set out to deliver.
+- **How it works (plain words):** the running workflow keeps a little live scoreboard of its steps and
+  answers a "what's your progress?" question (a Temporal *query*). The orchestrator checks that
+  scoreboard on a short interval, sends an update only when something actually changed, and closes the
+  stream once the run is done. (We chose this over a heavier message-bus because it needs no extra
+  infrastructure and works across the separate API and worker processes.)
+- **Where it lives:** the per-step scoreboard + query in
+  [../libs/workflow/src/lib/runner.ts](../libs/workflow/src/lib/runner.ts) (`WorkflowProgress`) and
+  [temporal/workflows.ts](../libs/workflow/src/lib/temporal/workflows.ts); the SSE endpoint in
+  [../apps/orchestrator/src/workflow-run/workflow-run.controller.ts](../apps/orchestrator/src/workflow-run/workflow-run.controller.ts)
+  + `streamProgress` in the service.
+
+✅ **Story complete** — Workflow Orchestrator API & Status (HELIX-21): start/cancel/retry/get
+(HELIX-78) plus a live per-step SSE stream (HELIX-79).
+
+🎉 **Epic complete — Workflow Engine (HELIX-2).** All five stories done: define & run a DAG
+(HELIX-17), durable execution on Temporal (HELIX-18), human-in-the-loop pause/resume (HELIX-19),
+per-step retries (HELIX-20), and a user-facing orchestrator API with live status (HELIX-21).
 
 ---
 
@@ -512,6 +536,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-76 | Resume-on-decision handler (deliver the answer) | ✅ | #33 |
 | HELIX-77 | Per-step retry policy (backoff + classification) | ✅ | #34 |
 | HELIX-78 | Run lifecycle API (start/get/cancel/retry) | ✅ | #35 |
+| HELIX-79 | Live per-step status stream (SSE) | ✅ | #37 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -537,13 +562,17 @@ the **Durable Execution & State Persistence** story is ✅ done. The third story
 **Human-in-the-Loop Pause/Resume** (HELIX-19) and **Retries** (HELIX-20) are ✅ done: a workflow
 durably pauses for approval (HELIX-74), announces it (HELIX-75), resumes on the delivered decision
 (HELIX-76), and each step carries a configurable retry policy with backoff + retryable-error
-classification (HELIX-77). The **last story in the epic** — the **Workflow Orchestrator API &
-Status** (HELIX-21) — is now in progress: a new `orchestrator` service exposes a run lifecycle API
-(start/get/cancel/retry, HELIX-78), with a live per-step status stream (SSE/WebSocket, HELIX-79)
-still to come. This is the first point a user can kick off and watch a workflow run. After that:
-**MCP Integration / GitHub access**, **sandboxes**,
-**human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
-all this from a UI.
+classification (HELIX-77). The **last story** — the **Workflow Orchestrator API & Status**
+(HELIX-21) — is ✅ done too: a new `orchestrator` service exposes a run lifecycle API
+(start/get/cancel/retry, HELIX-78) plus a live per-step SSE stream (HELIX-79), so a user can kick
+off a run and watch it unfold.
+
+🎉 **That completes the Workflow Engine epic (HELIX-2)** — and with the Core Agent Platform epic
+(HELIX-1) before it, Helix can now define agents, run a tool-using agent loop within budget,
+remember/recall context, trace + cost runs, and chain agents into durable, human-gated,
+retrying multi-step workflows you can drive and watch over HTTP. **Next up:** **MCP Integration /
+GitHub access**, **sandboxes**, **human approvals**, and the **user-facing SaaS** (auth, run
+dashboard) — where all of this gets a real UI.
 
 ---
 
