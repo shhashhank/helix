@@ -468,6 +468,14 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
   (`claude-haiku-4-5-20251001`) but our price list was keyed by the short name. Now we
   strip the date and match, so dated models price correctly. Caught only by a live call —
   the mocked tests used the short name — so a regression test was added.
+- **Orchestrator deploy-deps prune** (PR #36) — the orchestrator's generated production
+  `package.json` was over-listing the whole `@temporalio` set (worker/workflow/activity),
+  because Nx rolls up its `@helix/workflow` dependency at the *project* level even though the
+  service only ever loads `@temporalio/client`. A small build-time plugin now prunes those
+  unused packages from the deploy manifest (only when the bundle genuinely doesn't require
+  them), so production no longer installs the heavyweight native worker. (A full lib split was
+  ruled out: the pure DAG core is bundled into the Temporal workflow sandbox via relative
+  imports, so extracting it would break the workflow bundler.) Runtime behavior is unchanged.
 
 ---
 
