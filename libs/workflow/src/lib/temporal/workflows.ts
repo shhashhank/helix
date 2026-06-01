@@ -5,14 +5,18 @@
  * API — no I/O, no `Date.now`, no randomness. The actual step work happens in
  * activities (see {@link ./activities}), which run in the normal Node runtime.
  */
-import { ActivityOptions, proxyActivities } from '@temporalio/workflow';
+import { ActivityOptions, defineQuery, proxyActivities, setHandler } from '@temporalio/workflow';
 import type { Duration } from '@temporalio/common';
 import type { StepActivities } from './activities';
 import type { ApprovalActivities } from './approval-activities';
 import { WorkflowDefinition, WorkflowStep } from '../types';
 import { ApprovalRequest } from '../approval-request';
-import { runWorkflow, WorkflowRunResult } from '../runner';
+import { runWorkflow, WorkflowProgress, WorkflowRunResult } from '../runner';
 import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval';
+import { WORKFLOW_PROGRESS_QUERY } from './shared';
+
+/** Live per-step progress, queryable on a running (or completed) DAG workflow (HELIX-79). */
+export const workflowProgressQuery = defineQuery<WorkflowProgress>(WORKFLOW_PROGRESS_QUERY);
 
 /**
  * Activity proxy. `startToCloseTimeout` bounds a single step; the retry policy
@@ -51,11 +55,24 @@ const { emitApprovalRequest } = proxyActivities<ApprovalActivities>({
  * checkpointed and resumes from the last completed step after a crash/restart.
  */
 export async function executeWorkflow(def: WorkflowDefinition): Promise<WorkflowRunResult> {
-  return runWorkflow(def, (step, ctx) => {
-    // Each step gets an activity proxy configured with its own retry policy.
-    const { runStep } = proxyActivities<StepActivities>(stepActivityOptions(step));
-    return runStep({ step, ctx });
-  });
+  // Live progress, updated as each step settles and served via a query (HELIX-79).
+  let progress: WorkflowProgress = { steps: {}, completed: [], skipped: [], levels: [], done: false };
+  setHandler(workflowProgressQuery, () => progress);
+
+  const result = await runWorkflow(
+    def,
+    (step, ctx) => {
+      // Each step gets an activity proxy configured with its own retry policy.
+      const { runStep } = proxyActivities<StepActivities>(stepActivityOptions(step));
+      return runStep({ step, ctx });
+    },
+    (p) => {
+      progress = p;
+    },
+  );
+
+  progress = { ...result, done: true };
+  return result;
 }
 
 /**

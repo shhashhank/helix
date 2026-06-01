@@ -1,5 +1,7 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, MessageEvent, Param, Post, Sse } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { WorkflowDefinition } from '@helix/workflow';
 import { RunStatusDto, RetryRunDto, StartRunDto, StartedRunDto } from './dto/workflow-run.dto';
 import { WorkflowRunService } from './workflow-run.service';
@@ -21,6 +23,12 @@ export class WorkflowRunController {
   @ApiOkResponse({ type: RunStatusDto })
   get(@Param('id') id: string): Promise<RunStatusDto> {
     return this.service.get(id);
+  }
+
+  @Sse(':id/stream')
+  @ApiOperation({ summary: 'Live per-step status stream (Server-Sent Events)' })
+  stream(@Param('id') id: string): Observable<MessageEvent> {
+    return this.service.streamProgress(id).pipe(map((progress): MessageEvent => ({ data: progress })));
   }
 
   @Post(':id/cancel')
