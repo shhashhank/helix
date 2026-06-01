@@ -86,6 +86,24 @@ describe('validateWorkflow', () => {
     expect(codes(def)).toContain('INVALID_CONDITION');
   });
 
+  it('flags an invalid per-step retry policy', () => {
+    expect(
+      codes(wf({ steps: [{ id: 'a', agentRole: 'x', retry: { maximumAttempts: 0 } }], edges: [] })),
+    ).toContain('INVALID_RETRY_POLICY');
+    expect(
+      codes(wf({ steps: [{ id: 'a', agentRole: 'x', retry: { backoffCoefficient: 0.5 } }], edges: [] })),
+    ).toContain('INVALID_RETRY_POLICY');
+    // a valid retry policy is accepted
+    expect(
+      validateWorkflow(
+        wf({
+          steps: [{ id: 'a', agentRole: 'x', retry: { maximumAttempts: 5, backoffCoefficient: 2 } }],
+          edges: [],
+        }),
+      ).valid,
+    ).toBe(true);
+  });
+
   it('detects a cycle', () => {
     const def = wf({
       edges: [

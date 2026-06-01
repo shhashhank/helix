@@ -5,10 +5,11 @@
  * API — no I/O, no `Date.now`, no randomness. The actual step work happens in
  * activities (see {@link ./activities}), which run in the normal Node runtime.
  */
-import { proxyActivities } from '@temporalio/workflow';
+import { ActivityOptions, proxyActivities } from '@temporalio/workflow';
+import type { Duration } from '@temporalio/common';
 import type { StepActivities } from './activities';
 import type { ApprovalActivities } from './approval-activities';
-import { WorkflowDefinition } from '../types';
+import { WorkflowDefinition, WorkflowStep } from '../types';
 import { ApprovalRequest } from '../approval-request';
 import { runWorkflow, WorkflowRunResult } from '../runner';
 import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval';
@@ -18,10 +19,23 @@ import { ApprovalResult, AwaitApprovalOptions, awaitApproval } from './approval'
  * covers transient/technical failures. A *business* failure is returned (not
  * thrown) by the activity, so it isn't retried — see {@link createStepActivities}.
  */
-const { runStep } = proxyActivities<StepActivities>({
-  startToCloseTimeout: '10 minutes',
-  retry: { maximumAttempts: 3 },
-});
+/**
+ * Build the Temporal activity options for a step from its {@link WorkflowStep.retry}
+ * policy (HELIX-77): max attempts, backoff, and retryable-error classification.
+ * Defaults to 3 attempts and a 10-minute per-attempt timeout when unset.
+ */
+function stepActivityOptions(step: WorkflowStep): ActivityOptions {
+  return {
+    startToCloseTimeout: (step.startToCloseTimeout ?? '10 minutes') as Duration,
+    retry: {
+      maximumAttempts: step.retry?.maximumAttempts ?? 3,
+      initialInterval: step.retry?.initialInterval as Duration | undefined,
+      backoffCoefficient: step.retry?.backoffCoefficient,
+      maximumInterval: step.retry?.maximumInterval as Duration | undefined,
+      nonRetryableErrorTypes: step.retry?.nonRetryableErrorTypes,
+    },
+  };
+}
 
 /** Publishing the approval request is a quick, retryable side effect. */
 const { emitApprovalRequest } = proxyActivities<ApprovalActivities>({
@@ -37,7 +51,11 @@ const { emitApprovalRequest } = proxyActivities<ApprovalActivities>({
  * checkpointed and resumes from the last completed step after a crash/restart.
  */
 export async function executeWorkflow(def: WorkflowDefinition): Promise<WorkflowRunResult> {
-  return runWorkflow(def, (step, ctx) => runStep({ step, ctx }));
+  return runWorkflow(def, (step, ctx) => {
+    // Each step gets an activity proxy configured with its own retry policy.
+    const { runStep } = proxyActivities<StepActivities>(stepActivityOptions(step));
+    return runStep({ step, ctx });
+  });
 }
 
 /**

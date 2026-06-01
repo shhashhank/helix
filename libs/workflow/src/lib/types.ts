@@ -8,6 +8,24 @@
 /** Which prior-step outcome lets an edge fire. */
 export type EdgeCondition = 'always' | 'success' | 'failure';
 
+/**
+ * Per-step retry policy (HELIX-77). The durable Temporal runner maps this onto an
+ * activity retry policy; the in-process runner ignores it. Durations are a number
+ * of milliseconds or a duration string like `'1s'` / `'30s'`.
+ */
+export interface StepRetryPolicy {
+  /** Max attempts including the first (integer ≥ 1). Default 3. */
+  maximumAttempts?: number;
+  /** Delay before the first retry. */
+  initialInterval?: string | number;
+  /** Multiplier applied to the delay between retries (≥ 1). Default 2. */
+  backoffCoefficient?: number;
+  /** Upper bound on the retry delay. */
+  maximumInterval?: string | number;
+  /** Error `type`s that must NOT be retried (fail fast) — retryable-error classification. */
+  nonRetryableErrorTypes?: string[];
+}
+
 export interface WorkflowStep {
   /** Unique within the workflow; referenced by edges. */
   id: string;
@@ -17,6 +35,10 @@ export interface WorkflowStep {
   name?: string;
   /** Optional static config passed to the step at run time. */
   config?: Record<string, unknown>;
+  /** Per-step retry policy (HELIX-77), honored by the durable Temporal runner. */
+  retry?: StepRetryPolicy;
+  /** Max wall-clock for a single attempt of this step (e.g. `'10m'`). Default 10 minutes. */
+  startToCloseTimeout?: string | number;
 }
 
 export interface WorkflowEdge {
@@ -55,6 +77,7 @@ export type WorkflowErrorCode =
   | 'SELF_EDGE'
   | 'DUPLICATE_EDGE'
   | 'INVALID_CONDITION'
+  | 'INVALID_RETRY_POLICY'
   | 'NO_ENTRY_STEP'
   | 'CYCLE';
 
