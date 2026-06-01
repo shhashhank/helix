@@ -563,6 +563,11 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
   runs started via the orchestrator API actually execute so you can watch them progress over
   SSE. Steps written up in [LOCAL_TESTING.md](LOCAL_TESTING.md). (Real per-role agent execution
   is still to come with the agent epics.)
+- **Architecture-diagram upkeep** (PR #43) — [ARCHITECTURE.md](ARCHITECTURE.md) is now kept
+  current the same way the dev log is: the `helix-pr` skill refreshes it inside each sub-task's PR
+  when a component/wiring/status changes, and a SessionStart drift hook
+  (`.claude/hooks/check-architecture-drift.sh`) nags if any `libs/*` or `apps/*` component is
+  missing from the diagram. Detect-and-remind only; the diagram is always updated by Claude.
 
 ---
 
