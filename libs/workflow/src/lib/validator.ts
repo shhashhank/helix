@@ -83,6 +83,18 @@ export function validateWorkflow(def: WorkflowDefinition): WorkflowValidationRes
     if (!step.agentRole || !step.agentRole.trim()) {
       add('EMPTY_AGENT_ROLE', `step "${step.id}" is missing an agentRole`, step.id);
     }
+    const r = step.retry;
+    if (r) {
+      if (
+        r.maximumAttempts !== undefined &&
+        (!Number.isInteger(r.maximumAttempts) || r.maximumAttempts < 1)
+      ) {
+        add('INVALID_RETRY_POLICY', `step "${step.id}" maximumAttempts must be an integer >= 1`, step.id);
+      }
+      if (r.backoffCoefficient !== undefined && r.backoffCoefficient < 1) {
+        add('INVALID_RETRY_POLICY', `step "${step.id}" backoffCoefficient must be >= 1`, step.id);
+      }
+    }
   }
 
   const edgeKeys = new Set<string>();
