@@ -10,6 +10,9 @@ import { WorkflowRunContext } from '../runner';
 /** Default Temporal task queue that Helix workflow workers poll. */
 export const HELIX_TASK_QUEUE = 'helix-workflows';
 
+/** Registered name of the DAG-executing workflow (the `executeWorkflow` function). */
+export const EXECUTE_WORKFLOW_TYPE = 'executeWorkflow';
+
 /** Input to the per-step activity: the step to run plus the prior-results context. */
 export interface RunStepInput {
   step: WorkflowStep;

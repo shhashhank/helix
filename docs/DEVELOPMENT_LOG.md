@@ -432,6 +432,25 @@ Per-step control over what happens when a step errors.
 ✅ **Story complete** — Retries (HELIX-20): configurable per-step retries with backoff and
 retryable-error classification.
 
+### Story: Workflow Orchestrator API & Status  🛠️ in progress
+The first **user-facing** surface for the engine — an HTTP API to drive workflow runs.
+
+#### HELIX-78 — Run lifecycle API  ✅
+- **What it is:** a real web API (a new **`orchestrator`** service) to **start, check, cancel, and
+  retry** workflow runs. `POST /api/runs` starts a run from a workflow definition; `GET /api/runs/:id`
+  reports its status (running/completed/failed/…); `POST /api/runs/:id/cancel` stops it;
+  `POST /api/runs/:id/retry` re-runs a failed one. There's Swagger docs at `/api/docs`.
+- **Why it matters:** until now the whole engine was usable only from code and tests. This is the
+  first point a **person (or a UI)** can actually kick off and manage a run over HTTP — the bridge
+  from "library" to "product". It validates the workflow at the door (bad definitions get a 400)
+  and talks to Temporal as a client, so it stays a thin, stateless front door over the durable engine.
+- **Where it lives:** the new [../apps/orchestrator/](../apps/orchestrator/) app —
+  [workflow-run.controller.ts](../apps/orchestrator/src/workflow-run/workflow-run.controller.ts) +
+  [workflow-run.service.ts](../apps/orchestrator/src/workflow-run/workflow-run.service.ts), over a
+  Temporal client. The client-only helpers live behind a worker-free entrypoint
+  `@helix/workflow/temporal-client` so the API never loads the heavy worker runtime.
+  Next in this story: a **live status stream** (SSE/WebSocket) pushing per-step transitions (HELIX-79).
+
 ---
 
 ## Fixes & hardening
@@ -484,6 +503,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-75 | Approval request emitter (announce sign-off) | ✅ | #32 |
 | HELIX-76 | Resume-on-decision handler (deliver the answer) | ✅ | #33 |
 | HELIX-77 | Per-step retry policy (backoff + classification) | ✅ | #34 |
+| HELIX-78 | Run lifecycle API (start/get/cancel/retry) | ✅ | #35 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -509,8 +529,10 @@ the **Durable Execution & State Persistence** story is ✅ done. The third story
 **Human-in-the-Loop Pause/Resume** (HELIX-19) and **Retries** (HELIX-20) are ✅ done: a workflow
 durably pauses for approval (HELIX-74), announces it (HELIX-75), resumes on the delivered decision
 (HELIX-76), and each step carries a configurable retry policy with backoff + retryable-error
-classification (HELIX-77). The **last story in the epic** is the **Workflow Orchestrator API &
-Status** (HELIX-21) — the first point a user can kick off and watch a workflow run. After that:
+classification (HELIX-77). The **last story in the epic** — the **Workflow Orchestrator API &
+Status** (HELIX-21) — is now in progress: a new `orchestrator` service exposes a run lifecycle API
+(start/get/cancel/retry, HELIX-78), with a live per-step status stream (SSE/WebSocket, HELIX-79)
+still to come. This is the first point a user can kick off and watch a workflow run. After that:
 **MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
 all this from a UI.
