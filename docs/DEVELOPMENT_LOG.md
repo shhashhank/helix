@@ -500,8 +500,23 @@ Connecting to MCP servers and discovering the tools they offer.
   (in-memory for tests, a subprocess for a real server), verified with an in-memory MCP server.
 - **Note:** the MCP SDK is ESM-first, so this lib type-checks with `moduleResolution: bundler`
   and runs as CommonJS (loading the SDK's CJS build) — keeping it consistent with the rest of the
-  workspace. Next in this story: a **server registry + health checks** (HELIX-81) and **tool
-  catalog sync** (HELIX-82).
+  workspace.
+
+#### HELIX-81 — Server registry + health checks  ✅
+- **What it is:** a **directory of the MCP tool servers** the platform knows about. You can
+  register a server (how to reach it — a local command or a URL), **enable/disable** it, and
+  **health-check** it: the registry connects (using the HELIX-80 client) and lists the server's
+  tools — healthy if that works (with a tool count), unhealthy if it can't connect, "disabled" if
+  it's been turned off.
+- **Why it matters:** before agents can use tools, the platform needs to know *which* tool servers
+  exist and *whether they're alive*. The enable/disable switch is an operator's kill switch, and
+  the liveness probe means a dead server is spotted up front rather than mid-run.
+- **Where it lives:** [../libs/mcp/src/registry.ts](../libs/mcp/src/registry.ts) — `McpServerRegistry`
+  (register/list/get/enable/disable/remove + `healthCheck`/`healthCheckAll`). How to *connect* to a
+  server is an injected `McpServerConnector` (so the logic is testable without spawning real
+  servers); a `createDefaultConnector` builds real stdio/HTTP transports for production.
+  Next in this story: **tool catalog sync** (HELIX-82) — surfacing the discovered tool schemas to
+  the agent runtime.
 
 ---
 
@@ -572,6 +587,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-78 | Run lifecycle API (start/get/cancel/retry) | ✅ | #35 |
 | HELIX-79 | Live per-step status stream (SSE) | ✅ | #37 |
 | HELIX-80 | MCP client (handshake/discovery/invoke) | ✅ | #39 |
+| HELIX-81 | MCP server registry + health checks | ✅ | #40 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -605,10 +621,10 @@ off a run and watch it unfold.
 With the Core Agent Platform (HELIX-1) and Workflow Engine (HELIX-2) epics done, Helix can
 define agents, run a tool-using agent loop within budget, remember/recall context, trace + cost
 runs, and chain agents into durable, human-gated, retrying multi-step workflows you can drive and
-watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — the MCP client is in
-(HELIX-80), with the server registry + health checks (HELIX-81) and tool-catalog sync (HELIX-82)
-next, then tool permissioning (HELIX-23), the GitHub MCP server (HELIX-24), and the secrets vault
-(HELIX-25). After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
+watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — the MCP client
+(HELIX-80) and the server registry + health checks (HELIX-81) are in, with tool-catalog sync
+(HELIX-82) next to finish the registry story, then tool permissioning (HELIX-23), the GitHub MCP
+server (HELIX-24), and the secrets vault (HELIX-25). After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
 ---
