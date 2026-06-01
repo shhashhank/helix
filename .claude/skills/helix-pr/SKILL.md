@@ -42,6 +42,19 @@ KEY=$(git branch --show-current | grep -oE '^HELIX-[0-9]+')
 git add docs/DEVELOPMENT_LOG.md && git commit -q -m "docs: log ${KEY} in DEVELOPMENT_LOG"
 ```
 
+### 1b. Keep the architecture diagram current (when it changed)
+
+`docs/ARCHITECTURE.md` is the at-a-glance system diagram, guarded by the SessionStart hook `.claude/hooks/check-architecture-drift.sh` (it nags whenever a `libs/*` or `apps/*` component is missing from the doc). If this sub-task changed the architecture, refresh it in this same PR:
+
+- **New or rewired component** — a new `libs/*` or `apps/*` (library/service), a new external system/dependency, or new cross-component wiring → update the relevant Mermaid diagram (and the "Where each piece lives" map) so the new component and its connections appear. Keep the solid = built / dashed = planned convention.
+- **Status change** — if this sub-task finishes a story or epic, flip it in the build-status table.
+- If the change was purely internal (no new component, wiring, or status change), no diagram edit is needed — the drift hook only checks that every `libs/*` and `apps/*` component appears somewhere in the doc.
+- Commit any change on the branch (skip if nothing changed):
+
+```bash
+git add docs/ARCHITECTURE.md && git commit -q -m "docs: update ARCHITECTURE for ${KEY}"
+```
+
 ### 2. Push the branch
 
 ```bash

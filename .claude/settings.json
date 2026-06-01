@@ -20,7 +20,17 @@
       "Bash(python3 -m json.tool .claude/settings.json)",
       "Bash(python3 -c \"import json; d=json.load\\(open\\('.claude/settings.json'\\)\\); print\\('SessionStart hook registered:', d['hooks']['SessionStart'][0]['hooks'][0]['command']\\)\")",
       "Edit(/.claude/skills/helix-pr/**)",
-      "Edit(/.claude/skills/helix-merge/**)"
+      "Edit(/.claude/skills/helix-merge/**)",
+      "Bash(curl -s -H 'Authorization: Bearer __TRACKED_VAR__' __TRACKED_VAR__/issue/HELIX-13?fields=summary,status)",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);[print\\(f\\\\\"{i['key']:10} {i['fields']['status']['name']:13} {i['fields']['priority']['name']:8} {i['fields']['summary']}\\\\\"\\) for i in d.get\\('issues',[]\\)]\")",
+      "Bash(curl -s -o /dev/null -w 'HELIX-54 In Progress HTTP %{http_code}\\\\n' -X POST -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' __TRACKED_VAR__/issue/HELIX-54/transitions -d '{\"transition\":{\"id\":\"21\"}}')",
+      "Bash(curl -s -o /dev/null -w 'HELIX-13 In Progress HTTP %{http_code}\\\\n' -X POST -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' __TRACKED_VAR__/issue/HELIX-13/transitions -d '{\"transition\":{\"id\":\"21\"}}')",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Bash(node -e \"const d={...require\\('./package.json'\\).dependencies,...require\\('./package.json'\\).devDependencies}; console.log\\('@nx/js', d['@nx/js']||'MISSING'\\); console.log\\('@anthropic-ai/sdk', d['@anthropic-ai/sdk']||'MISSING'\\)\")",
+      "Bash(echo \"lib exit: $?\")",
+      "Bash(git status *)",
+      "Bash(git commit *)"
     ],
     "additionalDirectories": [
       "/Users/shashankshekhar/softwareDevelopment/helix/.claude"
@@ -33,6 +43,10 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-devlog-drift.sh\""
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-architecture-drift.sh\""
           }
         ]
       }
