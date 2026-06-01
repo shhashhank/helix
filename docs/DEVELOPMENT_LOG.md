@@ -412,6 +412,26 @@ Letting a workflow stop and wait for a person to approve a risky action before c
 approval (HELIX-74), announces it (HELIX-75), and resumes when a human's decision is delivered back
 in (HELIX-76).
 
+### Story: Retries (minimal)  ✅ done
+Per-step control over what happens when a step errors.
+
+#### HELIX-77 — Per-step retry policy  ✅
+- **What it is:** each step in a workflow can now carry its own **retry policy** — how many times
+  to retry, how long to wait between tries (and how fast that delay grows), and **which errors
+  shouldn't be retried at all**. So a flaky network step can retry a few times with backoff, while
+  a "bad input" error fails immediately instead of pointlessly retrying.
+- **Why it matters:** retries are the difference between a transient blip and a failed run — but
+  blindly retrying *everything* wastes time and money (and can repeat a bad request). Per-step
+  control + retryable-error classification lets each step be as patient or as strict as it should
+  be. The durable engine (Temporal) enforces the policy, with backoff timers that survive crashes.
+- **Where it lives:** `StepRetryPolicy` on a step in
+  [../libs/workflow/src/lib/types.ts](../libs/workflow/src/lib/types.ts) (validated in
+  [validator.ts](../libs/workflow/src/lib/validator.ts)), mapped onto Temporal's activity retry in
+  [temporal/workflows.ts](../libs/workflow/src/lib/temporal/workflows.ts) (a per-step activity proxy).
+
+✅ **Story complete** — Retries (HELIX-20): configurable per-step retries with backoff and
+retryable-error classification.
+
 ---
 
 ## Fixes & hardening
@@ -463,6 +483,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-74 | Pause/await-signal primitive (human approval) | ✅ | #31 |
 | HELIX-75 | Approval request emitter (announce sign-off) | ✅ | #32 |
 | HELIX-76 | Resume-on-decision handler (deliver the answer) | ✅ | #33 |
+| HELIX-77 | Per-step retry policy (backoff + classification) | ✅ | #34 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -485,11 +506,12 @@ run on **Temporal** (HELIX-71), so a run survives a crash and resumes from its l
 step; a retried step won't repeat its side effects (**idempotency keys**, HELIX-72); and a
 crash-recovery test proves a killed worker resumes from the last checkpoint (HELIX-73) — so
 the **Durable Execution & State Persistence** story is ✅ done. The third story —
-**Human-in-the-Loop Pause/Resume** (HELIX-19) — is ✅ done: a workflow durably pauses for
-approval (HELIX-74), announces it (HELIX-75), and resumes when the human's decision is delivered
-back in (HELIX-76). Remaining in this epic: **Retries** (HELIX-20) and the **Workflow
-Orchestrator API & Status** (HELIX-21) — the first point a user can kick off and watch a
-workflow run. After that: **MCP Integration / GitHub access**, **sandboxes**,
+**Human-in-the-Loop Pause/Resume** (HELIX-19) and **Retries** (HELIX-20) are ✅ done: a workflow
+durably pauses for approval (HELIX-74), announces it (HELIX-75), resumes on the delivered decision
+(HELIX-76), and each step carries a configurable retry policy with backoff + retryable-error
+classification (HELIX-77). The **last story in the epic** is the **Workflow Orchestrator API &
+Status** (HELIX-21) — the first point a user can kick off and watch a workflow run. After that:
+**MCP Integration / GitHub access**, **sandboxes**,
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where a user runs
 all this from a UI.
 
