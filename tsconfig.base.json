@@ -18,7 +18,8 @@
       "@helix/llm": ["libs/llm/src/index.ts"],
       "@helix/agent": ["libs/agent/src/index.ts"],
       "@helix/workflow": ["libs/workflow/src/index.ts"],
-      "@helix/workflow/temporal-client": ["libs/workflow/src/temporal-client.ts"]
+      "@helix/workflow/temporal-client": ["libs/workflow/src/temporal-client.ts"],
+      "@helix/mcp": ["libs/mcp/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
