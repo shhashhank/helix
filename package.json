@@ -4,7 +4,10 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "nx": "nx"
+    "nx": "nx",
+    "dev:registry": "nx serve registry",
+    "dev:orchestrator": "nx serve orchestrator",
+    "dev:worker": "node -r @swc-node/register libs/workflow/src/dev-worker.ts"
   },
   "devDependencies": {
     "@nestjs/schematics": "^11.0.0",
