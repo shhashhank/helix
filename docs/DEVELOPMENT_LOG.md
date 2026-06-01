@@ -477,6 +477,34 @@ per-step retries (HELIX-20), and a user-facing orchestrator API with live status
 
 ---
 
+## Epic: MCP Integration Layer  🛠️ in progress
+
+The governed layer that lets agents use external tools (GitHub, etc.) through the **Model
+Context Protocol (MCP)** — so agents can actually *do* things, not just think.
+
+### Story: MCP Client & Server Registry  🛠️ in progress
+Connecting to MCP servers and discovering the tools they offer.
+
+#### HELIX-80 — MCP client implementation  ✅
+- **What it is:** the piece that **talks to an MCP server** — it connects (the "handshake"),
+  **asks what tools the server offers** (discovery), and **calls a tool** with arguments
+  (invocation), handing back the result. Think of it as a universal adapter: any tool server
+  that speaks MCP (GitHub, a filesystem, a database…) can be plugged in through this one client.
+- **Why it matters:** it's the doorway from "an agent decided to use a tool" to "the tool
+  actually ran". Everything in this epic — the GitHub tools, permissioning, the tool catalog —
+  builds on having a reliable client. Tool *failures* come back as a flagged result (so the agent
+  can react), while connection/protocol problems are raised as errors.
+- **Where it lives:** [../libs/mcp/](../libs/mcp/) (`@helix/mcp`) — `HelixMcpClient`
+  ([client.ts](../libs/mcp/src/client.ts)) wrapping the official `@modelcontextprotocol/sdk`,
+  with a small Helix-facing shape ([types.ts](../libs/mcp/src/types.ts)). It's transport-agnostic
+  (in-memory for tests, a subprocess for a real server), verified with an in-memory MCP server.
+- **Note:** the MCP SDK is ESM-first, so this lib type-checks with `moduleResolution: bundler`
+  and runs as CommonJS (loading the SDK's CJS build) — keeping it consistent with the rest of the
+  workspace. Next in this story: a **server registry + health checks** (HELIX-81) and **tool
+  catalog sync** (HELIX-82).
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -543,6 +571,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-77 | Per-step retry policy (backoff + classification) | ✅ | #34 |
 | HELIX-78 | Run lifecycle API (start/get/cancel/retry) | ✅ | #35 |
 | HELIX-79 | Live per-step status stream (SSE) | ✅ | #37 |
+| HELIX-80 | MCP client (handshake/discovery/invoke) | ✅ | #39 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -573,12 +602,14 @@ classification (HELIX-77). The **last story** — the **Workflow Orchestrator AP
 (start/get/cancel/retry, HELIX-78) plus a live per-step SSE stream (HELIX-79), so a user can kick
 off a run and watch it unfold.
 
-🎉 **That completes the Workflow Engine epic (HELIX-2)** — and with the Core Agent Platform epic
-(HELIX-1) before it, Helix can now define agents, run a tool-using agent loop within budget,
-remember/recall context, trace + cost runs, and chain agents into durable, human-gated,
-retrying multi-step workflows you can drive and watch over HTTP. **Next up:** **MCP Integration /
-GitHub access**, **sandboxes**, **human approvals**, and the **user-facing SaaS** (auth, run
-dashboard) — where all of this gets a real UI.
+With the Core Agent Platform (HELIX-1) and Workflow Engine (HELIX-2) epics done, Helix can
+define agents, run a tool-using agent loop within budget, remember/recall context, trace + cost
+runs, and chain agents into durable, human-gated, retrying multi-step workflows you can drive and
+watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — the MCP client is in
+(HELIX-80), with the server registry + health checks (HELIX-81) and tool-catalog sync (HELIX-82)
+next, then tool permissioning (HELIX-23), the GitHub MCP server (HELIX-24), and the secrets vault
+(HELIX-25). After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
+**human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
 ---
 
