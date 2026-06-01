@@ -500,6 +500,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
   them), so production no longer installs the heavyweight native worker. (A full lib split was
   ruled out: the pure DAG core is bundled into the Temporal workflow sandbox via relative
   imports, so extracting it would break the workflow bundler.) Runtime behavior is unchanged.
+- **Local manual-testing setup** (PR #38) — made the platform runnable by hand end-to-end:
+  the dev `docker-compose` Postgres now uses the **pgvector** image (the plain image failed the
+  `vector` migration), and a small **dev worker** (`pnpm dev:worker`, stub step executor) lets
+  runs started via the orchestrator API actually execute so you can watch them progress over
+  SSE. Steps written up in [LOCAL_TESTING.md](LOCAL_TESTING.md). (Real per-role agent execution
+  is still to come with the agent epics.)
 
 ---
 

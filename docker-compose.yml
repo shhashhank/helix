@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector image (not plain postgres) — the registry schema enables the
+    # `vector` extension for memory embeddings (HELIX-63), so migrations need it.
+    image: pgvector/pgvector:pg16
     container_name: helix-postgres
     restart: unless-stopped
     environment:
