@@ -532,6 +532,25 @@ Connecting to MCP servers and discovering the tools they offer.
 (HELIX-80), a registry of servers with health checks (HELIX-81), and an aggregated tool catalog
 for the agent runtime (HELIX-82).
 
+### Story: Tool Permissioning & Policy (basic)  🛠️ in progress
+Deciding which tools an agent is actually *allowed* to use — and recording it.
+
+#### HELIX-83 — Policy model + evaluator  ✅
+- **What it is:** a **rulebook for tool permissions**. For a given request — "this org / this agent
+  role wants to call this tool on this server" — it returns **allow**, **deny**, or
+  **needs-approval**. Rules match on whatever you specify (org, role, server, tool name — anything
+  left blank is a wildcard), and when several rules apply the **strictest wins** (a deny always
+  beats an allow). If no rule matches, the safe default is **deny**.
+- **Why it matters:** agents will soon be able to do real things (open PRs, run commands), so the
+  platform needs a gate in front of every tool call. "Deny wins" + "default deny" make it
+  *fail-closed* — nothing slips through by accident — and every decision (allow or deny) is written
+  to an audit trail. The third outcome, **needs-approval**, is the hook that will route risky tools
+  through the human Approval Service (HELIX-85).
+- **Where it lives:** [../libs/mcp/src/policy.ts](../libs/mcp/src/policy.ts) — `evaluatePolicy`
+  (the decision), `ToolPolicyEnforcer` (evaluate + audit + **block** denied calls), and a pluggable
+  audit sink. Next in this story: **rate limits/quotas** (HELIX-84) and **approval-gated routing**
+  (HELIX-85).
+
 ---
 
 ## Fixes & hardening
@@ -608,6 +627,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-80 | MCP client (handshake/discovery/invoke) | ✅ | #39 |
 | HELIX-81 | MCP server registry + health checks | ✅ | #40 |
 | HELIX-82 | MCP tool catalog sync (tools → runtime) | ✅ | #41 |
+| HELIX-83 | Tool policy model + evaluator (allow/deny) | ✅ | #44 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -643,8 +663,10 @@ define agents, run a tool-using agent loop within budget, remember/recall contex
 runs, and chain agents into durable, human-gated, retrying multi-step workflows you can drive and
 watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — its first story,
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
-HELIX-81, tool catalog sync HELIX-82). Next in this epic: tool permissioning (HELIX-23), the
-GitHub MCP server (HELIX-24), and the secrets vault (HELIX-25). After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
+HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** is underway — the
+policy model + evaluator is in (HELIX-83), with rate limits/quotas (HELIX-84) and approval-gated
+routing (HELIX-85) next. Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
+After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
 ---
