@@ -11,6 +11,8 @@ function stubClient(over: Partial<GitHubClient> = {}): GitHubClient {
       { path: 'README.md', type: 'file', size: 42 },
     ],
     searchCode: async ({ query }) => [{ path: `match-for-${query}.ts`, repository: 'o/r' }],
+    createBranch: async ({ branch }) => ({ branch, sha: 'sha0' }),
+    commitFiles: async ({ branch }) => ({ branch, commitSha: 'commit0' }),
     ...over,
   };
 }
@@ -28,8 +30,10 @@ async function connect(github: GitHubClient): Promise<Client> {
 describe('GitHub MCP server — repo read/search tools', () => {
   it('advertises the read/search tools', async () => {
     const client = await connect(stubClient());
-    const names = (await client.listTools()).tools.map((t) => t.name).sort();
-    expect(names).toEqual(['github_get_file', 'github_get_tree', 'github_search_code']);
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    expect(names).toEqual(
+      expect.arrayContaining(['github_get_file', 'github_get_tree', 'github_search_code']),
+    );
   });
 
   it('github_get_file returns the file contents', async () => {

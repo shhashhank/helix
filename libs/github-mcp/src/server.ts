@@ -11,13 +11,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GitHubClient } from './github-client';
 import { registerRepoReadTools } from './repo-tools';
+import { registerRepoWriteTools } from './write-tools';
 
 export interface GitHubMcpServerOptions {
   name?: string;
   version?: string;
 }
 
-/** Create a GitHub MCP server with the repo read/search tools registered. */
+/** Create a GitHub MCP server with the repo read/search + write tools registered. */
 export function createGitHubMcpServer(
   github: GitHubClient,
   opts: GitHubMcpServerOptions = {},
@@ -27,5 +28,6 @@ export function createGitHubMcpServer(
     version: opts.version ?? '0.1.0',
   });
   registerRepoReadTools(server, github);
+  registerRepoWriteTools(server, github);
   return server;
 }
