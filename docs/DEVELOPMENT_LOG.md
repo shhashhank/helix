@@ -610,8 +610,19 @@ The first **real** tool server — gives agents actual GitHub abilities over MCP
 - **Where it lives:** [../libs/github-mcp/src/write-tools.ts](../libs/github-mcp/src/write-tools.ts)
   (`github_create_branch`, `github_commit_files`), registered on the same server; the shared
   tool-result helpers were factored into [tool-result.ts](../libs/github-mcp/src/tool-result.ts).
-  Next in this story: **PR + review comments** (HELIX-88) and **GitHub App auth** (HELIX-89, which
-  provides the real GitHub-backed client).
+
+#### HELIX-88 — PR + review-comment tools  ✅
+- **What it is:** the pull-request abilities — **open a PR**, **comment on it**, and **request a
+  review**. With read (HELIX-86) and write (HELIX-87), the agent can now do the whole loop: read a
+  repo → branch + commit → open a PR for review.
+- **Why it matters:** opening a PR (rather than pushing to main) is exactly the human-checkpoint
+  the product is built around — the agent proposes changes and a person reviews. These are the last
+  GitHub tools the coding agent needs; like the rest they're built on the `GitHubClient` seam and
+  return tool errors on expected failures (e.g. a PR that already exists for the branch).
+- **Where it lives:** [../libs/github-mcp/src/pr-tools.ts](../libs/github-mcp/src/pr-tools.ts)
+  (`github_create_pull_request`, `github_comment_on_pull_request`, `github_request_review`),
+  registered on the same server. Next in this story: **GitHub App auth** (HELIX-89) — the real
+  authenticated client behind all these tools, plus a runnable stdio entrypoint.
 
 ---
 
@@ -694,6 +705,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-85 | Approval-gated tool routing (risky → human) | ✅ | #46 |
 | HELIX-86 | GitHub MCP server — repo read/search tools | ✅ | #47 |
 | HELIX-87 | GitHub MCP server — branch/commit/push tools | ✅ | #48 |
+| HELIX-88 | GitHub MCP server — PR + review-comment tools | ✅ | #49 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -731,8 +743,8 @@ watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — 
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
 HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
 rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). The **GitHub MCP
-Server** (HELIX-24) is now underway — repo read/search (HELIX-86) and branch/commit/push
-(HELIX-87) tools are in, with PR/review tools (HELIX-88) and GitHub App auth (HELIX-89) next —
+Server** (HELIX-24) is now underway — repo read/search (HELIX-86), branch/commit/push (HELIX-87),
+and PR/review (HELIX-88) tools are in, with GitHub App auth (HELIX-89, the real client) next —
 then the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
