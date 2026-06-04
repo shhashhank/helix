@@ -7,14 +7,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GitHubClient } from './github-client';
-
-type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
-
-const text = (value: string): ToolResult => ({ content: [{ type: 'text', text: value }] });
-const errorResult = (what: string, err: unknown): ToolResult => ({
-  content: [{ type: 'text', text: `error ${what}: ${err instanceof Error ? err.message : String(err)}` }],
-  isError: true,
-});
+import { errorResult, textResult } from './tool-result';
 
 /** Register `github_get_file`, `github_get_tree`, and `github_search_code`. */
 export function registerRepoReadTools(server: McpServer, github: GitHubClient): void {
@@ -32,7 +25,7 @@ export function registerRepoReadTools(server: McpServer, github: GitHubClient): 
     async ({ owner, repo, path, ref }) => {
       try {
         const file = await github.getFileContents({ owner, repo, path, ref });
-        return text(file.content);
+        return textResult(file.content);
       } catch (err) {
         return errorResult(`reading ${path}`, err);
       }
@@ -54,7 +47,7 @@ export function registerRepoReadTools(server: McpServer, github: GitHubClient): 
     async ({ owner, repo, path, ref, recursive }) => {
       try {
         const entries = await github.getTree({ owner, repo, path, ref, recursive });
-        return text(JSON.stringify(entries, null, 2));
+        return textResult(JSON.stringify(entries, null, 2));
       } catch (err) {
         return errorResult('listing tree', err);
       }
@@ -74,7 +67,7 @@ export function registerRepoReadTools(server: McpServer, github: GitHubClient): 
     async ({ query, owner, repo }) => {
       try {
         const matches = await github.searchCode({ query, owner, repo });
-        return text(JSON.stringify(matches, null, 2));
+        return textResult(JSON.stringify(matches, null, 2));
       } catch (err) {
         return errorResult('searching code', err);
       }

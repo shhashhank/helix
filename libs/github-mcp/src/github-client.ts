@@ -33,9 +33,40 @@ export interface CodeSearchMatch {
   url?: string;
 }
 
-/** The GitHub read/search operations the tools need. */
+export interface CreatedBranch {
+  branch: string;
+  /** Commit SHA the new branch points at. */
+  sha: string;
+}
+
+/** A file to write in a commit. */
+export interface CommitFile {
+  path: string;
+  /** New UTF-8 file content. */
+  content: string;
+}
+
+export interface CommitResult {
+  branch: string;
+  commitSha: string;
+}
+
+/** The GitHub read/search + write operations the tools need. */
 export interface GitHubClient {
+  // Read (HELIX-86)
   getFileContents(args: RepoRef & { path: string }): Promise<FileContents>;
   getTree(args: RepoRef & { path?: string; recursive?: boolean }): Promise<TreeEntry[]>;
   searchCode(args: { query: string; owner?: string; repo?: string }): Promise<CodeSearchMatch[]>;
+
+  // Write (HELIX-87)
+  /** Create a branch from `fromRef` (default: the repo's default branch). */
+  createBranch(args: { owner: string; repo: string; branch: string; fromRef?: string }): Promise<CreatedBranch>;
+  /** Create a single commit on `branch` that adds/updates `files`. */
+  commitFiles(args: {
+    owner: string;
+    repo: string;
+    branch: string;
+    message: string;
+    files: CommitFile[];
+  }): Promise<CommitResult>;
 }
