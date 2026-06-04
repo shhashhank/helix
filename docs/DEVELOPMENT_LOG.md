@@ -548,8 +548,20 @@ Deciding which tools an agent is actually *allowed* to use — and recording it.
   through the human Approval Service (HELIX-85).
 - **Where it lives:** [../libs/mcp/src/policy.ts](../libs/mcp/src/policy.ts) — `evaluatePolicy`
   (the decision), `ToolPolicyEnforcer` (evaluate + audit + **block** denied calls), and a pluggable
-  audit sink. Next in this story: **rate limits/quotas** (HELIX-84) and **approval-gated routing**
-  (HELIX-85).
+  audit sink.
+
+#### HELIX-84 — Rate limiting + quotas  ✅
+- **What it is:** a **usage cap** on tool calls — "no more than N calls per time window" — that
+  you can set **per org, per server, or per tool**. A request that would exceed the cap is blocked.
+- **Why it matters:** permission says *whether* a tool may be used; this says *how much*. It stops
+  a runaway agent (or a buggy loop) from hammering an external service or burning through an org's
+  budget, and lets different orgs/tools have different ceilings. The cap's granularity follows the
+  rule: an org-scoped limit caps that org's *total* calls, a tool-scoped limit caps that one tool.
+- **Where it lives:** [../libs/mcp/src/rate-limit.ts](../libs/mcp/src/rate-limit.ts) —
+  `FixedWindowRateLimiter` (a counter with an injectable clock, so it's deterministic to test) +
+  `ToolQuotaEnforcer` (`check`/`enforce`, throwing `RateLimitExceededError` when over). In-memory
+  for now; a shared store (Redis) would enforce it across replicas. Next in this story:
+  **approval-gated routing** (HELIX-85).
 
 ---
 
@@ -628,6 +640,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-81 | MCP server registry + health checks | ✅ | #40 |
 | HELIX-82 | MCP tool catalog sync (tools → runtime) | ✅ | #41 |
 | HELIX-83 | Tool policy model + evaluator (allow/deny) | ✅ | #44 |
+| HELIX-84 | Tool rate limiting + quotas (per tool/org) | ✅ | #45 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -664,8 +677,8 @@ runs, and chain agents into durable, human-gated, retrying multi-step workflows 
 watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — its first story,
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
 HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** is underway — the
-policy model + evaluator is in (HELIX-83), with rate limits/quotas (HELIX-84) and approval-gated
-routing (HELIX-85) next. Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
+policy model + evaluator (HELIX-83) and rate limits/quotas (HELIX-84) are in, with approval-gated
+routing (HELIX-85) next to finish the story. Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
