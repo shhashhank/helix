@@ -35,7 +35,7 @@ flowchart TB
     ag["@helix/agent<br/>agent loop · guardrails<br/>memory · vector recall · tracing"]
     lm["@helix/llm<br/>Anthropic provider · model router<br/>cost ceiling · retry/breaker · metering"]
     mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating"]
-    gh["@helix/github-mcp<br/>GitHub MCP server<br/>(read/search + branch/commit tools)"]
+    gh["@helix/github-mcp<br/>GitHub MCP server<br/>(read/search · branch/commit · PR tools)"]
   end
 
   subgraph dat["Data & external"]
