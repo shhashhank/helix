@@ -580,7 +580,7 @@ Deciding which tools an agent is actually *allowed* to use — and recording it.
 rate limits/quotas (HELIX-84), and approval routing for risky tools (HELIX-85) — fail-closed,
 audited, and human-gated where it matters.
 
-### Story: GitHub MCP Server  🛠️ in progress
+### Story: GitHub MCP Server  ✅ done
 The first **real** tool server — gives agents actual GitHub abilities over MCP.
 
 #### HELIX-86 — Repo read/search tools  ✅
@@ -621,8 +621,30 @@ The first **real** tool server — gives agents actual GitHub abilities over MCP
   return tool errors on expected failures (e.g. a PR that already exists for the branch).
 - **Where it lives:** [../libs/github-mcp/src/pr-tools.ts](../libs/github-mcp/src/pr-tools.ts)
   (`github_create_pull_request`, `github_comment_on_pull_request`, `github_request_review`),
-  registered on the same server. Next in this story: **GitHub App auth** (HELIX-89) — the real
-  authenticated client behind all these tools, plus a runnable stdio entrypoint.
+  registered on the same server. Last in this story: **GitHub App auth** (HELIX-89) — how the
+  server authenticates behind all these tools.
+
+#### HELIX-89 — GitHub App auth (short-lived installation tokens)  ✅
+- **What it is:** how the GitHub server proves who it is — as a **GitHub App**, not with a person's
+  password or a long-lived token. It mints a short, signed "I am this app" pass (a JWT, good for a
+  few minutes), trades it for an **installation token** scoped to just the repos we allow and good
+  for about an hour, and quietly refreshes it before it lapses.
+- **Why it matters:** it's the security backbone the whole MCP epic insists on — **no standing
+  secret, least privilege, and credentials never reach the AI**. The private key stays inside the
+  server process; the model only ever drives the tools, never sees a token. Short-lived +
+  repo-scoped means even a leaked token is near-worthless within the hour.
+- **Where it lives:** [../libs/github-mcp/src/app-auth.ts](../libs/github-mcp/src/app-auth.ts) —
+  `GitHubAppTokenProvider` (caches and auto-refreshes the token, coalescing concurrent refreshes),
+  `createAppJwt` (signs the app pass with Node's built-in crypto — **no extra dependency**), and
+  `appTokenProviderFromEnv` (reads the App ID, private key, and installation from the environment).
+  Fully unit-tested offline: a throwaway RSA key signs a real JWT we then verify, plus the caching,
+  refresh-on-expiry, concurrent-refresh coalescing, and repo-scoping behaviour.
+- **Still to wire (follow-up):** the live binding — a thin Octokit-backed `GitHubClient` that calls
+  GitHub with these tokens, plus a runnable stdio process so the registry can launch the server — is
+  deliberately a separate step. It pulls in the heavyweight Octokit dependency and is best shaped by
+  the agent runtime's real needs, so it's kept out of this auth-focused change. The tools
+  (HELIX-86/87/88) and this auth together are the finished GitHub-server **surface**; the concrete
+  network client is the remaining go-live glue.
 
 ---
 
@@ -706,6 +728,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-86 | GitHub MCP server — repo read/search tools | ✅ | #47 |
 | HELIX-87 | GitHub MCP server — branch/commit/push tools | ✅ | #48 |
 | HELIX-88 | GitHub MCP server — PR + review-comment tools | ✅ | #49 |
+| HELIX-89 | GitHub MCP server — GitHub App auth (installation tokens) | ✅ | #50 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -743,9 +766,11 @@ watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — 
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
 HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
 rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). The **GitHub MCP
-Server** (HELIX-24) is now underway — repo read/search (HELIX-86), branch/commit/push (HELIX-87),
-and PR/review (HELIX-88) tools are in, with GitHub App auth (HELIX-89, the real client) next —
-then the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
+Server** (HELIX-24) is ✅ done — repo read/search (HELIX-86), branch/commit/push (HELIX-87), and
+PR/review (HELIX-88) tools, all behind **GitHub App auth with short-lived, repo-scoped installation
+tokens** (HELIX-89). The one remaining story in this epic is the **Secrets & Credential Vault**
+(HELIX-25), after which the live Octokit binding can plug the GitHub tools into real repos using
+vault-sourced App credentials.
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
