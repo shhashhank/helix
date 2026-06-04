@@ -34,7 +34,8 @@ flowchart TB
     wf["@helix/workflow<br/>DSL · validator · compiler · runner<br/>versioning · idempotency · Temporal glue"]
     ag["@helix/agent<br/>agent loop · guardrails<br/>memory · vector recall · tracing"]
     lm["@helix/llm<br/>Anthropic provider · model router<br/>cost ceiling · retry/breaker · metering"]
-    mc["@helix/mcp<br/>client · server registry · tool catalog"]
+    mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating"]
+    gh["@helix/github-mcp<br/>GitHub MCP server<br/>(repo read/search tools)"]
   end
 
   subgraph dat["Data & external"]
@@ -43,7 +44,8 @@ flowchart TB
     rd[("Redis")]
     an{{Anthropic API}}
     vo{{Voyage API}}
-    ext{{MCP tool servers<br/>GitHub · …}}
+    gha{{GitHub API}}
+    ext{{other MCP tool servers}}
   end
 
   user -->|define agent recipes| reg
@@ -62,7 +64,9 @@ flowchart TB
   ag -->|working memory| rd
   ag -->|vector recall| pg
   lm -->|token & cost usage| pg
+  mc -.->|connect · gate| gh
   mc -.->|connect · planned| ext
+  gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
   class ext planned;
@@ -141,6 +145,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Agent runtime | [libs/agent](../libs/agent) (`@helix/agent`) |
 | Workflow engine | [libs/workflow](../libs/workflow) (`@helix/workflow`, incl. `lib/temporal/`) |
 | MCP integration | [libs/mcp](../libs/mcp) (`@helix/mcp`) |
+| GitHub MCP server | [libs/github-mcp](../libs/github-mcp) (`@helix/github-mcp`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |

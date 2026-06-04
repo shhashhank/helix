@@ -48,6 +48,9 @@ jobs:
       - name: Typecheck (mcp lib)
         run: pnpm exec tsc --noEmit -p libs/mcp/tsconfig.spec.json
 
+      - name: Typecheck (github-mcp lib)
+        run: pnpm exec tsc --noEmit -p libs/github-mcp/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -73,3 +76,6 @@ jobs:
 
       - name: Unit tests (mcp lib)
         run: pnpm exec jest --config libs/mcp/jest.config.js --ci
+
+      - name: Unit tests (github-mcp lib)
+        run: pnpm exec jest --config libs/github-mcp/jest.config.js --ci
