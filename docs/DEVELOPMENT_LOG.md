@@ -532,7 +532,7 @@ Connecting to MCP servers and discovering the tools they offer.
 (HELIX-80), a registry of servers with health checks (HELIX-81), and an aggregated tool catalog
 for the agent runtime (HELIX-82).
 
-### Story: Tool Permissioning & Policy (basic)  🛠️ in progress
+### Story: Tool Permissioning & Policy (basic)  ✅ done
 Deciding which tools an agent is actually *allowed* to use — and recording it.
 
 #### HELIX-83 — Policy model + evaluator  ✅
@@ -560,8 +560,25 @@ Deciding which tools an agent is actually *allowed* to use — and recording it.
 - **Where it lives:** [../libs/mcp/src/rate-limit.ts](../libs/mcp/src/rate-limit.ts) —
   `FixedWindowRateLimiter` (a counter with an injectable clock, so it's deterministic to test) +
   `ToolQuotaEnforcer` (`check`/`enforce`, throwing `RateLimitExceededError` when over). In-memory
-  for now; a shared store (Redis) would enforce it across replicas. Next in this story:
-  **approval-gated routing** (HELIX-85).
+  for now; a shared store (Redis) would enforce it across replicas.
+
+#### HELIX-85 — Approval-gated tool routing  ✅
+- **What it is:** the bridge that sends **risky tool calls to a human for sign-off**. When the
+  policy marks a tool `require_approval`, the call isn't run outright — it's routed to the Approval
+  Service, and only proceeds if a person approves (it's blocked if they reject).
+- **Why it matters:** some actions are too consequential to leave to an agent alone (merging to
+  main, deleting infra, spending money). This connects two things already built — the policy's
+  `require_approval` outcome (HELIX-83) and the durable human approval flow from the Workflow epic
+  (HELIX-74/75/76) — so high-risk tools get a human in the loop without the agent having to know
+  the details. Plain allows pass straight through; denials are still blocked up front.
+- **Where it lives:** [../libs/mcp/src/tool-approval.ts](../libs/mcp/src/tool-approval.ts) —
+  `ApprovalGatedToolPolicy.authorize()` (enforce → allow / block / route-for-approval) over a
+  pluggable `ToolApprovalGateway` (the "Approval Service" seam; the real one publishes a request
+  and durably waits via `awaitApproval`).
+
+✅ **Story complete** — Tool Permissioning & Policy (HELIX-23): a policy gate (HELIX-83),
+rate limits/quotas (HELIX-84), and approval routing for risky tools (HELIX-85) — fail-closed,
+audited, and human-gated where it matters.
 
 ---
 
@@ -641,6 +658,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-82 | MCP tool catalog sync (tools → runtime) | ✅ | #41 |
 | HELIX-83 | Tool policy model + evaluator (allow/deny) | ✅ | #44 |
 | HELIX-84 | Tool rate limiting + quotas (per tool/org) | ✅ | #45 |
+| HELIX-85 | Approval-gated tool routing (risky → human) | ✅ | #46 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -676,9 +694,9 @@ define agents, run a tool-using agent loop within budget, remember/recall contex
 runs, and chain agents into durable, human-gated, retrying multi-step workflows you can drive and
 watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — its first story,
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
-HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** is underway — the
-policy model + evaluator (HELIX-83) and rate limits/quotas (HELIX-84) are in, with approval-gated
-routing (HELIX-85) next to finish the story. Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
+HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
+rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). Remaining in the epic:
+the **GitHub MCP server** (HELIX-24) and the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
