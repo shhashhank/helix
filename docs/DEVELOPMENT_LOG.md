@@ -580,6 +580,25 @@ Deciding which tools an agent is actually *allowed* to use — and recording it.
 rate limits/quotas (HELIX-84), and approval routing for risky tools (HELIX-85) — fail-closed,
 audited, and human-gated where it matters.
 
+### Story: GitHub MCP Server  🛠️ in progress
+The first **real** tool server — gives agents actual GitHub abilities over MCP.
+
+#### HELIX-86 — Repo read/search tools  ✅
+- **What it is:** the first batch of real GitHub tools, exposed as an MCP server: **read a file**,
+  **list a repo's files/folders**, and **search code**. An agent connected through the MCP client
+  can now actually look inside a repository.
+- **Why it matters:** until now the MCP layer had only a stub for testing. This is the first
+  *concrete* tool server — the read side of "as a coding agent, I want GitHub tools." It's written
+  against a small `GitHubClient` interface, so the tools are fully testable with a stub today; the
+  real GitHub-backed client (with short-lived GitHub App tokens) plugs in at HELIX-89. Expected
+  failures (a missing file) come back as a tool error rather than crashing the call.
+- **Where it lives:** the new [../libs/github-mcp/](../libs/github-mcp/) (`@helix/github-mcp`) —
+  `createGitHubMcpServer` + [repo-tools.ts](../libs/github-mcp/src/repo-tools.ts)
+  (`github_get_file` / `github_get_tree` / `github_search_code`) over the
+  [GitHubClient](../libs/github-mcp/src/github-client.ts) seam. Verified end-to-end against an
+  in-memory MCP client. Next in this story: **branch/commit/push** (HELIX-87), **PR + review
+  comments** (HELIX-88), and **GitHub App auth** (HELIX-89, which provides the real client).
+
 ---
 
 ## Fixes & hardening
@@ -659,6 +678,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-83 | Tool policy model + evaluator (allow/deny) | ✅ | #44 |
 | HELIX-84 | Tool rate limiting + quotas (per tool/org) | ✅ | #45 |
 | HELIX-85 | Approval-gated tool routing (risky → human) | ✅ | #46 |
+| HELIX-86 | GitHub MCP server — repo read/search tools | ✅ | #47 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -695,8 +715,10 @@ runs, and chain agents into durable, human-gated, retrying multi-step workflows 
 watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — its first story,
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
 HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
-rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). Remaining in the epic:
-the **GitHub MCP server** (HELIX-24) and the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
+rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). The **GitHub MCP
+Server** (HELIX-24) is now underway — repo read/search tools are in (HELIX-86), with
+branch/commit/push (HELIX-87), PR/review tools (HELIX-88), and GitHub App auth (HELIX-89) next —
+then the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 

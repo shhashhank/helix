@@ -1,0 +1,7 @@
+{
+  "name": "github-mcp",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/github-mcp/src",
+  "projectType": "library",
+  "targets": {}
+}
