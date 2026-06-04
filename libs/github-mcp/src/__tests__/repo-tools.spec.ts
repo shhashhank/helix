@@ -13,6 +13,9 @@ function stubClient(over: Partial<GitHubClient> = {}): GitHubClient {
     searchCode: async ({ query }) => [{ path: `match-for-${query}.ts`, repository: 'o/r' }],
     createBranch: async ({ branch }) => ({ branch, sha: 'sha0' }),
     commitFiles: async ({ branch }) => ({ branch, commitSha: 'commit0' }),
+    createPullRequest: async () => ({ number: 1, url: 'https://github.com/o/r/pull/1' }),
+    commentOnPullRequest: async () => ({ id: 1, url: 'https://github.com/o/r/pull/1#c1' }),
+    requestReview: async () => undefined,
     ...over,
   };
 }

@@ -51,7 +51,17 @@ export interface CommitResult {
   commitSha: string;
 }
 
-/** The GitHub read/search + write operations the tools need. */
+export interface PullRequest {
+  number: number;
+  url: string;
+}
+
+export interface PrComment {
+  id: number;
+  url: string;
+}
+
+/** The GitHub read/search + write + pull-request operations the tools need. */
 export interface GitHubClient {
   // Read (HELIX-86)
   getFileContents(args: RepoRef & { path: string }): Promise<FileContents>;
@@ -69,4 +79,29 @@ export interface GitHubClient {
     message: string;
     files: CommitFile[];
   }): Promise<CommitResult>;
+
+  // Pull requests (HELIX-88)
+  /** Open a pull request from `head` into `base`. */
+  createPullRequest(args: {
+    owner: string;
+    repo: string;
+    head: string;
+    base: string;
+    title: string;
+    body?: string;
+  }): Promise<PullRequest>;
+  /** Post a comment on a pull request (or issue). */
+  commentOnPullRequest(args: {
+    owner: string;
+    repo: string;
+    number: number;
+    body: string;
+  }): Promise<PrComment>;
+  /** Request reviews on a pull request from the given users. */
+  requestReview(args: {
+    owner: string;
+    repo: string;
+    number: number;
+    reviewers: string[];
+  }): Promise<void>;
 }
