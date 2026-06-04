@@ -596,8 +596,22 @@ The first **real** tool server — gives agents actual GitHub abilities over MCP
   `createGitHubMcpServer` + [repo-tools.ts](../libs/github-mcp/src/repo-tools.ts)
   (`github_get_file` / `github_get_tree` / `github_search_code`) over the
   [GitHubClient](../libs/github-mcp/src/github-client.ts) seam. Verified end-to-end against an
-  in-memory MCP client. Next in this story: **branch/commit/push** (HELIX-87), **PR + review
-  comments** (HELIX-88), and **GitHub App auth** (HELIX-89, which provides the real client).
+  in-memory MCP client.
+
+#### HELIX-87 — Branch/commit/push tools  ✅
+- **What it is:** the *write* side of the GitHub server — **create a branch** and **commit files**
+  (add/update files in one commit on a branch). With HELIX-86's read tools, an agent can now look
+  at a repo *and* make changes to it.
+- **Why it matters:** this is what lets a coding agent actually produce work — branch off, write
+  the code, commit it. These mutate the repo, so in production they run with a short-lived,
+  repo-scoped GitHub App token (HELIX-89) and sit behind the tool policy/approval gate. Like the
+  read tools, they're built on the `GitHubClient` seam (stub-tested) and return tool errors on
+  expected failures (e.g. a branch that already exists).
+- **Where it lives:** [../libs/github-mcp/src/write-tools.ts](../libs/github-mcp/src/write-tools.ts)
+  (`github_create_branch`, `github_commit_files`), registered on the same server; the shared
+  tool-result helpers were factored into [tool-result.ts](../libs/github-mcp/src/tool-result.ts).
+  Next in this story: **PR + review comments** (HELIX-88) and **GitHub App auth** (HELIX-89, which
+  provides the real GitHub-backed client).
 
 ---
 
@@ -679,6 +693,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-84 | Tool rate limiting + quotas (per tool/org) | ✅ | #45 |
 | HELIX-85 | Approval-gated tool routing (risky → human) | ✅ | #46 |
 | HELIX-86 | GitHub MCP server — repo read/search tools | ✅ | #47 |
+| HELIX-87 | GitHub MCP server — branch/commit/push tools | ✅ | #48 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -716,8 +731,8 @@ watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — 
 **MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
 HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
 rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). The **GitHub MCP
-Server** (HELIX-24) is now underway — repo read/search tools are in (HELIX-86), with
-branch/commit/push (HELIX-87), PR/review tools (HELIX-88), and GitHub App auth (HELIX-89) next —
+Server** (HELIX-24) is now underway — repo read/search (HELIX-86) and branch/commit/push
+(HELIX-87) tools are in, with PR/review tools (HELIX-88) and GitHub App auth (HELIX-89) next —
 then the **secrets vault** (HELIX-25). Then: the GitHub MCP server (HELIX-24) and the secrets vault (HELIX-25).
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
