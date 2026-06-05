@@ -57,6 +57,9 @@ jobs:
       - name: Typecheck (planning lib)
         run: pnpm exec tsc --noEmit -p libs/planning/tsconfig.spec.json
 
+      - name: Typecheck (sandbox lib)
+        run: pnpm exec tsc --noEmit -p libs/sandbox/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -91,3 +94,6 @@ jobs:
 
       - name: Unit tests (planning lib)
         run: pnpm exec jest --config libs/planning/jest.config.ts --ci
+
+      - name: Unit tests (sandbox lib)
+        run: pnpm exec jest --config libs/sandbox/jest.config.ts --ci
