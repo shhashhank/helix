@@ -784,7 +784,7 @@ bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
   fake provider + a stub responder: ask→refine→stop-when-clear, no-questions short-circuit, the
   round cap, the user-declines path, and the full extract-then-clarify flow with aggregated usage.
 
-### Story: Implementation Plan Generation  🛠️ in progress
+### Story: Implementation Plan Generation  ✅ done
 
 Turn the agreed spec into a concrete plan: break it into tasks (HELIX-96), order them by dependency
 and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
@@ -824,6 +824,23 @@ and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
   `TaskGraphError` with the issues on a bad graph). 11 more offline tests cover validation, cycle
   detection (2-node, longer, deduped), the wave/topo ordering, independent-task batching, and every
   error path.
+
+#### HELIX-98 — Tech-stack / scaffold selection  ✅
+- **What it is:** the step that decides *what to build it with* — the language and runtime, the
+  framework, database, testing tool and package manager, the key dependencies to install, and a
+  minimal starting **project scaffold** (the first directories and files). It reads the agreed spec
+  (and optionally the task list) and makes those choices, grounded in the spec's **constraints** — so
+  "must run on the existing Postgres" actually forces Postgres, rather than a preference winning.
+- **Why it matters:** it's the final piece that makes the plan something you can *start building*
+  from: with the spec, the ordered task graph, and now a concrete stack + scaffold, the plan is the
+  full input contract the Coding Agent will work against. The prompt is told constraints always beat
+  preferences and to prefer mainstream, well-supported choices over cleverness.
+- **Where it lives:** [../libs/planning/src/lib/tech-stack.ts](../libs/planning/src/lib/tech-stack.ts)
+  — the `TechStackSelection` schema (language, runtime, a list of area→choice decisions, dependencies,
+  a scaffold of dir/file entries, setup commands, notes — Zod as the single source of truth) plus
+  `selectTechStack` (the architect prompt, forced-tool + schema-validated like every other step). 8
+  more offline tests cover schema validation and the selection flow against a fake provider (spec +
+  task-plan grounding, and the error paths).
 
 ---
 
@@ -916,6 +933,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-95 | Planning Agent — clarification loop (pause for answers, refine spec) | ✅ | #56 |
 | HELIX-96 | Planning Agent — task decomposition prompt + task-graph schema | ✅ | #57 |
 | HELIX-97 | Planning Agent — dependency ordering + validation (cycle detection, topo sort, waves) | ✅ | #58 |
+| HELIX-98 | Planning Agent — tech-stack / scaffold selection | ✅ | #59 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
