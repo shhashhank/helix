@@ -648,6 +648,37 @@ The first **real** tool server — gives agents actual GitHub abilities over MCP
 
 ---
 
+### Story: Secrets & Credential Vault  🛠️ in progress
+
+The vault so that **tool credentials (API keys, the GitHub App private key, …) never reach the AI**.
+Three sub-tasks: a secrets manager that keeps them encrypted at rest (HELIX-90), just-in-time
+injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
+
+#### HELIX-90 — Secrets manager integration  ✅
+- **What it is:** a small **credential vault** — you hand it a secret (say a token) under a name,
+  it stores it **encrypted**, and later hands it back only when explicitly asked. It uses the same
+  "envelope" scheme the big cloud key services use: every secret is locked with its own throwaway
+  key, and that throwaway key is itself locked by one **master key** that never gets stored next to
+  the data. Secrets also come back wrapped in a **redaction-safe holder** that prints `[REDACTED]`
+  if it ever lands in a log or `JSON.stringify`, so it can't leak by accident.
+- **Why it matters:** it's the foundation of the epic's promise — *secrets are encrypted at rest and
+  never reach the model*. Tools that need a credential will pull it from here at the last moment;
+  the AI only ever drives the tool, it never sees the key.
+- **Where it lives:** the new [../libs/secrets](../libs/secrets) library (`@helix/secrets`) —
+  [secret-store.ts](../libs/secrets/src/secret-store.ts) (`SecretsManager` interface +
+  `EncryptedSecretStore` + an in-memory record repository), [kms.ts](../libs/secrets/src/kms.ts)
+  (`LocalKms` envelope key manager), [secret-value.ts](../libs/secrets/src/secret-value.ts) (the
+  redaction-safe `SecretValue`), and [crypto.ts](../libs/secrets/src/crypto.ts) (AES-256-GCM via
+  Node's built-in crypto — **no dependency to install**). 20 offline tests cover the encryption
+  round-trip, "plaintext never reaches storage", per-secret keys, wrong-key/tamper rejection,
+  survive-restart, and the redaction behaviour.
+- **Deferred (see [../DEFERRED.md](../DEFERRED.md)):** the real **AWS Secrets Manager / KMS**
+  backend. The local store already uses AWS's envelope-encryption shape, so swapping `LocalKms` for
+  AWS KMS and the in-memory repo for Secrets Manager is a drop-in with no change to callers — done
+  when we deploy to AWS.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -729,6 +760,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-87 | GitHub MCP server — branch/commit/push tools | ✅ | #48 |
 | HELIX-88 | GitHub MCP server — PR + review-comment tools | ✅ | #49 |
 | HELIX-89 | GitHub MCP server — GitHub App auth (installation tokens) | ✅ | #50 |
+| HELIX-90 | Secrets vault — secrets manager (encrypted at rest, envelope encryption) | ✅ | #51 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
