@@ -718,7 +718,7 @@ injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
 
 ---
 
-## Epic: Planning Agent  🛠️ in progress
+## Epic: Planning Agent  ✅ done
 
 The first real **agent**: it turns a plain-language request into a validated requirements spec and,
 eventually, a structured implementation plan that becomes the Coding Agent's input contract.
@@ -842,6 +842,24 @@ and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
   more offline tests cover schema validation and the selection flow against a fake provider (spec +
   task-plan grounding, and the error paths).
 
+### Story: Plan Grounding (basic)  ✅ done
+
+#### HELIX-99 — Codebase context retrieval  ✅
+- **What it is:** the step that pulls **relevant bits of the existing codebase** into the planner, so
+  it plans against what's actually there (conventions, similar modules, the files it'll touch) rather
+  than from a blank page. It builds a few search queries out of the spec — the title/summary, the
+  functional requirements, the goals — runs them against a code search index, then merges the results,
+  removes duplicates (keeping the best-scoring hit per file), ranks them, and trims to a handful.
+- **Why it matters:** grounding is what stops the agent from reinventing things that already exist or
+  fighting the repo's conventions — the retrieved snippets get dropped into the planning prompts so the
+  spec, tasks, and stack choices reflect the real code. *How* the code is searched is left to an
+  injected `CodebaseRetriever` seam (the host wires it to `@helix/agent`'s hybrid retriever over an
+  embedded repo in a few lines), so the planner stays dependency-free and fully testable offline.
+- **Where it lives:** [../libs/planning/src/lib/plan-grounding.ts](../libs/planning/src/lib/plan-grounding.ts)
+  — `buildGroundingQueries` (spec → queries), `groundRequirements` (retrieve → dedupe by file → rank →
+  cap), and `formatGrounding` (render a prompt-ready `<codebase_context>` block). 7 offline tests cover
+  query derivation, the dedupe/rank/cap and per-/max-query limits, the empty case, and formatting.
+
 ---
 
 ## Fixes & hardening
@@ -934,6 +952,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-96 | Planning Agent — task decomposition prompt + task-graph schema | ✅ | #57 |
 | HELIX-97 | Planning Agent — dependency ordering + validation (cycle detection, topo sort, waves) | ✅ | #58 |
 | HELIX-98 | Planning Agent — tech-stack / scaffold selection | ✅ | #59 |
+| HELIX-99 | Planning Agent — codebase context retrieval (plan grounding) | ✅ | #60 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -978,7 +997,14 @@ to MCP tool servers under a policy/quota/approval gate, with credentials kept in
 only at the call boundary, and scrubbed from traces. Two deferred bindings remain before this is
 live against real services (see [../DEFERRED.md](../DEFERRED.md)): the **Octokit** client behind the
 GitHub tools and the **AWS Secrets Manager/KMS** vault backend.
-After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
+
+The **Planning Agent** (HELIX-4) — the first real agent — is now ✅ done too: it takes a plain-language
+request and produces a validated requirements spec with a confidence-gated clarification loop
+(HELIX-26), turns that into an implementation plan — a decomposed, dependency-ordered/validated task
+graph plus a tech-stack + scaffold (HELIX-27) — and grounds it in the existing codebase (HELIX-28).
+That plan is the input contract the **Coding Agent** will build against next.
+
+After that: **sandboxes**, the remaining **agents** (coding/review/testing/deploy),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 
 ---

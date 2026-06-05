@@ -6,3 +6,4 @@ export * from './lib/task-plan';
 export * from './lib/task-decomposition';
 export * from './lib/task-graph';
 export * from './lib/tech-stack';
+export * from './lib/plan-grounding';
