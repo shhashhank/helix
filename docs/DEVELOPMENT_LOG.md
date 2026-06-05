@@ -718,6 +718,38 @@ injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
 
 ---
 
+## Epic: Planning Agent  🛠️ in progress
+
+The first real **agent**: it turns a plain-language request into a validated requirements spec and,
+eventually, a structured implementation plan that becomes the Coding Agent's input contract.
+
+### Story: Requirement Analysis & Clarification  🛠️ in progress
+
+Understand what's actually being asked: extract a structured spec (HELIX-93), spot the ambiguous
+bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
+
+#### HELIX-93 — Requirement extraction prompt + schema  ✅
+- **What it is:** the step that reads a free-text request (e.g. *"build me a URL shortener"*) and
+  produces a tidy, structured **requirements specification** — a title and summary, the goals,
+  concrete functional and non-functional requirements (each with a MoSCoW *must/should/could/won't*
+  priority), constraints, explicit assumptions, what's out of scope, any **open questions** it
+  couldn't answer from the request, and testable acceptance criteria.
+- **Why it matters:** it's the front door of the whole build pipeline — everything downstream
+  (clarifying questions, the implementation plan, the coding agent) keys off this spec. Two design
+  choices make it dependable: the model is **forced to return the spec through a single tool call**
+  (so we get structured data, not prose to scrape), and that data is **validated against the schema**
+  before we trust it. The prompt also tells the model to record guesses as *assumptions* and genuine
+  gaps as *openQuestions* rather than inventing details — which is exactly what HELIX-94 will act on.
+- **Where it lives:** the new [../libs/planning](../libs/planning) library (`@helix/planning`) —
+  [requirements.ts](../libs/planning/src/lib/requirements.ts) (the spec schema, defined once in Zod
+  and reused as the TypeScript type, the runtime validator, and the tool's JSON Schema) and
+  [requirement-extraction.ts](../libs/planning/src/lib/requirement-extraction.ts) (the analyst prompt
+  + `extractRequirements`, which drives any `@helix/llm` provider and validates the result). 11
+  offline tests cover schema validation and the extraction flow against a fake provider (forced tool,
+  passthrough of tier/effort/metering, and the no-tool / malformed / empty-input error paths).
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -802,6 +834,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-90 | Secrets vault — secrets manager (encrypted at rest, envelope encryption) | ✅ | #51 |
 | HELIX-91 | Secrets vault — just-in-time credential injection (resolve at execution boundary) | ✅ | #52 |
 | HELIX-92 | Secrets vault — trace/log redaction (scrub secrets from telemetry) | ✅ | #53 |
+| HELIX-93 | Planning Agent — requirement extraction prompt + structured spec schema | ✅ | #54 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
