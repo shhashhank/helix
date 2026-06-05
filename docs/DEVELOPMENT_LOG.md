@@ -862,6 +862,40 @@ and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
 
 ---
 
+## Epic: Coding Agent  🛠️ in progress
+
+The agent that takes the plan and actually writes code: edit multiple files in an **isolated
+sandbox**, build and lint, and self-correct on the feedback until it compiles cleanly — then commit
+to a branch.
+
+### Story: Isolated Workspace / Sandbox  🛠️ in progress
+
+Give the coding agent a throwaway, isolated place to work: provision it (HELIX-100), check out the
+repo into it (HELIX-101), and fence it in with egress controls + resource limits (HELIX-102).
+
+#### HELIX-100 — Ephemeral sandbox provisioning  ✅
+- **What it is:** the bit that hands the coding agent a fresh, **throwaway workspace** to work in and
+  cleans it up afterwards. Ask the provider for a sandbox → you get one with a unique id and its own
+  directory; when you're done, dispose it and the whole thing is deleted. It also includes a small
+  **safety rail**: a `resolve()` that turns a workspace-relative path into a real one but **refuses
+  paths that try to escape** the sandbox (`../…` or absolute paths), so edits can't wander outside.
+- **Why it matters:** every later coding step — checkout, file edits, build/lint, tests — happens
+  *inside* one of these, so nothing the agent does touches the real machine or another run. Disposing
+  on completion keeps things clean and ephemeral.
+- **Where it lives:** the new [../libs/sandbox](../libs/sandbox) library (`@helix/sandbox`) —
+  [sandbox.ts](../libs/sandbox/src/sandbox.ts) (the `SandboxProvider` / `Sandbox` seam + the
+  path-escape `SandboxPathError`) and
+  [local-sandbox.ts](../libs/sandbox/src/local-sandbox.ts) (`LocalSandboxProvider`, which provisions
+  each sandbox as a temp directory, tracks the active set, and disposes by removing it). 6 offline
+  tests cover provisioning, unique ids/dirs + tracking, the path-escape guard, writing within the
+  workspace, idempotent dispose, and `disposeAll`.
+- **Deferred (see [../DEFERRED.md](../DEFERRED.md)):** the real **container / microVM** backend
+  (Firecracker / Fargate — the L-sized, high-risk infra spike the ticket flags). The local provider
+  gives a real, testable ephemeral *filesystem* workspace today; OS-level process/network/resource
+  isolation drops in behind the same seam, with the limits defined by HELIX-102.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -953,6 +987,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-97 | Planning Agent — dependency ordering + validation (cycle detection, topo sort, waves) | ✅ | #58 |
 | HELIX-98 | Planning Agent — tech-stack / scaffold selection | ✅ | #59 |
 | HELIX-99 | Planning Agent — codebase context retrieval (plan grounding) | ✅ | #60 |
+| HELIX-100 | Coding Agent — ephemeral sandbox provisioning (seam + local provider) | ✅ | #62 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
