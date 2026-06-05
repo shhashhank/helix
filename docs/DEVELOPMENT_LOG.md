@@ -477,7 +477,7 @@ per-step retries (HELIX-20), and a user-facing orchestrator API with live status
 
 ---
 
-## Epic: MCP Integration Layer  🛠️ in progress
+## Epic: MCP Integration Layer  ✅ done
 
 The governed layer that lets agents use external tools (GitHub, etc.) through the **Model
 Context Protocol (MCP)** — so agents can actually *do* things, not just think.
@@ -648,7 +648,7 @@ The first **real** tool server — gives agents actual GitHub abilities over MCP
 
 ---
 
-### Story: Secrets & Credential Vault  🛠️ in progress
+### Story: Secrets & Credential Vault  ✅ done
 
 The vault so that **tool credentials (API keys, the GitHub App private key, …) never reach the AI**.
 Three sub-tasks: a secrets manager that keeps them encrypted at rest (HELIX-90), just-in-time
@@ -696,6 +696,25 @@ injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
   MCP layer depends on `@helix/secrets` for types only — no runtime coupling. Covered by tests for
   the resolution, the fail-closed path, the env/header merge, and "the registry only ever stores
   references."
+
+#### HELIX-92 — Trace/log redaction  ✅
+- **What it is:** a scrubber that strips credentials out of **telemetry** — the run traces (and any
+  logs) the platform emits — so even if a token gets interpolated into some string along the way, it
+  never appears in a recorded trace. It works two ways: it masks **known secret values** (e.g. a
+  credential just resolved for a tool call) and it recognises **common credential shapes** (PEM
+  private keys, JWTs, GitHub / OpenAI / AWS tokens, `Bearer …`, `secret=…`) even when it doesn't
+  hold the literal value. A `SecretValue` is always rendered as `[REDACTED]`.
+- **Why it matters:** it's the third and final guarantee of the vault — *secrets redacted from
+  logs/traces*. With it, completing the story means credentials are encrypted at rest (HELIX-90),
+  handed over only at call time (HELIX-91), and scrubbed from everything we record (HELIX-92).
+- **Where it lives:** the `Redactor` in [../libs/secrets/src/redaction.ts](../libs/secrets/src/redaction.ts)
+  (`redact` for a string, `redactDeep` for a whole object/array, plus the default credential rules),
+  and a `RedactingTraceSink` in
+  [../libs/agent/src/lib/redacting-trace-sink.ts](../libs/agent/src/lib/redacting-trace-sink.ts)
+  that wraps **any** trace sink (in-memory, OpenTelemetry, …) and deep-redacts each span's name +
+  attributes at the export boundary, leaving structural fields (ids, timing, status) intact. Tested
+  for the credential patterns, value-based scrubbing, no over-redaction of ordinary words, deep/cyclic
+  objects, and the wrapped-sink behaviour.
 
 ---
 
@@ -782,6 +801,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-89 | GitHub MCP server — GitHub App auth (installation tokens) | ✅ | #50 |
 | HELIX-90 | Secrets vault — secrets manager (encrypted at rest, envelope encryption) | ✅ | #51 |
 | HELIX-91 | Secrets vault — just-in-time credential injection (resolve at execution boundary) | ✅ | #52 |
+| HELIX-92 | Secrets vault — trace/log redaction (scrub secrets from telemetry) | ✅ | #53 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -815,15 +835,17 @@ off a run and watch it unfold.
 With the Core Agent Platform (HELIX-1) and Workflow Engine (HELIX-2) epics done, Helix can
 define agents, run a tool-using agent loop within budget, remember/recall context, trace + cost
 runs, and chain agents into durable, human-gated, retrying multi-step workflows you can drive and
-watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now in progress — its first story,
-**MCP Client & Server Registry**, is ✅ done (client HELIX-80, server registry + health checks
-HELIX-81, tool catalog sync HELIX-82), and **Tool Permissioning & Policy** (HELIX-23) is ✅ done — policy gate (HELIX-83),
-rate limits/quotas (HELIX-84), approval routing for risky tools (HELIX-85). The **GitHub MCP
-Server** (HELIX-24) is ✅ done — repo read/search (HELIX-86), branch/commit/push (HELIX-87), and
-PR/review (HELIX-88) tools, all behind **GitHub App auth with short-lived, repo-scoped installation
-tokens** (HELIX-89). The one remaining story in this epic is the **Secrets & Credential Vault**
-(HELIX-25), after which the live Octokit binding can plug the GitHub tools into real repos using
-vault-sourced App credentials.
+watch over HTTP. The **MCP Integration Layer** (HELIX-3) is now ✅ done — **MCP Client & Server
+Registry** (client HELIX-80, server registry + health checks HELIX-81, tool catalog sync HELIX-82),
+**Tool Permissioning & Policy** (HELIX-23 — policy gate HELIX-83, rate limits/quotas HELIX-84,
+approval routing HELIX-85), the **GitHub MCP Server** (HELIX-24 — read/search HELIX-86,
+branch/commit HELIX-87, PR/review HELIX-88, behind GitHub App installation-token auth HELIX-89),
+and the **Secrets & Credential Vault** (HELIX-25 — encrypted-at-rest secrets manager HELIX-90,
+just-in-time credential injection HELIX-91, telemetry redaction HELIX-92). So Helix can now connect
+to MCP tool servers under a policy/quota/approval gate, with credentials kept in a vault, injected
+only at the call boundary, and scrubbed from traces. Two deferred bindings remain before this is
+live against real services (see [../DEFERRED.md](../DEFERRED.md)): the **Octokit** client behind the
+GitHub tools and the **AWS Secrets Manager/KMS** vault backend.
 After that: **sandboxes**, the **agents themselves** (planning/coding/review/…),
 **human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
 

@@ -9,5 +9,6 @@ export * from './lib/voyage-embedder';
 export * from './lib/vector-store';
 export * from './lib/retriever';
 export * from './lib/trace';
+export * from './lib/redacting-trace-sink';
 export * from './lib/correlation';
 export * from './lib/otel-trace-sink';
