@@ -37,7 +37,7 @@ flowchart TB
     mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating<br/>JIT credential injection"]
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
-    pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence)<br/>clarification loop (pause for answers)"]
+    pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → task graph"]
   end
 
   subgraph dat["Data & external"]
