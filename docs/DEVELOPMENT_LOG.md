@@ -931,6 +931,31 @@ repo into it (HELIX-101), and fence it in with egress controls + resource limits
   on overrun). 11 offline tests cover defaults/merge/validation, the egress precedence + wildcard +
   case rules, and the wall-clock pass/timeout paths. Closes the Isolated Workspace story.
 
+### Story: Code Generation & Multi-File Editing  🛠️ in progress
+
+The agent's hands: the tools to change files (HELIX-103), scaffold from templates (HELIX-104), and
+group the changes into commits (HELIX-105).
+
+#### HELIX-103 — File edit tools (read/write/patch)  ✅
+- **What it is:** the three basic tools the coding agent uses to change code, all working **inside the
+  sandbox**: **read** a file, **write** (create or overwrite) a file, and **patch** a file (replace an
+  exact snippet with new text). Patch is deliberately strict — if the snippet isn't there, or appears
+  more than once and you didn't say "replace all", it refuses and says why, so the agent fixes a bad
+  edit instead of silently corrupting a file.
+- **Why it matters:** these are the actual hands of the agent. Every edit goes through the sandbox's
+  path guard, so the agent can't touch anything outside its workspace, and the tools hand back plain
+  error messages (file missing, snippet not found, path escape, bad arguments) as **tool errors** —
+  exactly the feedback the self-correction loop (HELIX-31) will read and retry against.
+- **Where it lives:** the new [../libs/coding-agent](../libs/coding-agent) library
+  (`@helix/coding-agent`) — [file-edits.ts](../libs/coding-agent/src/lib/file-edits.ts) (the
+  `readFile` / `writeFile` / `patchFile` operations + `FileNotFoundError` /
+  `PatchNotApplicableError`) and
+  [file-edit-tools.ts](../libs/coding-agent/src/lib/file-edit-tools.ts) (`FILE_EDIT_TOOLS` LLM tool
+  defs with Zod-derived schemas, and `createFileEditToolHandler(sandbox)` which validates input, runs
+  the op, and returns results — failures as `isError`). Depends on `@helix/sandbox` for the `Sandbox`
+  type only. 15 offline tests run the ops against a real local sandbox (write/read/overwrite, missing
+  file, escape rejection, all the patch cases) and the tool dispatcher (round-trip + every error path).
+
 ---
 
 ## Fixes & hardening
@@ -1027,6 +1052,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-100 | Coding Agent — ephemeral sandbox provisioning (seam + local provider) | ✅ | #62 |
 | HELIX-101 | Coding Agent — repo checkout + workspace mount (fetcher seam) | ✅ | #63 |
 | HELIX-102 | Coding Agent — egress controls + resource limits (sandbox policy) | ✅ | #64 |
+| HELIX-103 | Coding Agent — file edit tools (read/write/patch in sandbox) | ✅ | #65 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
