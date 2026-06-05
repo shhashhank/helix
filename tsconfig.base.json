@@ -20,7 +20,8 @@
       "@helix/workflow": ["libs/workflow/src/index.ts"],
       "@helix/workflow/temporal-client": ["libs/workflow/src/temporal-client.ts"],
       "@helix/mcp": ["libs/mcp/src/index.ts"],
-      "@helix/github-mcp": ["libs/github-mcp/src/index.ts"]
+      "@helix/github-mcp": ["libs/github-mcp/src/index.ts"],
+      "@helix/secrets": ["libs/secrets/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
