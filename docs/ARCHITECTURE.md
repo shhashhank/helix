@@ -34,7 +34,7 @@ flowchart TB
     wf["@helix/workflow<br/>DSL · validator · compiler · runner<br/>versioning · idempotency · Temporal glue"]
     ag["@helix/agent<br/>agent loop · guardrails<br/>memory · vector recall · tracing"]
     lm["@helix/llm<br/>Anthropic provider · model router<br/>cost ceiling · retry/breaker · metering"]
-    mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating"]
+    mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating<br/>JIT credential injection"]
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
   end
@@ -67,6 +67,7 @@ flowchart TB
   lm -->|token & cost usage| pg
   mc -.->|connect · gate| gh
   mc -.->|connect · planned| ext
+  mc -.->|resolve secret refs at connect| sec
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;

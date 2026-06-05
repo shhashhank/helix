@@ -1,5 +1,6 @@
 export * from './types';
 export * from './client';
+export * from './credentials';
 export * from './registry';
 export * from './catalog';
 export * from './policy';

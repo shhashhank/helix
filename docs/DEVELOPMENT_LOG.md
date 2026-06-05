@@ -677,6 +677,26 @@ injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
   AWS KMS and the in-memory repo for Secrets Manager is a drop-in with no change to callers — done
   when we deploy to AWS.
 
+#### HELIX-91 — Just-in-time credential injection  ✅
+- **What it is:** the rule that a tool server's secret (an API key, the GitHub App key) is named in
+  its config only as a **reference**, and the real value is fetched from the vault **at the last
+  possible moment** — when we actually open the connection to that server — and handed straight to
+  where it's needed (a stdio process's environment variable, or an HTTP header). It's resolved,
+  used, and gone; it's never written into the registry and never put in front of the AI.
+- **Why it matters:** this is the *"injected only at call time"* half of the vault's promise. The
+  registry that lists tool servers holds only pointers to secrets, the tool catalogue the model sees
+  holds none, so a credential can't leak through saved config or through the arguments the AI
+  produces. If a required secret is missing we **fail closed** — we don't connect a server without
+  the credential it needs.
+- **Where it lives:** [../libs/mcp/src/credentials.ts](../libs/mcp/src/credentials.ts)
+  (`TransportCredentials` = env/header → vault refs; `resolveTransportCredentials` resolves them at
+  call time) and [../libs/mcp/src/registry.ts](../libs/mcp/src/registry.ts)
+  (`createCredentialInjectingConnector` resolves + injects when connecting; `injectResolvedSecrets`
+  merges the plaintext into a transport config without mutating the stored, ref-only config). The
+  MCP layer depends on `@helix/secrets` for types only — no runtime coupling. Covered by tests for
+  the resolution, the fail-closed path, the env/header merge, and "the registry only ever stores
+  references."
+
 ---
 
 ## Fixes & hardening
@@ -761,6 +781,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-88 | GitHub MCP server — PR + review-comment tools | ✅ | #49 |
 | HELIX-89 | GitHub MCP server — GitHub App auth (installation tokens) | ✅ | #50 |
 | HELIX-90 | Secrets vault — secrets manager (encrypted at rest, envelope encryption) | ✅ | #51 |
+| HELIX-91 | Secrets vault — just-in-time credential injection (resolve at execution boundary) | ✅ | #52 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
