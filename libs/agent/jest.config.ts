@@ -9,6 +9,7 @@ export default {
   moduleFileExtensions: ['ts', 'js', 'html', 'json'],
   moduleNameMapper: {
     '^@helix/llm$': '<rootDir>/../llm/src/index.ts',
+    '^@helix/secrets$': '<rootDir>/../secrets/src/index.ts',
   },
   coverageDirectory: '../../coverage/libs/agent',
   testMatch: ['<rootDir>/src/**/*.spec.ts'],

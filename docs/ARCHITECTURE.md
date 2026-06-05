@@ -32,7 +32,7 @@ flowchart TB
   subgraph lib["Shared libraries — @helix/*"]
     direction TB
     wf["@helix/workflow<br/>DSL · validator · compiler · runner<br/>versioning · idempotency · Temporal glue"]
-    ag["@helix/agent<br/>agent loop · guardrails<br/>memory · vector recall · tracing"]
+    ag["@helix/agent<br/>agent loop · guardrails<br/>memory · vector recall · tracing<br/>telemetry redaction"]
     lm["@helix/llm<br/>Anthropic provider · model router<br/>cost ceiling · retry/breaker · metering"]
     mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating<br/>JIT credential injection"]
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
@@ -68,6 +68,7 @@ flowchart TB
   mc -.->|connect · gate| gh
   mc -.->|connect · planned| ext
   mc -.->|resolve secret refs at connect| sec
+  ag -.->|redact secrets from telemetry| sec
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
@@ -133,7 +134,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 |---|---|---|
 | **HELIX-1 · Core Agent Platform** | ✅ done | Agent definitions + registry API; LLM gateway (routing, cost, resilience, metering); agent loop with guardrails, structured output, working memory, vector recall, tracing |
 | **HELIX-2 · Workflow Engine** | ✅ done | Define → compile → run a DAG; durable execution on Temporal; human pause/resume; per-step retries; orchestrator run API + live SSE status |
-| **HELIX-3 · MCP Integration Layer** | 🛠️ in progress | MCP client + server registry + tool catalog ✅ (HELIX-22); tool permissioning, GitHub server, secrets vault next |
+| **HELIX-3 · MCP Integration Layer** | ✅ done | MCP client + server registry + tool catalog (HELIX-22); tool permissioning/quota/approval (HELIX-23); GitHub MCP server + App-token auth (HELIX-24); secrets vault — encrypted at rest, JIT injection, telemetry redaction (HELIX-25) |
 | HELIX-4..8 · Agents (planning/coding/review/testing/deploy) | ⬜ | Replace the stub step executor with real agents |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
