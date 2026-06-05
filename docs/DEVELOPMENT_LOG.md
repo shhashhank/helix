@@ -748,6 +748,24 @@ bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
   offline tests cover schema validation and the extraction flow against a fake provider (forced tool,
   passthrough of tier/effort/metering, and the no-tool / malformed / empty-input error paths).
 
+#### HELIX-94 — Ambiguity detection + question generation  ✅
+- **What it is:** the step that reads the spec from HELIX-93, spots the parts that are genuinely
+  unclear or could be read more than one way, and turns each into a **specific clarification
+  question**. Every question comes with an **importance** (*blocking / important / optional*), a
+  **confidence** score (how safe it is to just proceed on a default guess without asking), a proposed
+  **default assumption**, and — where it helps — a short list of likely answer options.
+- **Why it matters:** it's how the planner avoids two failure modes — silently guessing on something
+  important, or pestering the user about trivia. A **confidence threshold** decides what actually
+  gets asked: anything *blocking*, or below the threshold, is surfaced to the user; the rest can
+  proceed on its default assumption. That triage is exactly what the clarification loop (HELIX-95)
+  will drive next.
+- **Where it lives:** [../libs/planning/src/lib/clarification.ts](../libs/planning/src/lib/clarification.ts)
+  — `generateClarifications` (forced-tool, schema-validated, like extraction), `triageByConfidence`
+  (the threshold gate splitting *ask* vs *auto-resolve*), `hasBlockingQuestions`, and a deterministic
+  `openQuestionsToClarifications` baseline that structures the spec's free-text open questions without
+  an LLM. 11 more offline tests cover the schema (importance + 0–1 confidence), the generation flow
+  (forced tool, spec/request embedded, empty-list + error paths), and the confidence triage.
+
 ---
 
 ## Fixes & hardening
@@ -835,6 +853,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-91 | Secrets vault — just-in-time credential injection (resolve at execution boundary) | ✅ | #52 |
 | HELIX-92 | Secrets vault — trace/log redaction (scrub secrets from telemetry) | ✅ | #53 |
 | HELIX-93 | Planning Agent — requirement extraction prompt + structured spec schema | ✅ | #54 |
+| HELIX-94 | Planning Agent — ambiguity detection + clarification questions (confidence triage) | ✅ | #55 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
