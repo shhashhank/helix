@@ -15,5 +15,6 @@ module.exports = {
   testMatch: ['<rootDir>/src/**/*.spec.ts'],
   moduleNameMapper: {
     '^@modelcontextprotocol/sdk/(.*)$': `${sdkCjs}/$1`,
+    '^@helix/secrets$': '<rootDir>/../secrets/src/index.ts',
   },
 };

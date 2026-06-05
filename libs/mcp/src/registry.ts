@@ -9,13 +9,31 @@
  * transports for production use.
  */
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import type { SecretsManager } from '@helix/secrets';
 import { HelixMcpClient } from './client';
+import { resolveTransportCredentials } from './credentials';
+import type { ResolvedTransportSecrets, TransportCredentials } from './credentials';
 import { McpClientInfo } from './types';
 
-/** How to reach an MCP server. */
+/**
+ * How to reach an MCP server. `env`/`headers` are literal (non-secret) values;
+ * secret-backed env vars and headers go in `credentials` as vault *references*
+ * and are resolved just-in-time at connect (see {@link createCredentialInjectingConnector}).
+ */
 export type McpTransportConfig =
-  | { type: 'stdio'; command: string; args?: string[]; env?: Record<string, string> }
-  | { type: 'http'; url: string };
+  | {
+      type: 'stdio';
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      credentials?: TransportCredentials;
+    }
+  | {
+      type: 'http';
+      url: string;
+      headers?: Record<string, string>;
+      credentials?: TransportCredentials;
+    };
 
 /** Input to {@link McpServerRegistry.register}. */
 export interface McpServerConfig {
@@ -154,7 +172,8 @@ export class McpServerRegistry {
 /**
  * Default connector: builds a real transport from the server's config and connects
  * a {@link HelixMcpClient}. Transports are imported lazily so unused ones (and their
- * deps) aren't loaded.
+ * deps) aren't loaded. Does **not** resolve `credentials` — use
+ * {@link createCredentialInjectingConnector} for servers that need vault secrets.
  */
 export function createDefaultConnector(info?: McpClientInfo): McpServerConnector {
   return async (server) => {
@@ -165,15 +184,69 @@ export function createDefaultConnector(info?: McpClientInfo): McpServerConnector
   };
 }
 
+/**
+ * Connector that performs just-in-time credential injection (HELIX-91): at connect
+ * time it resolves the server's `credentials` refs from the vault and merges the
+ * plaintext into the transport's env/headers. The registry keeps only the refs;
+ * the resolved secrets live only for the duration of this connect.
+ */
+export function createCredentialInjectingConnector(
+  secrets: SecretsManager,
+  info?: McpClientInfo,
+): McpServerConnector {
+  return async (server) => {
+    const resolved = await resolveTransportCredentials(server.transport.credentials, secrets);
+    const transport = await buildTransport(injectResolvedSecrets(server.transport, resolved));
+    const client = new HelixMcpClient(info);
+    await client.connect(transport);
+    return client;
+  };
+}
+
+/**
+ * Merge resolved secrets into a transport config, returning a **new** config with
+ * the plaintext applied to env/headers and `credentials` stripped. Pure (does not
+ * mutate the input), so the registry's stored config keeps only references.
+ */
+export function injectResolvedSecrets(
+  config: McpTransportConfig,
+  resolved: ResolvedTransportSecrets,
+): McpTransportConfig {
+  if (config.type === 'stdio') {
+    return {
+      type: 'stdio',
+      command: config.command,
+      args: config.args,
+      env: { ...config.env, ...resolved.env },
+      credentials: undefined,
+    };
+  }
+  return {
+    type: 'http',
+    url: config.url,
+    headers: { ...config.headers, ...resolved.headers },
+    credentials: undefined,
+  };
+}
+
 async function buildTransport(config: McpTransportConfig): Promise<Transport> {
   if (config.type === 'stdio') {
     const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
-    return new StdioClientTransport({ command: config.command, args: config.args, env: config.env });
+    const env = { ...config.env };
+    return new StdioClientTransport({
+      command: config.command,
+      args: config.args,
+      env: Object.keys(env).length > 0 ? env : undefined,
+    });
   }
   const { StreamableHTTPClientTransport } = await import(
     '@modelcontextprotocol/sdk/client/streamableHttp.js'
   );
-  return new StreamableHTTPClientTransport(new URL(config.url));
+  const headers = { ...config.headers };
+  return new StreamableHTTPClientTransport(
+    new URL(config.url),
+    Object.keys(headers).length > 0 ? { requestInit: { headers } } : undefined,
+  );
 }
 
 function nowIso(): string {
