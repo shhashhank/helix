@@ -37,7 +37,7 @@ flowchart TB
     mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating<br/>JIT credential injection"]
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
-    pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold selection"]
+    pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold · codebase grounding"]
   end
 
   subgraph dat["Data & external"]
@@ -71,6 +71,7 @@ flowchart TB
   mc -.->|resolve secret refs at connect| sec
   ag -.->|redact secrets from telemetry| sec
   pl -.->|structured-output extraction| lm
+  pl -.->|codebase grounding (retriever seam)| ag
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
@@ -137,7 +138,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-1 · Core Agent Platform** | ✅ done | Agent definitions + registry API; LLM gateway (routing, cost, resilience, metering); agent loop with guardrails, structured output, working memory, vector recall, tracing |
 | **HELIX-2 · Workflow Engine** | ✅ done | Define → compile → run a DAG; durable execution on Temporal; human pause/resume; per-step retries; orchestrator run API + live SSE status |
 | **HELIX-3 · MCP Integration Layer** | ✅ done | MCP client + server registry + tool catalog (HELIX-22); tool permissioning/quota/approval (HELIX-23); GitHub MCP server + App-token auth (HELIX-24); secrets vault — encrypted at rest, JIT injection, telemetry redaction (HELIX-25) |
-| **HELIX-4 · Planning Agent** | 🛠️ in progress | NL request → validated requirements spec (HELIX-93) → ambiguity/clarification → implementation plan (the Coding Agent's input contract) |
+| **HELIX-4 · Planning Agent** | ✅ done | NL request → validated requirements spec + clarification loop (HELIX-26); implementation plan — task graph, dependency ordering, tech-stack/scaffold (HELIX-27); codebase grounding (HELIX-28). The plan is the Coding Agent's input contract |
 | HELIX-5..8 · Agents (coding/review/testing/deploy) | ⬜ | Replace the stub step executor with real agents |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
