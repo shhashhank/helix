@@ -38,6 +38,7 @@ flowchart TB
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
     pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold · codebase grounding"]
+    sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard"]
   end
 
   subgraph dat["Data & external"]
@@ -139,7 +140,8 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-2 · Workflow Engine** | ✅ done | Define → compile → run a DAG; durable execution on Temporal; human pause/resume; per-step retries; orchestrator run API + live SSE status |
 | **HELIX-3 · MCP Integration Layer** | ✅ done | MCP client + server registry + tool catalog (HELIX-22); tool permissioning/quota/approval (HELIX-23); GitHub MCP server + App-token auth (HELIX-24); secrets vault — encrypted at rest, JIT injection, telemetry redaction (HELIX-25) |
 | **HELIX-4 · Planning Agent** | ✅ done | NL request → validated requirements spec + clarification loop (HELIX-26); implementation plan — task graph, dependency ordering, tech-stack/scaffold (HELIX-27); codebase grounding (HELIX-28). The plan is the Coding Agent's input contract |
-| HELIX-5..8 · Agents (coding/review/testing/deploy) | ⬜ | Replace the stub step executor with real agents |
+| **HELIX-5 · Coding Agent** | 🛠️ in progress | Generate/modify multi-file code to satisfy a plan in an isolated sandbox with a build/lint self-correction loop. Sandbox provisioning seam landed (HELIX-100) |
+| HELIX-6..8 · Agents (review/testing/deploy) | ⬜ | Replace the stub step executor with the remaining agents |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
 ---
@@ -155,6 +157,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | GitHub MCP server | [libs/github-mcp](../libs/github-mcp) (`@helix/github-mcp`) |
 | Secrets vault | [libs/secrets](../libs/secrets) (`@helix/secrets`) |
 | Planning Agent | [libs/planning](../libs/planning) (`@helix/planning`) |
+| Sandbox | [libs/sandbox](../libs/sandbox) (`@helix/sandbox`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |

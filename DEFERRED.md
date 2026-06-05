@@ -49,6 +49,22 @@ else it's tracked.
   Secrets Manager credentials available).
 - **Also tracked:** HELIX-90 PR "Out of scope".
 
+### 3. Real container / microVM sandbox backend
+- **Deferred from:** HELIX-100 (Ephemeral sandbox provisioning) — in progress.
+- **What's deferred:** provisioning sandboxes as **isolated containers / microVMs**
+  (Firecracker / Fargate / Docker) for true process, network, and resource
+  isolation. (The ticket itself flags this as an L-sized, high-risk infra spike.)
+- **In place instead:** `@helix/sandbox` — a `SandboxProvider` / `Sandbox` seam +
+  `LocalSandboxProvider`, which provisions each sandbox as an ephemeral temp
+  directory (create → track → dispose) with a path-escape guard. Real filesystem
+  isolation + lifecycle, fully offline-tested; just not OS-level isolation.
+- **To land:** implement `SandboxProvider` over a container/microVM runtime with
+  no change to callers. The egress controls + resource limits (HELIX-102) define
+  the isolation knobs that backend enforces.
+- **Trigger / sequencing:** when the Coding Agent runs untrusted/agent-authored
+  code for real (and when there's a host with the privileged runtime + cloud env).
+- **Also tracked:** HELIX-100 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
