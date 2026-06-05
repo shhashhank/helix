@@ -784,6 +784,28 @@ bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
   fake provider + a stub responder: ask→refine→stop-when-clear, no-questions short-circuit, the
   round cap, the user-declines path, and the full extract-then-clarify flow with aggregated usage.
 
+### Story: Implementation Plan Generation  🛠️ in progress
+
+Turn the agreed spec into a concrete plan: break it into tasks (HELIX-96), order them by dependency
+and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
+
+#### HELIX-96 — Task decomposition prompt + schema  ✅
+- **What it is:** the step that takes the finished requirements spec and breaks it into a list of
+  concrete **engineering tasks** — the nodes of the implementation plan. Each task has a stable id, a
+  title and description, a category (backend / data / testing / …), the **requirement ids it
+  implements** (so every requirement is traceable to work), and the **ids of tasks that must come
+  first** (`dependsOn` — the edges of the task graph).
+- **Why it matters:** it's the bridge from *what* to build (the spec) to *how* to build it in
+  reviewable pieces. Declaring dependencies as `dependsOn` rather than relying on list order is what
+  lets the next step (HELIX-97) assemble and validate a real dependency graph, and ultimately makes
+  the plan the Coding Agent's input contract.
+- **Where it lives:** [../libs/planning/src/lib/task-plan.ts](../libs/planning/src/lib/task-plan.ts)
+  (the `TaskPlan` / `ImplementationTask` schema — Zod as the single source of truth for the type, the
+  validator, and the tool's JSON Schema — plus `taskIds`) and
+  [../libs/planning/src/lib/task-decomposition.ts](../libs/planning/src/lib/task-decomposition.ts)
+  (the tech-lead prompt + `decomposeTasks`, forced-tool + schema-validated like the earlier steps). 9
+  more offline tests cover schema validation and the decomposition flow against a fake provider.
+
 ---
 
 ## Fixes & hardening
@@ -873,6 +895,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-93 | Planning Agent — requirement extraction prompt + structured spec schema | ✅ | #54 |
 | HELIX-94 | Planning Agent — ambiguity detection + clarification questions (confidence triage) | ✅ | #55 |
 | HELIX-95 | Planning Agent — clarification loop (pause for answers, refine spec) | ✅ | #56 |
+| HELIX-96 | Planning Agent — task decomposition prompt + task-graph schema | ✅ | #57 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
