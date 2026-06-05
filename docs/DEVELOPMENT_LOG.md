@@ -912,6 +912,25 @@ repo into it (HELIX-101), and fence it in with egress controls + resource limits
   which HELIX-102 governs) or a GitHub-tools-backed reader (needs the deferred Octokit client). The
   mount logic + seam are done; wiring a concrete fetcher is the remaining integration.
 
+#### HELIX-102 — Egress controls + resource limits  ✅
+- **What it is:** the sandbox's **safety fence** — a definition of what the workspace is allowed to
+  do. Two parts: a **network allowlist** (which hosts it may reach — default **deny everything**
+  except a small list like the npm registry and GitHub) and **resource caps** (CPU, memory, disk,
+  a wall-clock time limit, and a max process count). It also includes the bits that can actually be
+  enforced in-process right now: an egress *decision* (is this host allowed?) and a wall-clock timer
+  that trips an operation that runs too long.
+- **Why it matters:** the coding agent runs code it wrote itself, so the workspace must be fenced in —
+  it shouldn't phone home anywhere it likes or chew up the machine. The egress rules use the same
+  **`deny > allow > default`, default-deny** precedence as the MCP tool policy, so nothing is reachable
+  unless explicitly permitted. The OS-level enforcement of CPU/mem/disk is applied by the real
+  container backend; this defines the knobs it uses, and what *can* be enforced without it is.
+- **Where it lives:** [../libs/sandbox/src/policy.ts](../libs/sandbox/src/policy.ts) — `SandboxPolicy`
+  / `ResourceLimits` / `EgressPolicy` with secure defaults, `resolveSandboxPolicy` (merge a partial
+  over the defaults + validate), `evaluateEgress` / `isHostAllowed` (host allow/deny with `*.suffix`
+  wildcards, default-deny), and `enforceWallClock` (cap an in-process operation, `SandboxTimeoutError`
+  on overrun). 11 offline tests cover defaults/merge/validation, the egress precedence + wildcard +
+  case rules, and the wall-clock pass/timeout paths. Closes the Isolated Workspace story.
+
 ---
 
 ## Fixes & hardening
@@ -1007,6 +1026,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-99 | Planning Agent — codebase context retrieval (plan grounding) | ✅ | #60 |
 | HELIX-100 | Coding Agent — ephemeral sandbox provisioning (seam + local provider) | ✅ | #62 |
 | HELIX-101 | Coding Agent — repo checkout + workspace mount (fetcher seam) | ✅ | #63 |
+| HELIX-102 | Coding Agent — egress controls + resource limits (sandbox policy) | ✅ | #64 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
