@@ -36,6 +36,7 @@ flowchart TB
     lm["@helix/llm<br/>Anthropic provider · model router<br/>cost ceiling · retry/breaker · metering"]
     mc["@helix/mcp<br/>client · server registry · tool catalog<br/>policy · quota · approval gating"]
     gh["@helix/github-mcp<br/>GitHub MCP server<br/>read/search · branch/commit · PR tools<br/>GitHub App installation-token auth"]
+    sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
   end
 
   subgraph dat["Data & external"]
@@ -146,6 +147,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Workflow engine | [libs/workflow](../libs/workflow) (`@helix/workflow`, incl. `lib/temporal/`) |
 | MCP integration | [libs/mcp](../libs/mcp) (`@helix/mcp`) |
 | GitHub MCP server | [libs/github-mcp](../libs/github-mcp) (`@helix/github-mcp`) |
+| Secrets vault | [libs/secrets](../libs/secrets) (`@helix/secrets`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |
