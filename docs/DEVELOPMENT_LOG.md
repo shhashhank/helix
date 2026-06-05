@@ -723,7 +723,7 @@ injection at call time (HELIX-91), and redaction from logs/traces (HELIX-92).
 The first real **agent**: it turns a plain-language request into a validated requirements spec and,
 eventually, a structured implementation plan that becomes the Coding Agent's input contract.
 
-### Story: Requirement Analysis & Clarification  🛠️ in progress
+### Story: Requirement Analysis & Clarification  ✅ done
 
 Understand what's actually being asked: extract a structured spec (HELIX-93), spot the ambiguous
 bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
@@ -765,6 +765,24 @@ bits and ask about them (HELIX-94), and loop the answers back in (HELIX-95).
   `openQuestionsToClarifications` baseline that structures the spec's free-text open questions without
   an LLM. 11 more offline tests cover the schema (importance + 0–1 confidence), the generation flow
   (forced tool, spec/request embedded, empty-list + error paths), and the confidence triage.
+
+#### HELIX-95 — Clarification loop integration  ✅
+- **What it is:** the loop that ties the previous two steps together and **pauses for the user**.
+  Each round it generates clarification questions, keeps only the ones worth asking (blocking or
+  below the confidence threshold), hands those to whoever is driving the conversation, waits for the
+  answers, then revises the spec to fold them in — repeating until nothing important is left to ask
+  (or a safety cap of rounds is reached).
+- **Why it matters:** it turns the planner from a one-shot guess into an actual back-and-forth that
+  converges on a spec everyone agrees on. Crucially, **how** the user is asked is left to the caller
+  via an injected responder (`ClarificationResponder`) — a CLI prompt, an approval UI, or a test
+  stub — so the loop has no opinion about the UI and stays fully testable offline. The whole
+  Requirement Analysis pipeline now has a single entry point, `extractAndClarify(request, …)`.
+- **Where it lives:** [../libs/planning/src/lib/clarification-loop.ts](../libs/planning/src/lib/clarification-loop.ts)
+  — `clarifyRequirements` (the round loop), `refineRequirements` (re-emits a validated spec that
+  incorporates the answers + any auto-applied assumptions, reusing the HELIX-93 schema/tool), and
+  `extractAndClarify` (extract → clarify in one call). 5 more offline tests, driven by a scripted
+  fake provider + a stub responder: ask→refine→stop-when-clear, no-questions short-circuit, the
+  round cap, the user-declines path, and the full extract-then-clarify flow with aggregated usage.
 
 ---
 
@@ -854,6 +872,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-92 | Secrets vault — trace/log redaction (scrub secrets from telemetry) | ✅ | #53 |
 | HELIX-93 | Planning Agent — requirement extraction prompt + structured spec schema | ✅ | #54 |
 | HELIX-94 | Planning Agent — ambiguity detection + clarification questions (confidence triage) | ✅ | #55 |
+| HELIX-95 | Planning Agent — clarification loop (pause for answers, refine spec) | ✅ | #56 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
