@@ -1,0 +1,7 @@
+{
+  "name": "coding-agent",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/coding-agent/src",
+  "projectType": "library",
+  "targets": {}
+}

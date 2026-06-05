@@ -23,7 +23,8 @@
       "@helix/github-mcp": ["libs/github-mcp/src/index.ts"],
       "@helix/secrets": ["libs/secrets/src/index.ts"],
       "@helix/planning": ["libs/planning/src/index.ts"],
-      "@helix/sandbox": ["libs/sandbox/src/index.ts"]
+      "@helix/sandbox": ["libs/sandbox/src/index.ts"],
+      "@helix/coding-agent": ["libs/coding-agent/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

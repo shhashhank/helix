@@ -39,6 +39,7 @@ flowchart TB
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
     pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold · codebase grounding"]
     sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard<br/>repo checkout + workspace mount<br/>egress allowlist · resource limits"]
+    cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)"]
   end
 
   subgraph dat["Data & external"]
@@ -73,6 +74,7 @@ flowchart TB
   ag -.->|redact secrets from telemetry| sec
   pl -.->|structured-output extraction| lm
   pl -.->|codebase grounding · retriever seam| ag
+  cag -.->|file edits in workspace| sbx
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
@@ -158,6 +160,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Secrets vault | [libs/secrets](../libs/secrets) (`@helix/secrets`) |
 | Planning Agent | [libs/planning](../libs/planning) (`@helix/planning`) |
 | Sandbox | [libs/sandbox](../libs/sandbox) (`@helix/sandbox`) |
+| Coding Agent | [libs/coding-agent](../libs/coding-agent) (`@helix/coding-agent`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |
