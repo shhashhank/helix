@@ -806,6 +806,25 @@ and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
   (the tech-lead prompt + `decomposeTasks`, forced-tool + schema-validated like the earlier steps). 9
   more offline tests cover schema validation and the decomposition flow against a fake provider.
 
+#### HELIX-97 — Dependency ordering + validation  ✅
+- **What it is:** the step that takes the tasks from HELIX-96 (each saying which other tasks it
+  `dependsOn`) and turns those links into a usable plan. It **checks the graph** — no two tasks share
+  an id, no task points at a task that doesn't exist, nothing depends on itself, and there are **no
+  cycles** (A → B → A) — then computes a safe **order** (every task after the things it needs) grouped
+  into **waves**: each wave is a batch of tasks whose prerequisites are all done, so they can run in
+  parallel.
+- **Why it matters:** the decomposition gives raw tasks; this is what makes them *executable in the
+  right order*. The waves map cleanly onto the workflow engine's parallel steps, and the validation
+  catches an LLM that produced an impossible plan (a cycle or a dangling reference) before any code
+  is written. It's pure, deterministic graph code — no model call — so it's cheap and exhaustively
+  testable.
+- **Where it lives:** [../libs/planning/src/lib/task-graph.ts](../libs/planning/src/lib/task-graph.ts)
+  — `validateTaskGraph` (duplicate ids / unknown + self dependencies), `findCycles` (DFS cycle
+  detection, deduped), and `orderTaskGraph` (validate → topological order + parallel waves, throwing
+  `TaskGraphError` with the issues on a bad graph). 11 more offline tests cover validation, cycle
+  detection (2-node, longer, deduped), the wave/topo ordering, independent-task batching, and every
+  error path.
+
 ---
 
 ## Fixes & hardening
@@ -896,6 +915,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-94 | Planning Agent — ambiguity detection + clarification questions (confidence triage) | ✅ | #55 |
 | HELIX-95 | Planning Agent — clarification loop (pause for answers, refine spec) | ✅ | #56 |
 | HELIX-96 | Planning Agent — task decomposition prompt + task-graph schema | ✅ | #57 |
+| HELIX-97 | Planning Agent — dependency ordering + validation (cycle detection, topo sort, waves) | ✅ | #58 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
