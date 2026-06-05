@@ -5,3 +5,4 @@ export * from './lib/clarification-loop';
 export * from './lib/task-plan';
 export * from './lib/task-decomposition';
 export * from './lib/task-graph';
+export * from './lib/tech-stack';
