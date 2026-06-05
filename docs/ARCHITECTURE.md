@@ -71,7 +71,7 @@ flowchart TB
   mc -.->|resolve secret refs at connect| sec
   ag -.->|redact secrets from telemetry| sec
   pl -.->|structured-output extraction| lm
-  pl -.->|codebase grounding (retriever seam)| ag
+  pl -.->|codebase grounding · retriever seam| ag
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
