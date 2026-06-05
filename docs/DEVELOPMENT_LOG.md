@@ -894,6 +894,24 @@ repo into it (HELIX-101), and fence it in with egress controls + resource limits
   gives a real, testable ephemeral *filesystem* workspace today; OS-level process/network/resource
   isolation drops in behind the same seam, with the limits defined by HELIX-102.
 
+#### HELIX-101 — Repo checkout + workspace mount  ✅
+- **What it is:** the step that puts the **target repo into the sandbox** so the agent has code to
+  work on. Point it at a repo + branch and it writes every file into the workspace (creating folders
+  as needed), either at the root or under a chosen subfolder. *Where* the files come from is pluggable
+  — the real version will `git clone` the branch (or read it via the GitHub tools) — while the
+  *mounting* (writing the files in) is what this step owns.
+- **Why it matters:** the coding agent edits real files; this is how they get there. And it reuses the
+  sandbox's **path-escape guard** on every write, so a repo that contains a sneaky path (`../…`) can't
+  trick the checkout into writing outside the sandbox — it's rejected before anything lands.
+- **Where it lives:** [../libs/sandbox/src/repo-checkout.ts](../libs/sandbox/src/repo-checkout.ts) —
+  `checkoutRepo` (fetch → write each file through `sandbox.resolve`, returning what was mounted), the
+  `RepoFetcher` seam (the swappable "where the files come from"), and `InMemoryRepoFetcher` for tests
+  and composition. 5 offline tests cover materializing files (incl. nested dirs), the `mountDir`
+  subdir option, the escape-path rejection (nothing written outside), and ref pass-through.
+- **Deferred:** the real `RepoFetcher` — a `git clone --depth 1` (needs the git binary + network/egress,
+  which HELIX-102 governs) or a GitHub-tools-backed reader (needs the deferred Octokit client). The
+  mount logic + seam are done; wiring a concrete fetcher is the remaining integration.
+
 ---
 
 ## Fixes & hardening
@@ -988,6 +1006,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-98 | Planning Agent — tech-stack / scaffold selection | ✅ | #59 |
 | HELIX-99 | Planning Agent — codebase context retrieval (plan grounding) | ✅ | #60 |
 | HELIX-100 | Coding Agent — ephemeral sandbox provisioning (seam + local provider) | ✅ | #62 |
+| HELIX-101 | Coding Agent — repo checkout + workspace mount (fetcher seam) | ✅ | #63 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
