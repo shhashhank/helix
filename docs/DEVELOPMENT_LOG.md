@@ -995,7 +995,7 @@ group the changes into commits (HELIX-105).
   more offline tests cover the line diff (add/modify/delete, from-empty), snapshot/diff classification
   against a real sandbox, ignored-dir skipping, and grouping by dir + by a custom per-task key.
 
-### Story: Build, Lint & Self-Correction Loop  🛠️ in progress
+### Story: Build, Lint & Self-Correction Loop  ✅ done
 
 Make the agent's code actually compile + lint, and fix itself when it doesn't: run the checks
 (HELIX-106), feed failures back as fix instructions (HELIX-107), and cap the retries (HELIX-108).
@@ -1035,6 +1035,25 @@ Make the agent's code actually compile + lint, and fix itself when it doesn't: r
   into structured `Diagnostic`s) and `buildFixFeedback` (per failed check → diagnostics or a truncated
   raw fallback, plus a bounded re-prompt; `ok` short-circuits when the checks passed). 7 more offline
   tests cover both parsers, the pass/parse/raw-fallback/timed-out cases, and the diagnostic cap.
+
+#### HELIX-108 — Iteration budget + bail-out  ✅
+- **What it is:** the **loop** that finally ties the editing tools, the checks, and the error feedback
+  together: run the checks → if they pass, done → if they fail, build the fix feedback, let the agent
+  apply a fix, and run again. It does this at most a fixed number of times (the **iteration budget**),
+  and if the code still doesn't pass after the last try it **stops and flags it for a human** instead
+  of pushing broken code.
+- **Why it matters:** this is the self-correction that backs the Coding Agent's promise of *compiling,
+  lint-passing* changes — and the budget is the safety valve so a stubborn error can't loop forever
+  or burn unlimited tokens. The "apply a fix" step is an injected callback, so the actual LLM editing
+  lives in the caller and the whole loop is deterministic and offline-testable. The result says
+  exactly what happened: passed vs exhausted, how many runs and fix attempts, the final check output,
+  and (on exhaustion) the unresolved feedback to hand to the human.
+- **Where it lives:** [../libs/coding-agent/src/lib/self-correct.ts](../libs/coding-agent/src/lib/self-correct.ts)
+  — `selfCorrect(runner, { checks, applyFix, maxIterations, … })` → `SelfCorrectResult` (`status`
+  passed/exhausted, `escalate`, `iterations`, `fixAttempts`, `finalOutcome`, `finalFeedback`,
+  `history`). It deliberately doesn't attempt a fix on the last allowed run (nothing left to verify
+  it). 4 more offline tests: pass-first (no fix), fix-then-pass, exhaust + escalate (with the right
+  fix-attempt count), and `maxIterations: 1`. Closes the Build, Lint & Self-Correction Loop story.
 
 ---
 
@@ -1137,6 +1156,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-105 | Coding Agent — diff generation + commit grouping | ✅ | #67 |
 | HELIX-106 | Coding Agent — build/lint runner in sandbox (command runner + checks) | ✅ | #68 |
 | HELIX-107 | Coding Agent — error feedback to fix loop (diagnostic parse + re-prompt) | ✅ | #69 |
+| HELIX-108 | Coding Agent — iteration budget + bail-out (self-correction loop) | ✅ | #70 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
