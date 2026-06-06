@@ -1162,6 +1162,25 @@ prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
   error, the multi-aspect merge, and the summary/blocking logic. Closes the Diff-Aware Review Engine
   story.
 
+### Story: Secret Scan (basic security)  ✅ done
+
+#### HELIX-114 — Secret scan integration  ✅
+- **What it is:** a fast, **gitleaks-style** scan of the change for **committed secrets** — it looks at
+  the *added* lines of the diff for the tell-tale shapes of credentials (PEM private keys, JWTs, GitHub
+  / OpenAI / AWS tokens, hard-coded `password=…`) and turns any hit into a **blocker** finding. It only
+  looks at added lines, so a pre-existing secret isn't blamed on this change, and it **never echoes the
+  secret value** in the finding it reports.
+- **Why it matters:** the model-based security review (HELIX-112) is good but not guaranteed; a
+  deterministic regex scan is a cheap, reliable backstop for the one thing you absolutely must not
+  merge — a key checked into the repo. Each hit is a blocker, which (via `isBlocking`) fails the merge
+  gate, with a suggestion to load the value from the secrets vault instead.
+- **Where it lives:** [../libs/review-agent/src/lib/secret-scan.ts](../libs/review-agent/src/lib/secret-scan.ts)
+  — `SECRET_PATTERNS` (the credential shapes, mirroring what `@helix/secrets` redacts) and
+  `scanDiffForSecrets` (added-line scan → `Finding[]`). Pure + deterministic, no LLM. 5 offline tests:
+  the common shapes flagged as security blockers, never echoing the value, ignoring secrets on
+  context/removed lines and in deleted files, and one finding per offending line. Closes the Secret
+  Scan story.
+
 ---
 
 ## Fixes & hardening
@@ -1269,6 +1288,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-111 | Code Review Agent — diff fetch + context assembly | ✅ | #73 |
 | HELIX-112 | Code Review Agent — multi-aspect review prompts | ✅ | #74 |
 | HELIX-113 | Code Review Agent — findings schema + severity model | ✅ | #75 |
+| HELIX-114 | Code Review Agent — secret scan integration (gitleaks-style) | ✅ | #76 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
