@@ -1229,7 +1229,7 @@ turn the verdict into a status check / merge gate (HELIX-116).
 The agent that makes sure the code actually works: generate tests for the change, run them in the
 sandbox, report results + coverage, and loop failures back to the Coding Agent.
 
-### Story: Test Generation  🛠️ in progress
+### Story: Test Generation  ✅ done
 
 Write the tests: per-framework generation prompts (HELIX-117) and a mapping from the spec's
 acceptance criteria to tests (HELIX-118).
@@ -1249,6 +1249,22 @@ acceptance criteria to tests (HELIX-118).
   (forced `emit_tests` tool → validated `GeneratedTest[]`, via the injected `@helix/llm` provider). 6
   offline tests against a fake provider: the per-framework prompt + conventions, schema validation, and
   the generation flow (forced tool, source embedded, no-tool + malformed error paths).
+
+#### HELIX-118 — Acceptance-criteria to test mapping  ✅
+- **What it is:** generating tests that specifically **verify the spec's acceptance criteria**, with
+  each test **traced back to the criterion it covers**. You give it the numbered acceptance criteria
+  (from the Planning Agent's spec) + the source; it returns tests grouped by which criterion each one
+  checks. A coverage check then says which criteria have tests and which were **left untested**.
+- **Why it matters:** there's a difference between "tests pass" and "the thing we were asked to build
+  works." Tying tests to acceptance criteria gives traceability — you can point at a criterion and see
+  the test that proves it — and the coverage check is the safety net that catches a requirement nobody
+  wrote a test for.
+- **Where it lives:** [../libs/testing-agent/src/lib/acceptance-tests.ts](../libs/testing-agent/src/lib/acceptance-tests.ts)
+  — `generateAcceptanceTests` (forced `emit_acceptance_tests` tool → tests grouped by `criterionIndex`,
+  which `parseAcceptanceMapping` resolves to the criterion text and range-checks) and
+  `acceptanceCoverage` (covered vs uncovered criteria + `fullyCovered`). 8 more offline tests:
+  index resolution + range/empty-tests validation, the generation flow (forced tool, numbered criteria
+  embedded, empty-criteria + no-tool errors), and the coverage logic. Closes the Test Generation story.
 
 ---
 
@@ -1361,6 +1377,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-115 | Code Review Agent — inline + summary comment posting | ✅ | #77 |
 | HELIX-116 | Code Review Agent — status check / merge gate (severity threshold) | ✅ | #78 |
 | HELIX-117 | Testing Agent — test generation prompts per framework | ✅ | #79 |
+| HELIX-118 | Testing Agent — acceptance-criteria to test mapping (traceability + coverage) | ✅ | #81 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
