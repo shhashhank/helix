@@ -1181,6 +1181,29 @@ prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
   context/removed lines and in deleted files, and one finding per offending line. Closes the Secret
   Scan story.
 
+### Story: Review Posting & Merge Gate  🛠️ in progress
+
+Tell the human what was found and gate the merge: post inline + summary comments (HELIX-115) and
+turn the verdict into a status check / merge gate (HELIX-116).
+
+#### HELIX-115 — Inline + summary comment posting  ✅
+- **What it is:** turning the findings into the comments a reviewer leaves on a PR — an **inline
+  comment** pinned to the exact file + line for each located finding, and a single **summary comment**
+  with the verdict (approve / changes requested), the counts by severity, and a list of everything
+  found. It also picks the review *event* — approve when clean, request-changes when something blocks,
+  plain comment otherwise.
+- **Why it matters:** this is how the review becomes visible and actionable on the PR rather than a
+  blob of JSON. The verdict it picks is the same block/approve decision the merge gate (HELIX-116)
+  enforces. *Posting* itself goes through an injected seam — the live version posts via the GitHub
+  tools (`@helix/github-mcp`), which is the deferred Octokit binding — so the formatting is pure and
+  fully offline-testable.
+- **Where it lives:** [../libs/review-agent/src/lib/review-comments.ts](../libs/review-agent/src/lib/review-comments.ts)
+  — `buildInlineComments` (located findings → file/line/body), `buildReviewSummary` (the markdown
+  verdict + counts + list), `buildReviewPosting` (assemble inline + summary + the `APPROVE` /
+  `COMMENT` / `REQUEST_CHANGES` event), and `postReview` over a `ReviewPoster` seam. 6 offline tests:
+  inline only for located findings, the three verdicts + counts + list, the event choice, and posting
+  via a fake poster.
+
 ---
 
 ## Fixes & hardening
@@ -1289,6 +1312,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-112 | Code Review Agent — multi-aspect review prompts | ✅ | #74 |
 | HELIX-113 | Code Review Agent — findings schema + severity model | ✅ | #75 |
 | HELIX-114 | Code Review Agent — secret scan integration (gitleaks-style) | ✅ | #76 |
+| HELIX-115 | Code Review Agent — inline + summary comment posting | ✅ | #77 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
