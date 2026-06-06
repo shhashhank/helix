@@ -1101,7 +1101,7 @@ Land the work tidily: a branch named by convention (HELIX-109) and a good commit
 The agent that reviews the Coding Agent's changes — for correctness, security, style, and whether
 they match the plan — and posts findings + gates the merge.
 
-### Story: Diff-Aware Review Engine  🛠️ in progress
+### Story: Diff-Aware Review Engine  ✅ done
 
 Look at the right things: assemble the diff + surrounding code (HELIX-111), run multi-aspect review
 prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
@@ -1140,6 +1140,27 @@ prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
   text review + usage per aspect). 4 more offline tests against a fake provider: the per-aspect prompt,
   the formatted context (incl. the spec) embedded, running all aspects by default, and a requested
   subset.
+
+#### HELIX-113 — Findings schema + severity model  ✅
+- **What it is:** the step that turns the review into **structured, machine-readable findings**. Each
+  aspect pass is re-run so the model returns a list of issues — each with a **severity**
+  (blocker / major / minor / info), the file (and line when known), what's wrong, and an optional fix
+  — validated against a fixed schema. On top of that a small **severity model** counts the findings
+  (by severity and aspect, plus the highest present) and answers the one question the merge gate cares
+  about: does anything here **block**?
+- **Why it matters:** prose review is for humans; the rest of the pipeline needs data. Structured
+  findings are what get posted as inline PR comments (HELIX-35) and what the merge gate keys off —
+  `isBlocking` (anything at/above a threshold severity) is literally the "block or approve" decision.
+  The aspect is stamped on by us (each pass is focused), so the model only lists issues, and the whole
+  thing is validated before we trust it.
+- **Where it lives:** [../libs/review-agent/src/lib/findings.ts](../libs/review-agent/src/lib/findings.ts)
+  — the `Finding` schema + `REVIEW_SEVERITIES` (Zod as the single source of truth for the type, the
+  validator `parseFindings`, and the `emit_findings` tool's JSON Schema); `reviewForFindings` /
+  `reviewAllFindings` (run the aspect prompts as a **forced findings tool** and merge); and the
+  severity model — `summarizeFindings` (counts + highest) and `isBlocking` (the merge-gate signal). 8
+  more offline tests: validation (+ aspect stamping, empty, invalid), the forced-tool run + no-tool
+  error, the multi-aspect merge, and the summary/blocking logic. Closes the Diff-Aware Review Engine
+  story.
 
 ---
 
@@ -1247,6 +1268,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-110 | Coding Agent — commit message generation (Conventional Commits) | ✅ | #72 |
 | HELIX-111 | Code Review Agent — diff fetch + context assembly | ✅ | #73 |
 | HELIX-112 | Code Review Agent — multi-aspect review prompts | ✅ | #74 |
+| HELIX-113 | Code Review Agent — findings schema + severity model | ✅ | #75 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
