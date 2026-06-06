@@ -1020,6 +1020,22 @@ Make the agent's code actually compile + lint, and fix itself when it doesn't: r
   stop-on-failure, timed-out = failure) with a fake runner. *(The real container-exec backend is
   deferred; the local spawn is genuine.)*
 
+#### HELIX-107 — Error feedback to fix loop  ✅
+- **What it is:** the step that takes the raw build/lint output from HELIX-106 and turns it into a
+  **clear list of what to fix**. It reads the compiler/linter text, pulls out each problem (file, line,
+  column, the message, the error code or lint rule), and writes a tidy re-prompt — "these checks
+  failed, here are the exact errors, fix them" — that the agent reads before trying again. If it can't
+  recognise the format, it falls back to including the raw output so nothing is lost, and it **caps**
+  how much it includes so a thousand errors can't blow up the prompt.
+- **Why it matters:** this is the feedback half of the self-correction loop — the difference between
+  telling the agent "the build failed" (useless) and "line 12 of note.service.ts can't find name
+  'foo'" (fixable). HELIX-108 wraps this parse → re-prompt → re-run cycle in an iteration budget.
+- **Where it lives:** [../libs/coding-agent/src/lib/feedback.ts](../libs/coding-agent/src/lib/feedback.ts)
+  — `parseTypeScriptDiagnostics` and `parseEslintDiagnostics` (recognise `tsc` + ESLint stylish output
+  into structured `Diagnostic`s) and `buildFixFeedback` (per failed check → diagnostics or a truncated
+  raw fallback, plus a bounded re-prompt; `ok` short-circuits when the checks passed). 7 more offline
+  tests cover both parsers, the pass/parse/raw-fallback/timed-out cases, and the diagnostic cap.
+
 ---
 
 ## Fixes & hardening
@@ -1120,6 +1136,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-104 | Coding Agent — scaffolding/templates (NestJS CRUD exemplar) | ✅ | #66 |
 | HELIX-105 | Coding Agent — diff generation + commit grouping | ✅ | #67 |
 | HELIX-106 | Coding Agent — build/lint runner in sandbox (command runner + checks) | ✅ | #68 |
+| HELIX-107 | Coding Agent — error feedback to fix loop (diagnostic parse + re-prompt) | ✅ | #69 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
