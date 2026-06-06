@@ -862,7 +862,7 @@ and check the graph (HELIX-97), and pick the tech stack / scaffold (HELIX-98).
 
 ---
 
-## Epic: Coding Agent  🛠️ in progress
+## Epic: Coding Agent  ✅ done
 
 The agent that takes the plan and actually writes code: edit multiple files in an **isolated
 sandbox**, build and lint, and self-correct on the feedback until it compiles cleanly — then commit
@@ -1055,7 +1055,7 @@ Make the agent's code actually compile + lint, and fix itself when it doesn't: r
   it). 4 more offline tests: pass-first (no fix), fix-then-pass, exhaust + escalate (with the right
   fix-attempt count), and `maxIterations: 1`. Closes the Build, Lint & Self-Correction Loop story.
 
-### Story: Commit & Branch Management  🛠️ in progress
+### Story: Commit & Branch Management  ✅ done
 
 Land the work tidily: a branch named by convention (HELIX-109) and a good commit message per group
 (HELIX-110).
@@ -1076,6 +1076,23 @@ Land the work tidily: a branch named by convention (HELIX-109) and a good commit
   (validates then `git checkout -b` via the runner; returns an error result without touching git for a
   bad name). 18 more offline tests: slug/name building + sanitisation, a table of invalid-name cases,
   the no-git invalid path, and creating + switching to a branch in a **real `git init`-ed sandbox**.
+
+#### HELIX-110 — Commit message generation  ✅
+- **What it is:** turning each group of changes (from HELIX-105) into a **Conventional Commits**
+  message — `type(scope): subject` plus a short body listing the files. It works two ways: a
+  deterministic builder that infers the type (feat / test / docs / chore …) and scope straight from
+  the changed paths, and an **LLM** version that writes a nicer subject/body — and the LLM version
+  **falls back to the deterministic one** on any hiccup, so a commit message is always produced.
+- **Why it matters:** tidy, conventional commit messages make the agent's branches reviewable and the
+  history readable, and the always-on fallback means message generation can never block a commit (or
+  cost a retry) even if the model is unavailable. With this, the Coding Agent can name a branch, group
+  its diffs into logical commits, and write each commit's message — the end of the editing pipeline.
+- **Where it lives:** [../libs/coding-agent/src/lib/commit-message.ts](../libs/coding-agent/src/lib/commit-message.ts)
+  — `buildCommitMessage` (deterministic; `inferType` from paths, scope from the group key, a per-file
+  body) and `generateCommitMessage` (forced, schema-validated `emit_commit_message` tool, falling back
+  to the builder on no-tool / invalid output / a thrown provider). 7 more offline tests: the
+  deterministic type/scope/subject/body (incl. test/docs/chore inference + root scope), and the LLM
+  path with all three fallback routes. Closes the Commit & Branch Management story.
 
 ---
 
@@ -1180,6 +1197,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-107 | Coding Agent — error feedback to fix loop (diagnostic parse + re-prompt) | ✅ | #69 |
 | HELIX-108 | Coding Agent — iteration budget + bail-out (self-correction loop) | ✅ | #70 |
 | HELIX-109 | Coding Agent — branch creation + naming convention (helix/&lt;run-id&gt;/&lt;slug&gt;) | ✅ | #71 |
+| HELIX-110 | Coding Agent — commit message generation (Conventional Commits) | ✅ | #72 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -1229,10 +1247,20 @@ The **Planning Agent** (HELIX-4) — the first real agent — is now ✅ done to
 request and produces a validated requirements spec with a confidence-gated clarification loop
 (HELIX-26), turns that into an implementation plan — a decomposed, dependency-ordered/validated task
 graph plus a tech-stack + scaffold (HELIX-27) — and grounds it in the existing codebase (HELIX-28).
-That plan is the input contract the **Coding Agent** will build against next.
+That plan is the input contract for the **Coding Agent**.
 
-After that: **sandboxes**, the remaining **agents** (coding/review/testing/deploy),
-**human approvals**, and the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI.
+The **Coding Agent** (HELIX-5) is now ✅ done as well: it works in an **isolated sandbox** — provision,
+repo checkout, egress/resource limits, and a real command runner (HELIX-29); **edits code** with
+read/write/patch tools, scaffolds from templates, and turns the result into a diff split into logical
+commits (HELIX-30); **builds, lints, and self-corrects** — running the checks, feeding the parsed
+errors back, and looping under an iteration budget that escalates to a human if it can't get to green
+(HELIX-31); and **lands the work** on a `helix/<run-id>/<slug>` branch with Conventional-Commits
+messages (HELIX-32). So, given a plan, it produces compiling, lint-passing changes on a branch.
+
+After that: the remaining **agents** (review/testing/deploy), **human approvals**, **monitoring**, and
+the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI. Note the coding agent's
+*live* `git`/checks run locally today; the **container/microVM sandbox** and the **Octokit** push/PR
+binding remain deferred (see [../DEFERRED.md](../DEFERRED.md)).
 
 ---
 
