@@ -1288,6 +1288,22 @@ and package a report (HELIX-121).
   frameworks, pytest, none, malformed package.json), the default commands, and the run (pass / fail /
   timeout, default + explicit command, cwd/timeout passthrough).
 
+#### HELIX-120 — Result + coverage parser  ✅
+- **What it is:** reading the test command's raw output and turning it into **structured numbers** — how
+  many tests ran, passed, failed, were skipped, which ones failed (and why, where), and the **coverage**
+  percentages — **normalised** so it looks the same whether the project used Jest, Vitest, PyTest, or
+  Mocha.
+- **Why it matters:** the raw output is for humans; the report (HELIX-121) and the failure-feedback loop
+  (HELIX-38) need data. Normalising across frameworks means the rest of the pipeline doesn't care which
+  test tool ran. The run's exit code stays the source of truth for pass/fail; the parser only adds the
+  detail on top — counts are pulled generically (every framework prints "N passed / M failed"), while
+  failures and coverage are parsed per framework with a graceful fallback to just the counts.
+- **Where it lives:** [../libs/testing-agent/src/lib/test-results.ts](../libs/testing-agent/src/lib/test-results.ts)
+  — `parseTestResults` (normalized `TestResults`: total/passed/failed/skipped + `TestFailure[]`),
+  `parseCoverage` (Jest summary row / pytest-cov `TOTAL`), and `parseTestRun` (combine a `TestRunResult`
+  into counts + coverage). 7 more offline tests over representative Jest / PyTest / Mocha output and
+  coverage samples (incl. not letting Jest's "Test Suites" line shadow the "Tests" counts).
+
 ---
 
 ## Fixes & hardening
@@ -1401,6 +1417,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-117 | Testing Agent — test generation prompts per framework | ✅ | #79 |
 | HELIX-118 | Testing Agent — acceptance-criteria to test mapping (traceability + coverage) | ✅ | #81 |
 | HELIX-119 | Testing Agent — test runner in sandbox (framework detection + run) | ✅ | #82 |
+| HELIX-120 | Testing Agent — result + coverage parser (normalized across frameworks) | ✅ | #83 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
