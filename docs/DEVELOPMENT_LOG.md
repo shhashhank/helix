@@ -956,6 +956,25 @@ group the changes into commits (HELIX-105).
   type only. 15 offline tests run the ops against a real local sandbox (write/read/overwrite, missing
   file, escape rejection, all the patch cases) and the tool dispatcher (round-trip + every error path).
 
+#### HELIX-104 — Scaffolding / templates (NestJS CRUD exemplar)  ✅
+- **What it is:** a way to drop a batch of **starter files** into the workspace from a template, so the
+  agent isn't typing boilerplate from scratch. The worked example is a **NestJS CRUD resource**: give it
+  a name like `note` and it produces the module, controller (with the `notes` routes), service (an
+  in-memory store with create/findAll/findOne/update/remove), and the create/update DTOs — with the
+  class names, file names, and route correctly cased and pluralised (`note-item` → `NoteItem`,
+  `note-items`, …).
+- **Why it matters:** it turns the planner's tech-stack/scaffold choice (HELIX-98) into actual files.
+  Writing is **conflict-safe** — it checks all target paths first and refuses to overwrite existing
+  files unless told to, so scaffolding can never silently clobber work the agent already did. And it's
+  a pure, deterministic generator (no LLM), so it's fast and exhaustively testable.
+- **Where it lives:** [../libs/coding-agent/src/lib/scaffold.ts](../libs/coding-agent/src/lib/scaffold.ts)
+  (`resourceNames` casing/pluralisation, `applyScaffold` — write a file set into the sandbox with the
+  up-front conflict check + `ScaffoldConflictError`) and
+  [../libs/coding-agent/src/lib/templates/nest-crud.ts](../libs/coding-agent/src/lib/templates/nest-crud.ts)
+  (`nestCrudResource(name)` → the five files). 12 more offline tests cover the name forms (incl. `-y` /
+  sibilant plurals), conflict-safe + overwrite applies, and the generated NestJS code (class names,
+  route, DI, `PartialType` DTO), including writing a full resource into a real sandbox.
+
 ---
 
 ## Fixes & hardening
@@ -1053,6 +1072,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-101 | Coding Agent — repo checkout + workspace mount (fetcher seam) | ✅ | #63 |
 | HELIX-102 | Coding Agent — egress controls + resource limits (sandbox policy) | ✅ | #64 |
 | HELIX-103 | Coding Agent — file edit tools (read/write/patch in sandbox) | ✅ | #65 |
+| HELIX-104 | Coding Agent — scaffolding/templates (NestJS CRUD exemplar) | ✅ | #66 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
