@@ -1266,6 +1266,28 @@ acceptance criteria to tests (HELIX-118).
   index resolution + range/empty-tests validation, the generation flow (forced tool, numbered criteria
   embedded, empty-criteria + no-tool errors), and the coverage logic. Closes the Test Generation story.
 
+### Story: Test Execution & Reporting  🛠️ in progress
+
+Actually run the tests: run them in the sandbox (HELIX-119), parse the results + coverage (HELIX-120),
+and package a report (HELIX-121).
+
+#### HELIX-119 — Test runner in sandbox  ✅
+- **What it is:** figuring out *which* test framework the project uses and **running its tests** in the
+  workspace. It detects the framework from the project's files — the test deps in `package.json`
+  (jest / vitest / mocha) or python markers (a `conftest.py`, or `pytest` in `pyproject.toml` /
+  requirements) — picks the right command (`pnpm test` / `pytest` / …), runs it, and reports whether
+  the tests **passed**, along with the output, exit code, and whether it timed out.
+- **Why it matters:** generated tests are worthless until they actually run; this is the step that does
+  it, reusing the same real **command runner** (and wall-clock kill) the build/lint checks use, so a
+  hanging test suite can't wedge a run. Detecting the framework means the agent doesn't have to be told
+  what the project uses.
+- **Where it lives:** [../libs/testing-agent/src/lib/test-runner.ts](../libs/testing-agent/src/lib/test-runner.ts)
+  — `detectFramework` (package.json deps / pytest markers), `defaultTestCommand` (per-framework
+  command), and `runTests` (run via the injected `@helix/sandbox` `CommandRunner` → `TestRunResult`:
+  passed + exit/stdout/stderr/timeout). 8 more offline tests against a fake runner: detection (node
+  frameworks, pytest, none, malformed package.json), the default commands, and the run (pass / fail /
+  timeout, default + explicit command, cwd/timeout passthrough).
+
 ---
 
 ## Fixes & hardening
@@ -1378,6 +1400,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-116 | Code Review Agent — status check / merge gate (severity threshold) | ✅ | #78 |
 | HELIX-117 | Testing Agent — test generation prompts per framework | ✅ | #79 |
 | HELIX-118 | Testing Agent — acceptance-criteria to test mapping (traceability + coverage) | ✅ | #81 |
+| HELIX-119 | Testing Agent — test runner in sandbox (framework detection + run) | ✅ | #82 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
