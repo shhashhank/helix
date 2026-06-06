@@ -1055,6 +1055,28 @@ Make the agent's code actually compile + lint, and fix itself when it doesn't: r
   it). 4 more offline tests: pass-first (no fix), fix-then-pass, exhaust + escalate (with the right
   fix-attempt count), and `maxIterations: 1`. Closes the Build, Lint & Self-Correction Loop story.
 
+### Story: Commit & Branch Management  🛠️ in progress
+
+Land the work tidily: a branch named by convention (HELIX-109) and a good commit message per group
+(HELIX-110).
+
+#### HELIX-109 — Branch creation + naming convention  ✅
+- **What it is:** how the agent names and creates the branch it works on. The convention is
+  **`helix/<run-id>/<slug>`** — the word `helix`, the run's id, and a tidy slug of what the work is —
+  so each run gets a predictable, collision-free branch. It cleans the description into a valid slug
+  (lowercase, dashes, trimmed, length-capped) and guarantees the whole name passes git's branch-name
+  rules; then it actually runs `git checkout -b` in the workspace.
+- **Why it matters:** consistent branch names make runs easy to find and avoid clashes, and validating
+  the name up front means a weird task title can't produce a branch git would reject. Creation goes
+  through the same command runner as everything else (real `git`, killed on timeout), so it's genuine
+  and offline-testable against a throwaway repo.
+- **Where it lives:** [../libs/coding-agent/src/lib/branching.ts](../libs/coding-agent/src/lib/branching.ts)
+  — `slugify`, `branchName` (`helix/<run-id>/<slug>`, sanitised, with a `work` fallback for an empty
+  slug), `isValidGitBranchName` (the relevant `git check-ref-format` rules), and `createGitBranch`
+  (validates then `git checkout -b` via the runner; returns an error result without touching git for a
+  bad name). 18 more offline tests: slug/name building + sanitisation, a table of invalid-name cases,
+  the no-git invalid path, and creating + switching to a branch in a **real `git init`-ed sandbox**.
+
 ---
 
 ## Fixes & hardening
@@ -1157,6 +1179,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-106 | Coding Agent — build/lint runner in sandbox (command runner + checks) | ✅ | #68 |
 | HELIX-107 | Coding Agent — error feedback to fix loop (diagnostic parse + re-prompt) | ✅ | #69 |
 | HELIX-108 | Coding Agent — iteration budget + bail-out (self-correction loop) | ✅ | #70 |
+| HELIX-109 | Coding Agent — branch creation + naming convention (helix/&lt;run-id&gt;/&lt;slug&gt;) | ✅ | #71 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
