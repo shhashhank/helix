@@ -40,6 +40,7 @@ flowchart TB
     pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold · codebase grounding"]
     sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard<br/>repo checkout + workspace mount<br/>egress allowlist · resource limits<br/>command runner (spawn in workspace)"]
     cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)<br/>branch naming + creation · commit messages"]
+    rev["@helix/review-agent<br/>Code Review Agent<br/>diff + surrounding-code context assembly"]
   end
 
   subgraph dat["Data & external"]
@@ -144,7 +145,8 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-3 · MCP Integration Layer** | ✅ done | MCP client + server registry + tool catalog (HELIX-22); tool permissioning/quota/approval (HELIX-23); GitHub MCP server + App-token auth (HELIX-24); secrets vault — encrypted at rest, JIT injection, telemetry redaction (HELIX-25) |
 | **HELIX-4 · Planning Agent** | ✅ done | NL request → validated requirements spec + clarification loop (HELIX-26); implementation plan — task graph, dependency ordering, tech-stack/scaffold (HELIX-27); codebase grounding (HELIX-28). The plan is the Coding Agent's input contract |
 | **HELIX-5 · Coding Agent** | ✅ done | Isolated sandbox — provision, repo checkout, egress/limits, command runner (HELIX-29); file edit tools, scaffolding, diff + commit grouping (HELIX-30); build/lint runner, error→fix feedback, self-correction loop (HELIX-31); branch naming + commit messages (HELIX-32). Generates compiling, lint-passing changes on a branch |
-| HELIX-6..8 · Agents (review/testing/deploy) | ⬜ | Replace the stub step executor with the remaining agents |
+| **HELIX-6 · Code Review Agent** | 🛠️ in progress | Review the Coding Agent's diffs for correctness/security/style/plan-conformance, post structured findings, gate the merge. Diff + surrounding-code context assembly landed (HELIX-111) |
+| HELIX-7..8 · Agents (testing/deploy) | ⬜ | Replace the stub step executor with the remaining agents |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
 ---
@@ -162,6 +164,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Planning Agent | [libs/planning](../libs/planning) (`@helix/planning`) |
 | Sandbox | [libs/sandbox](../libs/sandbox) (`@helix/sandbox`) |
 | Coding Agent | [libs/coding-agent](../libs/coding-agent) (`@helix/coding-agent`) |
+| Code Review Agent | [libs/review-agent](../libs/review-agent) (`@helix/review-agent`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |
