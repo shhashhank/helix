@@ -8,3 +8,4 @@ export * from './lib/checks';
 export * from './lib/feedback';
 export * from './lib/self-correct';
 export * from './lib/branching';
+export * from './lib/commit-message';
