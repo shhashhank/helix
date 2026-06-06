@@ -1096,6 +1096,36 @@ Land the work tidily: a branch named by convention (HELIX-109) and a good commit
 
 ---
 
+## Epic: Code Review Agent  🛠️ in progress
+
+The agent that reviews the Coding Agent's changes — for correctness, security, style, and whether
+they match the plan — and posts findings + gates the merge.
+
+### Story: Diff-Aware Review Engine  🛠️ in progress
+
+Look at the right things: assemble the diff + surrounding code (HELIX-111), run multi-aspect review
+prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
+
+#### HELIX-111 — Diff fetch + context assembly  ✅
+- **What it is:** the step that gathers everything a reviewer needs to look at — the **changed bits
+  (the diff) plus the surrounding code** — into one tidy bundle. Hand it the list of changed files;
+  it summarises them (how many, lines added/removed), optionally pulls in each file's full current
+  contents for context, and carries along the requirements/plan so the review can check the work
+  actually matches what was asked. It also formats all of that into a single block ready to drop into
+  a review prompt.
+- **Why it matters:** good review needs context — a diff alone often isn't enough to judge correctness.
+  Pulling the full file around each change (and the spec) is what lets the later steps catch real
+  problems, not just surface nits. *How* files are read is an injected seam (sandbox or git), so the
+  assembly is pure and offline-testable, and big files are skipped to keep the prompt bounded.
+- **Where it lives:** the new [../libs/review-agent](../libs/review-agent) library
+  (`@helix/review-agent`) — [review-context.ts](../libs/review-agent/src/lib/review-context.ts):
+  `assembleReviewContext` (diff → `ReviewContext` with summary, optional per-file content via the
+  `FileContentReader` seam, and the spec), and `formatReviewContext` (render it as a bounded
+  prompt block). 5 offline tests cover the summary/spec, content attachment (and skipping deleted /
+  oversized files), and the rendered block + truncation.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1198,6 +1228,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-108 | Coding Agent — iteration budget + bail-out (self-correction loop) | ✅ | #70 |
 | HELIX-109 | Coding Agent — branch creation + naming convention (helix/&lt;run-id&gt;/&lt;slug&gt;) | ✅ | #71 |
 | HELIX-110 | Coding Agent — commit message generation (Conventional Commits) | ✅ | #72 |
+| HELIX-111 | Code Review Agent — diff fetch + context assembly | ✅ | #73 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
