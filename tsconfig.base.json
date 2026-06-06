@@ -25,7 +25,8 @@
       "@helix/planning": ["libs/planning/src/index.ts"],
       "@helix/sandbox": ["libs/sandbox/src/index.ts"],
       "@helix/coding-agent": ["libs/coding-agent/src/index.ts"],
-      "@helix/review-agent": ["libs/review-agent/src/index.ts"]
+      "@helix/review-agent": ["libs/review-agent/src/index.ts"],
+      "@helix/testing-agent": ["libs/testing-agent/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

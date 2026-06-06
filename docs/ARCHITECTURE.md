@@ -41,6 +41,7 @@ flowchart TB
     sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard<br/>repo checkout + workspace mount<br/>egress allowlist · resource limits<br/>command runner (spawn in workspace)"]
     cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)<br/>branch naming + creation · commit messages"]
     rev["@helix/review-agent<br/>Code Review Agent<br/>diff + surrounding-code context assembly<br/>multi-aspect review (correctness/security/style/perf/plan)<br/>structured findings · severity · secret scan<br/>inline + summary posting · merge gate (severity threshold)"]
+    tst["@helix/testing-agent<br/>Testing Agent<br/>test generation prompts per framework (jest/pytest/…)"]
   end
 
   subgraph dat["Data & external"]
@@ -78,6 +79,7 @@ flowchart TB
   cag -.->|file edits + checks in workspace| sbx
   cag -.->|commit messages · LLM with fallback| lm
   rev -.->|aspect reviews| lm
+  tst -.->|test generation| lm
   rev -.->|post review · planned (GitHub tools)| gh
   gh -.->|GitHub API · planned auth| gha
 
@@ -148,7 +150,8 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-4 · Planning Agent** | ✅ done | NL request → validated requirements spec + clarification loop (HELIX-26); implementation plan — task graph, dependency ordering, tech-stack/scaffold (HELIX-27); codebase grounding (HELIX-28). The plan is the Coding Agent's input contract |
 | **HELIX-5 · Coding Agent** | ✅ done | Isolated sandbox — provision, repo checkout, egress/limits, command runner (HELIX-29); file edit tools, scaffolding, diff + commit grouping (HELIX-30); build/lint runner, error→fix feedback, self-correction loop (HELIX-31); branch naming + commit messages (HELIX-32). Generates compiling, lint-passing changes on a branch |
 | **HELIX-6 · Code Review Agent** | ✅ done | Diff-aware review engine — context assembly, multi-aspect review (correctness/security/style/perf/plan), structured findings + severity (HELIX-33); gitleaks-style secret scan (HELIX-34); inline + summary comment posting + a severity-threshold merge gate (HELIX-35). Reviews the Coding Agent's diffs and blocks or approves per policy |
-| HELIX-7..8 · Agents (testing/deploy) | ⬜ | Replace the stub step executor with the remaining agents |
+| **HELIX-7 · Testing Agent** | 🛠️ in progress | Generate tests (per-framework), run them in the sandbox, report results/coverage, and loop failures back to the Coding Agent. Per-framework test-generation prompts landed (HELIX-117) |
+| HELIX-8 · Deployment Agent | ⬜ | Replace the stub step executor with the deployment agent |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
 ---
@@ -167,6 +170,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Sandbox | [libs/sandbox](../libs/sandbox) (`@helix/sandbox`) |
 | Coding Agent | [libs/coding-agent](../libs/coding-agent) (`@helix/coding-agent`) |
 | Code Review Agent | [libs/review-agent](../libs/review-agent) (`@helix/review-agent`) |
+| Testing Agent | [libs/testing-agent](../libs/testing-agent) (`@helix/testing-agent`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |

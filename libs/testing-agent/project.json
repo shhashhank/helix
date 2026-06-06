@@ -1,0 +1,7 @@
+{
+  "name": "testing-agent",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/testing-agent/src",
+  "projectType": "library",
+  "targets": {}
+}
