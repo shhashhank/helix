@@ -80,7 +80,7 @@ flowchart TB
   cag -.->|commit messages · LLM with fallback| lm
   rev -.->|aspect reviews| lm
   tst -.->|test generation| lm
-  rev -.->|post review · planned (GitHub tools)| gh
+  rev -.->|post review · planned · GitHub tools| gh
   gh -.->|GitHub API · planned auth| gha
 
   classDef planned stroke-dasharray:6 4,stroke:#a36,color:#a36;
