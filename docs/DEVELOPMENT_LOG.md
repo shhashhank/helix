@@ -1096,7 +1096,7 @@ Land the work tidily: a branch named by convention (HELIX-109) and a good commit
 
 ---
 
-## Epic: Code Review Agent  🛠️ in progress
+## Epic: Code Review Agent  ✅ done
 
 The agent that reviews the Coding Agent's changes — for correctness, security, style, and whether
 they match the plan — and posts findings + gates the merge.
@@ -1181,7 +1181,7 @@ prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
   context/removed lines and in deleted files, and one finding per offending line. Closes the Secret
   Scan story.
 
-### Story: Review Posting & Merge Gate  🛠️ in progress
+### Story: Review Posting & Merge Gate  ✅ done
 
 Tell the human what was found and gate the merge: post inline + summary comments (HELIX-115) and
 turn the verdict into a status check / merge gate (HELIX-116).
@@ -1203,6 +1203,24 @@ turn the verdict into a status check / merge gate (HELIX-116).
   `COMMENT` / `REQUEST_CHANGES` event), and `postReview` over a `ReviewPoster` seam. 6 offline tests:
   inline only for located findings, the three verdicts + counts + list, the event choice, and posting
   via a fake poster.
+
+#### HELIX-116 — Status check / merge gate  ✅
+- **What it is:** the final yes/no — it takes all the findings and decides whether the change is
+  allowed to merge, by a simple **policy**: anything at or above a chosen **severity threshold** (by
+  default `major`, which also catches the secret-scan blockers) **fails** the gate; otherwise it
+  **passes**. The decision becomes a **status check** (pass/fail + a short reason) that a branch
+  protection rule can require.
+- **Why it matters:** this is the *"blocks or approves per policy"* part of the agent — the thing that
+  actually stops broken or insecure code from merging, with a knob (the threshold) to make the gate as
+  strict or lenient as a team wants. It's pure and deterministic; publishing the status check to the
+  PR is an injected seam (live: the GitHub tools / deferred Octokit binding).
+- **Where it lives:** [../libs/review-agent/src/lib/merge-gate.ts](../libs/review-agent/src/lib/merge-gate.ts)
+  — `ReviewPolicy` + `DEFAULT_REVIEW_POLICY`, `evaluateMergeGate` (findings + policy →
+  `MergeGateDecision`: pass/fail, the blocking findings, and a reason), and `toStatusCheck` /
+  `publishMergeGate` (the status-check payload + the `StatusCheckPublisher` seam). 7 offline tests:
+  pass-on-empty, fail at/above threshold, pass below it, a stricter policy, the default policy, the
+  status-check mapping + truncation, and publishing via a fake. Closes the Review Posting & Merge Gate
+  story and the Code Review Agent epic (HELIX-6).
 
 ---
 
@@ -1313,6 +1331,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-113 | Code Review Agent — findings schema + severity model | ✅ | #75 |
 | HELIX-114 | Code Review Agent — secret scan integration (gitleaks-style) | ✅ | #76 |
 | HELIX-115 | Code Review Agent — inline + summary comment posting | ✅ | #77 |
+| HELIX-116 | Code Review Agent — status check / merge gate (severity threshold) | ✅ | #78 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -1372,10 +1391,16 @@ errors back, and looping under an iteration budget that escalates to a human if 
 (HELIX-31); and **lands the work** on a `helix/<run-id>/<slug>` branch with Conventional-Commits
 messages (HELIX-32). So, given a plan, it produces compiling, lint-passing changes on a branch.
 
-After that: the remaining **agents** (review/testing/deploy), **human approvals**, **monitoring**, and
-the **user-facing SaaS** (auth, run dashboard) — where all of this gets a UI. Note the coding agent's
-*live* `git`/checks run locally today; the **container/microVM sandbox** and the **Octokit** push/PR
-binding remain deferred (see [../DEFERRED.md](../DEFERRED.md)).
+The **Code Review Agent** (HELIX-6) is now ✅ done too: it assembles the diff + surrounding code,
+reviews it across **five aspects** (correctness, security, style, performance, plan-conformance) into
+**structured findings with severity**, backstops the security pass with a deterministic **secret
+scan**, and turns it all into **inline + summary PR comments** and a **severity-threshold merge gate**
+(HELIX-33/34/35) — so it reviews the Coding Agent's changes and blocks or approves per policy.
+
+After that: the remaining **agents** (testing/deploy), **human approvals**, **monitoring**, and the
+**user-facing SaaS** (auth, run dashboard) — where all of this gets a UI. Note the coding agent's
+*live* `git`/checks run locally today; the **container/microVM sandbox** and the **Octokit** push / PR
+/ review-posting binding remain deferred (see [../DEFERRED.md](../DEFERRED.md)).
 
 ---
 
