@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# SessionStart hook for the Helix repo.
+# SessionStart hook for the Helix repo. Two detect-and-remind checks on
+# docs/ARCHITECTURE.md:
 #
-# Detects "architecture drift": any component under libs/* or apps/* whose name
-# is NOT mentioned anywhere in docs/ARCHITECTURE.md — i.e. a lib or service that
-# exists in the codebase but is missing from the at-a-glance diagram. If it finds
-# any, it injects a gentle reminder into Claude's session context.
+#   1. Architecture drift: any component under libs/* or apps/* whose name is NOT
+#      mentioned in the doc — a lib/service missing from the at-a-glance diagram.
+#   2. Mermaid render lint: parentheses inside a Mermaid edge label (|...|), which
+#      abort the whole flowchart so it silently fails to render in preview (bit us
+#      in PR #61 and #80). Parentheses in quoted node labels ["..."] are fine.
 #
-# This script only DETECTS and REMINDS. It never edits the doc and never blocks a
-# session (always exits 0) — the diagram itself is always updated by Claude (see
-# the helix-pr skill).
+# If either finds something, it injects a gentle reminder into Claude's session
+# context. This script only DETECTS and REMINDS. It never edits the doc and never
+# blocks a session (always exits 0) — Claude updates the diagram (see helix-pr).
 
 # Resolve repo root; bail quietly if we're not in a git repo.
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
@@ -17,7 +19,9 @@ root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 doc="$root/docs/ARCHITECTURE.md"
 [ -f "$doc" ] || exit 0
 
-# Component dirs that should each appear in the diagram doc.
+reminders=""
+
+# 1. Architecture drift: a libs/* or apps/* dir not mentioned in the diagram doc.
 missing=""
 for base in libs apps; do
   [ -d "$root/$base" ] || continue
@@ -27,13 +31,22 @@ for base in libs apps; do
     grep -qF -- "$name" "$doc" 2>/dev/null || missing="${missing} ${base}/${name}"
   done
 done
-
 missing="$(printf '%s' "$missing" | sed 's/^ *//')"
-[ -n "$missing" ] || exit 0
+if [ -n "$missing" ]; then
+  list="$(printf '%s' "$missing" | tr ' ' '\n' | paste -sd ',' - | sed 's/,/, /g')"
+  reminders="Reminder: docs/ARCHITECTURE.md doesn't mention component(s): ${list}. If a sub-task added or rewired a component, refresh the architecture diagram + 'where each piece lives' map (and the build-status table if a story/epic finished) — see the helix-pr skill."
+fi
 
-list="$(printf '%s' "$missing" | tr ' ' '\n' | paste -sd ',' - | sed 's/,/, /g')"
-msg="Reminder: docs/ARCHITECTURE.md doesn't mention component(s): ${list}. If a sub-task added or rewired a component, refresh the architecture diagram + 'where each piece lives' map (and the build-status table if a story/epic finished) — see the helix-pr skill."
+# 2. Mermaid render lint: parentheses inside an edge label (|...|) before the
+#    closing pipe. (Quoted node-label parens don't match this and are fine.)
+paren_lines="$(grep -nE '\->\|[^|]*\(' "$doc" 2>/dev/null | cut -d: -f1 | paste -sd ',' - | sed 's/,/, /g')"
+if [ -n "$paren_lines" ]; then
+  lint="Reminder: docs/ARCHITECTURE.md has parentheses inside a Mermaid edge label at line(s) ${paren_lines}; this breaks the first flowchart render in preview. Move the parentheses out of the edge label (they are fine in quoted node labels)."
+  reminders="${reminders:+$reminders }$lint"
+fi
 
-# SessionStart additionalContext (component names are plain, so inline JSON is safe).
-printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"
+[ -n "$reminders" ] || exit 0
+
+# SessionStart additionalContext (the messages are plain, so inline JSON is safe).
+printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$reminders"
 exit 0
