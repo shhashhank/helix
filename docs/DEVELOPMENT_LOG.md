@@ -931,7 +931,7 @@ repo into it (HELIX-101), and fence it in with egress controls + resource limits
   on overrun). 11 offline tests cover defaults/merge/validation, the egress precedence + wildcard +
   case rules, and the wall-clock pass/timeout paths. Closes the Isolated Workspace story.
 
-### Story: Code Generation & Multi-File Editing  🛠️ in progress
+### Story: Code Generation & Multi-File Editing  ✅ done
 
 The agent's hands: the tools to change files (HELIX-103), scaffold from templates (HELIX-104), and
 group the changes into commits (HELIX-105).
@@ -974,6 +974,26 @@ group the changes into commits (HELIX-105).
   (`nestCrudResource(name)` → the five files). 12 more offline tests cover the name forms (incl. `-y` /
   sibilant plurals), conflict-safe + overwrite applies, and the generated NestJS code (class names,
   route, DI, `PartialType` DTO), including writing a full resource into a real sandbox.
+
+#### HELIX-105 — Diff generation + commit grouping  ✅
+- **What it is:** the part that figures out **what the agent changed** and splits it into sensible
+  commits. Snapshot the workspace after checkout, let the agent edit, snapshot again — and it reports
+  the **added / modified / deleted** files with a line-level diff and add/delete counts. Then it
+  **groups** those changes into logical commits: by default everything under a module folder (e.g.
+  `src/note/`) commits together and top-level files go in `(root)`, but the grouping key is pluggable,
+  so changes can be grouped **per task** instead.
+- **Why it matters:** an agent that edits a dozen files shouldn't dump them into one giant unreviewable
+  commit. Grouping gives clean, logical commits (the input the Commit & Branch story, HELIX-32, turns
+  into real commits with generated messages), and the diff is what review/approval reads. It's pure and
+  deterministic — no `git` needed (the actual commit is the deferred git binding) — so it's fully
+  offline-testable.
+- **Where it lives:** [../libs/coding-agent/src/lib/diff.ts](../libs/coding-agent/src/lib/diff.ts)
+  (`listWorkspaceFiles` — recursive, skips node_modules/.git/…; `snapshotWorkspace`; `diffSnapshots` →
+  `FileChange[]`; `lineDiff` — an LCS line diff with counts) and
+  [../libs/coding-agent/src/lib/commit-grouping.ts](../libs/coding-agent/src/lib/commit-grouping.ts)
+  (`groupChanges` + `defaultGroupKey`, returning `CommitGroup`s with per-group add/delete totals). 9
+  more offline tests cover the line diff (add/modify/delete, from-empty), snapshot/diff classification
+  against a real sandbox, ignored-dir skipping, and grouping by dir + by a custom per-task key.
 
 ---
 
@@ -1073,6 +1093,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-102 | Coding Agent — egress controls + resource limits (sandbox policy) | ✅ | #64 |
 | HELIX-103 | Coding Agent — file edit tools (read/write/patch in sandbox) | ✅ | #65 |
 | HELIX-104 | Coding Agent — scaffolding/templates (NestJS CRUD exemplar) | ✅ | #66 |
+| HELIX-105 | Coding Agent — diff generation + commit grouping | ✅ | #67 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
