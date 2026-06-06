@@ -1124,6 +1124,23 @@ prompts (HELIX-112), into a structured findings + severity model (HELIX-113).
   prompt block). 5 offline tests cover the summary/spec, content attachment (and skipping deleted /
   oversized files), and the rendered block + truncation.
 
+#### HELIX-112 — Multi-aspect review prompts  ✅
+- **What it is:** the actual reviewing — but split into **focused passes**, one per concern:
+  correctness, security, style, performance, and whether the change matches the plan
+  (plan-conformance). Each pass has its own "what to look for" guidance and reviews the assembled
+  context (from HELIX-111) on its own, so a security review isn't distracted by style and vice versa.
+- **Why it matters:** one giant "review this" prompt tends to skim; separate, narrowly-scoped passes
+  catch more and produce cleaner, attributable feedback (this finding came from the *security* pass).
+  Each pass is told to report only real, actionable issues — and to cite the file + lines — so the
+  output is useful rather than nit-picky. This produces the model's review text per aspect; turning it
+  into structured findings with severity is HELIX-113.
+- **Where it lives:** [../libs/review-agent/src/lib/review-prompts.ts](../libs/review-agent/src/lib/review-prompts.ts)
+  — `REVIEW_ASPECTS` + `ASPECT_GUIDANCE`, `buildAspectSystemPrompt`, and `reviewAspect` /
+  `reviewAspects` (run one or all aspects through the injected `@helix/llm` provider, returning the
+  text review + usage per aspect). 4 more offline tests against a fake provider: the per-aspect prompt,
+  the formatted context (incl. the spec) embedded, running all aspects by default, and a requested
+  subset.
+
 ---
 
 ## Fixes & hardening
@@ -1229,6 +1246,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-109 | Coding Agent — branch creation + naming convention (helix/&lt;run-id&gt;/&lt;slug&gt;) | ✅ | #71 |
 | HELIX-110 | Coding Agent — commit message generation (Conventional Commits) | ✅ | #72 |
 | HELIX-111 | Code Review Agent — diff fetch + context assembly | ✅ | #73 |
+| HELIX-112 | Code Review Agent — multi-aspect review prompts | ✅ | #74 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
