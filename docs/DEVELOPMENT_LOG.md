@@ -1266,7 +1266,7 @@ acceptance criteria to tests (HELIX-118).
   index resolution + range/empty-tests validation, the generation flow (forced tool, numbered criteria
   embedded, empty-criteria + no-tool errors), and the coverage logic. Closes the Test Generation story.
 
-### Story: Test Execution & Reporting  🛠️ in progress
+### Story: Test Execution & Reporting  ✅ done
 
 Actually run the tests: run them in the sandbox (HELIX-119), parse the results + coverage (HELIX-120),
 and package a report (HELIX-121).
@@ -1303,6 +1303,21 @@ and package a report (HELIX-121).
   `parseCoverage` (Jest summary row / pytest-cov `TOTAL`), and `parseTestRun` (combine a `TestRunResult`
   into counts + coverage). 7 more offline tests over representative Jest / PyTest / Mocha output and
   coverage samples (incl. not letting Jest's "Test Suites" line shadow the "Tests" counts).
+
+#### HELIX-121 — Test report artifact  ✅
+- **What it is:** packaging the parsed run into a **report** — a structured object (pass/fail, the
+  counts, the failures, coverage, and the acceptance-criteria coverage from HELIX-118) that can be
+  **stored**, plus a tidy **markdown summary** to **surface** on the PR / in the run UI.
+- **Why it matters:** it's the single thing the rest of the system reads after tests run — the markdown
+  goes to a human, the structured object feeds the workflow and the failure-feedback loop (HELIX-38).
+  Putting acceptance coverage in the report makes the "did we actually verify the requirements" answer
+  visible right next to the results.
+- **Where it lives:** [../libs/testing-agent/src/lib/report.ts](../libs/testing-agent/src/lib/report.ts)
+  — `buildTestReport` (a `TestRunResult` + framework + optional acceptance coverage → a structured
+  `TestReport`) and `formatTestReport` (the markdown: verdict, results line, coverage, acceptance
+  coverage + any uncovered criteria, the failures list, and a command/duration footer). 3 more offline
+  tests: the structured report assembly, and the failed + passed markdown (with uncovered acceptance
+  criteria). Closes the Test Execution & Reporting story.
 
 ---
 
@@ -1418,6 +1433,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-118 | Testing Agent — acceptance-criteria to test mapping (traceability + coverage) | ✅ | #81 |
 | HELIX-119 | Testing Agent — test runner in sandbox (framework detection + run) | ✅ | #82 |
 | HELIX-120 | Testing Agent — result + coverage parser (normalized across frameworks) | ✅ | #83 |
+| HELIX-121 | Testing Agent — test report artifact (structured + markdown) | ✅ | #84 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
