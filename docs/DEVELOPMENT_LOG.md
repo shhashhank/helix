@@ -1224,6 +1224,34 @@ turn the verdict into a status check / merge gate (HELIX-116).
 
 ---
 
+## Epic: Testing Agent  🛠️ in progress
+
+The agent that makes sure the code actually works: generate tests for the change, run them in the
+sandbox, report results + coverage, and loop failures back to the Coding Agent.
+
+### Story: Test Generation  🛠️ in progress
+
+Write the tests: per-framework generation prompts (HELIX-117) and a mapping from the spec's
+acceptance criteria to tests (HELIX-118).
+
+#### HELIX-117 — Test generation prompts per framework  ✅
+- **What it is:** the bit that asks the model to **write tests** for a piece of code — but with the
+  right instructions for whichever **test framework** is in use (Jest, Vitest, PyTest, Mocha), so the
+  generated tests follow that framework's conventions (file naming, assertion style, how to mock). You
+  hand it the source files and a framework; it returns the test files (path + contents).
+- **Why it matters:** generic "write some tests" produces tests that don't fit the project; a
+  framework-aware prompt produces tests that actually run. The model is told to cover the happy path
+  and the important edge/error cases, keep tests deterministic, and not test third-party code — and it
+  returns the files through a **forced, schema-validated tool** so we get structured output, not prose.
+- **Where it lives:** the new [../libs/testing-agent](../libs/testing-agent) library
+  (`@helix/testing-agent`) — [test-generation.ts](../libs/testing-agent/src/lib/test-generation.ts):
+  `TEST_FRAMEWORKS` + `FRAMEWORK_CONVENTIONS`, `buildTestGenerationSystemPrompt`, and `generateTests`
+  (forced `emit_tests` tool → validated `GeneratedTest[]`, via the injected `@helix/llm` provider). 6
+  offline tests against a fake provider: the per-framework prompt + conventions, schema validation, and
+  the generation flow (forced tool, source embedded, no-tool + malformed error paths).
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1332,6 +1360,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-114 | Code Review Agent — secret scan integration (gitleaks-style) | ✅ | #76 |
 | HELIX-115 | Code Review Agent — inline + summary comment posting | ✅ | #77 |
 | HELIX-116 | Code Review Agent — status check / merge gate (severity threshold) | ✅ | #78 |
+| HELIX-117 | Testing Agent — test generation prompts per framework | ✅ | #79 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
