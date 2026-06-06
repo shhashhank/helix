@@ -39,7 +39,7 @@ flowchart TB
     sec["@helix/secrets<br/>credential vault<br/>envelope encryption · LocalKms<br/>redaction-safe SecretValue"]
     pl["@helix/planning<br/>Planning Agent<br/>requirement extraction → spec<br/>ambiguity detection (confidence) · clarification loop<br/>task decomposition → validated DAG + waves<br/>tech-stack + scaffold · codebase grounding"]
     sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard<br/>repo checkout + workspace mount<br/>egress allowlist · resource limits<br/>command runner (spawn in workspace)"]
-    cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)"]
+    cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)<br/>branch naming + creation"]
   end
 
   subgraph dat["Data & external"]
