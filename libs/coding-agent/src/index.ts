@@ -6,3 +6,4 @@ export * from './lib/diff';
 export * from './lib/commit-grouping';
 export * from './lib/checks';
 export * from './lib/feedback';
+export * from './lib/self-correct';
