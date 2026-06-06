@@ -41,7 +41,7 @@ flowchart TB
     sbx["@helix/sandbox<br/>ephemeral workspace provisioning<br/>local temp-dir provider · path-escape guard<br/>repo checkout + workspace mount<br/>egress allowlist · resource limits<br/>command runner (spawn in workspace)"]
     cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)<br/>branch naming + creation · commit messages"]
     rev["@helix/review-agent<br/>Code Review Agent<br/>diff + surrounding-code context assembly<br/>multi-aspect review (correctness/security/style/perf/plan)<br/>structured findings · severity · secret scan<br/>inline + summary posting · merge gate (severity threshold)"]
-    tst["@helix/testing-agent<br/>Testing Agent<br/>test generation prompts per framework (jest/pytest/…)<br/>acceptance-criteria → tests (traceable) · coverage<br/>framework detection · run tests in sandbox"]
+    tst["@helix/testing-agent<br/>Testing Agent<br/>test generation prompts per framework (jest/pytest/…)<br/>acceptance-criteria → tests (traceable) · coverage<br/>framework detection · run tests in sandbox<br/>result + coverage parsing (normalized)"]
   end
 
   subgraph dat["Data & external"]
