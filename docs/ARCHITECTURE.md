@@ -81,6 +81,7 @@ flowchart TB
   rev -.->|aspect reviews| lm
   tst -.->|test generation| lm
   tst -.->|run tests in sandbox| sbx
+  tst -.->|re-invoke fix on failure · budget| cag
   rev -.->|post review · planned · GitHub tools| gh
   gh -.->|GitHub API · planned auth| gha
 
@@ -151,7 +152,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-4 · Planning Agent** | ✅ done | NL request → validated requirements spec + clarification loop (HELIX-26); implementation plan — task graph, dependency ordering, tech-stack/scaffold (HELIX-27); codebase grounding (HELIX-28). The plan is the Coding Agent's input contract |
 | **HELIX-5 · Coding Agent** | ✅ done | Isolated sandbox — provision, repo checkout, egress/limits, command runner (HELIX-29); file edit tools, scaffolding, diff + commit grouping (HELIX-30); build/lint runner, error→fix feedback, self-correction loop (HELIX-31); branch naming + commit messages (HELIX-32). Generates compiling, lint-passing changes on a branch |
 | **HELIX-6 · Code Review Agent** | ✅ done | Diff-aware review engine — context assembly, multi-aspect review (correctness/security/style/perf/plan), structured findings + severity (HELIX-33); gitleaks-style secret scan (HELIX-34); inline + summary comment posting + a severity-threshold merge gate (HELIX-35). Reviews the Coding Agent's diffs and blocks or approves per policy |
-| **HELIX-7 · Testing Agent** | 🛠️ in progress | Generate tests (per-framework), run them in the sandbox, report results/coverage, and loop failures back to the Coding Agent. Per-framework test-generation prompts landed (HELIX-117) |
+| **HELIX-7 · Testing Agent** | ✅ done | Generate tests per-framework + map them to acceptance criteria (HELIX-36); detect the framework, run tests in the sandbox, normalize results/coverage into a report (HELIX-37); package failures + loop them back to the Coding Agent under a budget (HELIX-38) |
 | HELIX-8 · Deployment Agent | ⬜ | Replace the stub step executor with the deployment agent |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 

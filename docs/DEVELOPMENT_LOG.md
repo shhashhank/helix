@@ -1224,7 +1224,7 @@ turn the verdict into a status check / merge gate (HELIX-116).
 
 ---
 
-## Epic: Testing Agent  🛠️ in progress
+## Epic: Testing Agent  ✅ done
 
 The agent that makes sure the code actually works: generate tests for the change, run them in the
 sandbox, report results + coverage, and loop failures back to the Coding Agent.
@@ -1319,7 +1319,7 @@ and package a report (HELIX-121).
   tests: the structured report assembly, and the failed + passed markdown (with uncovered acceptance
   criteria). Closes the Test Execution & Reporting story.
 
-### Story: Failure Feedback Loop  🛠️ in progress
+### Story: Failure Feedback Loop  ✅ done
 
 Close the loop when tests fail: package the failures into diagnostics (HELIX-122) and re-invoke the
 Coding Agent under a budget to fix them (HELIX-123).
@@ -1338,6 +1338,24 @@ Coding Agent under a budget to fix them (HELIX-123).
   tests, a `truncated` flag, and the re-prompt). Pure + deterministic. 5 offline tests: no-diagnostics
   on pass, the failing-test list + embedded stack traces + counts, graceful render without file/message,
   and the failure-cap + raw-output truncation.
+
+#### HELIX-123 — Re-invoke coding step + budget  ✅
+- **What it is:** the **loop** that closes the testing story: run the tests; if they pass, done; if they
+  fail, package the diagnostics (HELIX-122) and **hand them to the Coding Agent to fix**, then run the
+  tests again — at most a fixed number of times (the **budget**), and if they still fail after the last
+  try, **stop and flag it for a human** rather than calling it good.
+- **Why it matters:** this is what makes the generated tests actually drive a fix, not just report a
+  failure — the same self-correction shape as the build/lint loop (HELIX-108), but driven by *test*
+  results, and with the same budget as the safety valve so a stubborn failure can't loop forever. The
+  "apply a fix" step is an injected callback, so the real Coding-Agent re-invocation lives in the caller
+  and the whole loop is deterministic and offline-testable.
+- **Where it lives:** [../libs/testing-agent/src/lib/test-feedback-loop.ts](../libs/testing-agent/src/lib/test-feedback-loop.ts)
+  — `runTestFeedbackLoop(runner, { framework, applyFix, maxIterations, … })` → `TestFeedbackResult`
+  (`status` passed/exhausted, `escalate`, `iterations`, `fixAttempts`, `finalReport`, `finalDiagnostics`,
+  `history`). It runs tests via the sandbox runner, builds the report + diagnostics, and doesn't attempt
+  a fix on the last run. 4 more offline tests (flippable fake runner): pass-first (no fix),
+  fix-then-pass, exhaust + escalate (with the fix-attempt count + final diagnostics), and
+  `maxIterations: 1`. Closes the Failure Feedback Loop story and the Testing Agent epic (HELIX-7).
 
 ---
 
@@ -1455,6 +1473,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-120 | Testing Agent — result + coverage parser (normalized across frameworks) | ✅ | #83 |
 | HELIX-121 | Testing Agent — test report artifact (structured + markdown) | ✅ | #84 |
 | HELIX-122 | Testing Agent — failure diagnostics packaging (failing tests + stack traces) | ✅ | #86 |
+| HELIX-123 | Testing Agent — re-invoke coding step + budget (test fix loop) | ✅ | #87 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
@@ -1520,10 +1539,17 @@ reviews it across **five aspects** (correctness, security, style, performance, p
 scan**, and turns it all into **inline + summary PR comments** and a **severity-threshold merge gate**
 (HELIX-33/34/35) — so it reviews the Coding Agent's changes and blocks or approves per policy.
 
-After that: the remaining **agents** (testing/deploy), **human approvals**, **monitoring**, and the
-**user-facing SaaS** (auth, run dashboard) — where all of this gets a UI. Note the coding agent's
-*live* `git`/checks run locally today; the **container/microVM sandbox** and the **Octokit** push / PR
-/ review-posting binding remain deferred (see [../DEFERRED.md](../DEFERRED.md)).
+The **Testing Agent** (HELIX-7) is now ✅ done as well: it generates tests **per framework** and maps
+them to the spec's **acceptance criteria** (with a coverage check, HELIX-36); **detects** the framework,
+**runs** the tests in the sandbox, and normalises results + coverage into a **report** (HELIX-37); and
+on failure **packages the diagnostics + stack traces and loops them back to the Coding Agent under a
+budget** until they pass or it escalates (HELIX-38). So the pipeline now runs **plan → code → review →
+test**, end to end.
+
+After that: the **Deployment Agent**, **human approvals**, **monitoring**, and the **user-facing SaaS**
+(auth, run dashboard) — where all of this gets a UI. Note the coding/testing agents' *live* `git` and
+test runs happen locally today; the **container/microVM sandbox** and the **Octokit** push / PR /
+review-posting binding remain deferred (see [../DEFERRED.md](../DEFERRED.md)).
 
 ---
 
