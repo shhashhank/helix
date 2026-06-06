@@ -995,6 +995,31 @@ group the changes into commits (HELIX-105).
   more offline tests cover the line diff (add/modify/delete, from-empty), snapshot/diff classification
   against a real sandbox, ignored-dir skipping, and grouping by dir + by a custom per-task key.
 
+### Story: Build, Lint & Self-Correction Loop  🛠️ in progress
+
+Make the agent's code actually compile + lint, and fix itself when it doesn't: run the checks
+(HELIX-106), feed failures back as fix instructions (HELIX-107), and cap the retries (HELIX-108).
+
+#### HELIX-106 — Build/lint runner in sandbox  ✅
+- **What it is:** the ability to **run commands** (the build, the linter) inside the workspace and
+  capture how they went — exit code, stdout, stderr, whether they timed out. On top of that, a small
+  runner that executes a list of **language-aware checks** (e.g. `pnpm build`, `pnpm lint`) in order and
+  reports a single pass/fail plus each check's output.
+- **Why it matters:** this is the gate that tells the agent whether its code is actually good. Capturing
+  the real compiler/linter output (not just "it failed") is what the next step (HELIX-107) feeds back so
+  the agent can fix the specific errors — the self-correction loop. Commands run as **real child
+  processes** rooted at the sandbox (cwd through the path guard) and are **killed if they overrun** a
+  wall-clock timeout, so a hanging build can't wedge a run.
+- **Where it lives:** the command primitive is in
+  [../libs/sandbox/src/command-runner.ts](../libs/sandbox/src/command-runner.ts) (`CommandRunner` seam +
+  `LocalCommandRunner`, which spawns via `child_process`, captures output, and SIGKILLs on timeout); the
+  build/lint orchestration is in [../libs/coding-agent/src/lib/checks.ts](../libs/coding-agent/src/lib/checks.ts)
+  (`runChecks` → `ChecksOutcome`, with `stopOnFailure`, plus `nodeChecks` language-aware presets). 12
+  more offline tests: the runner against **real subprocesses** (stdout/exit, stderr/non-zero, cwd =
+  workspace, timeout kill, unknown command, cwd escape) and the checks aggregation (pass/fail,
+  stop-on-failure, timed-out = failure) with a fake runner. *(The real container-exec backend is
+  deferred; the local spawn is genuine.)*
+
 ---
 
 ## Fixes & hardening
@@ -1094,6 +1119,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-103 | Coding Agent — file edit tools (read/write/patch in sandbox) | ✅ | #65 |
 | HELIX-104 | Coding Agent — scaffolding/templates (NestJS CRUD exemplar) | ✅ | #66 |
 | HELIX-105 | Coding Agent — diff generation + commit grouping | ✅ | #67 |
+| HELIX-106 | Coding Agent — build/lint runner in sandbox (command runner + checks) | ✅ | #68 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
