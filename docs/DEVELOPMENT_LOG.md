@@ -1319,6 +1319,26 @@ and package a report (HELIX-121).
   tests: the structured report assembly, and the failed + passed markdown (with uncovered acceptance
   criteria). Closes the Test Execution & Reporting story.
 
+### Story: Failure Feedback Loop  🛠️ in progress
+
+Close the loop when tests fail: package the failures into diagnostics (HELIX-122) and re-invoke the
+Coding Agent under a budget to fix them (HELIX-123).
+
+#### HELIX-122 — Failure diagnostics packaging  ✅
+- **What it is:** when the tests fail, turning the report into a **fix request** for the Coding Agent —
+  a tidy list of *which* tests failed (file · name · message) plus the raw **stack-trace output**, and a
+  short instruction: "fix the code so these pass; they'll be re-run."
+- **Why it matters:** it's the testing side's version of the build/lint fix feedback — the difference
+  between "tests failed" and "here's exactly which assertions blew up and where." It's **bounded** (caps
+  the number of failures listed and truncates the stack traces) so a huge failure dump can't blow the
+  prompt, and it short-circuits to nothing when the tests passed. HELIX-123 feeds this back to the
+  Coding Agent and re-runs.
+- **Where it lives:** [../libs/testing-agent/src/lib/test-feedback.ts](../libs/testing-agent/src/lib/test-feedback.ts)
+  — `buildFailureDiagnostics` (a `TestReport` + optional raw output → `FailureDiagnostics`: the failing
+  tests, a `truncated` flag, and the re-prompt). Pure + deterministic. 5 offline tests: no-diagnostics
+  on pass, the failing-test list + embedded stack traces + counts, graceful render without file/message,
+  and the failure-cap + raw-output truncation.
+
 ---
 
 ## Fixes & hardening
@@ -1434,6 +1454,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-119 | Testing Agent — test runner in sandbox (framework detection + run) | ✅ | #82 |
 | HELIX-120 | Testing Agent — result + coverage parser (normalized across frameworks) | ✅ | #83 |
 | HELIX-121 | Testing Agent — test report artifact (structured + markdown) | ✅ | #84 |
+| HELIX-122 | Testing Agent — failure diagnostics packaging (failing tests + stack traces) | ✅ | #86 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
