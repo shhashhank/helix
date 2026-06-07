@@ -1364,7 +1364,7 @@ Coding Agent under a budget to fix them (HELIX-123).
 The agent that ships the reviewed, tested change: build an artifact, push it, deploy a single demo
 stack to AWS, and return a live URL.
 
-### Story: Build & Artifact Packaging  🛠️ in progress
+### Story: Build & Artifact Packaging  ✅ done
 
 Make the artifact: detect how to build the app and build it (HELIX-124), then push the image to ECR
 (HELIX-125).
@@ -1405,6 +1405,34 @@ Make the artifact: detect how to build the app and build it (HELIX-124), then pu
   `@helix/sandbox` `CommandRunner` → `PushResult`, halting on the first failure). 8 offline tests against
   a fake runner: the URI/registry computation (default + explicit tag, invalid-input rejection), the
   login → tag → push command list, and the push run (all-ok / first-step failure stops / push timeout,
+  cwd/timeout passthrough).
+
+### Story: Deploy to Target Environment (single stack)  🛠️ in progress
+
+Stand the image up somewhere it can actually serve traffic: generate the infrastructure-as-code for a
+single demo stack and deploy it (HELIX-126), then wire its environment + secrets (HELIX-127).
+
+#### HELIX-126 — IaC deploy (CDK) for ECS/Lambda  ✅
+- **What it is:** writing out the **infrastructure-as-code** (an **AWS CDK** app) that stands the pushed
+  image up as a running, reachable service — either an **ECS Fargate** service behind a load balancer, or
+  a **Lambda** container function with a public URL — and then running `cdk deploy` and reading back the
+  **live URL** the stack publishes.
+- **Why it matters:** this is the step that turns "an image in a registry" into "a thing you can open in a
+  browser." Rather than click around a cloud console, the agent generates a small, deterministic CDK
+  project (so the same spec always produces the same infrastructure) and deploys it through the same
+  sandbox **command runner** as everything else, recovering the URL from the deploy output. Generating the
+  CDK files and the deploy command is pure and offline-tested; the actual `cdk deploy` needs the CDK CLI +
+  real AWS credentials, so — like the build and the ECR push — it's **deferred** (see
+  [../DEFERRED.md](../DEFERRED.md)).
+- **Where it lives:** [cdk.ts](../libs/deployment-agent/src/lib/cdk.ts) in `@helix/deployment-agent` —
+  `synthesizeCdkApp` (generates `cdk.json`, `bin/app.ts`, and a `lib/<app>-stack.ts` — an
+  `ApplicationLoadBalancedFargateService` for ECS or a `DockerImageFunction` + Function URL for Lambda,
+  fronting the ECR image and exporting a `LiveUrl` output), `cdkSynthCommand` / `cdkDeployCommand`
+  (`npx cdk synth` / `npx cdk deploy --require-approval never`), `extractLiveUrl` (parse the `LiveUrl`
+  output from deploy stdout), and `runCdkDeploy` (run the deploy via the `@helix/sandbox` `CommandRunner`
+  → `DeployResult` with the live URL). 10 offline tests: the ECS + Lambda synthesis (constructs, image,
+  ports/cpu/memory, env vars, account-vs-region env, the `LiveUrl` output), input validation, the
+  synth/deploy commands, URL parsing, and the deploy run (ok + parsed URL / non-zero / timeout,
   cwd/timeout passthrough).
 
 ---
@@ -1526,6 +1554,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-123 | Testing Agent — re-invoke coding step + budget (test fix loop) | ✅ | #87 |
 | HELIX-124 | Deployment Agent — Dockerfile/buildpack detection + build | ✅ | #88 |
 | HELIX-125 | Deployment Agent — image push to ECR (login · tag · push) | ✅ | #89 |
+| HELIX-126 | Deployment Agent — IaC deploy (CDK) for ECS/Lambda | ✅ | #90 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
