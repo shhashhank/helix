@@ -1387,6 +1387,26 @@ Make the artifact: detect how to build the app and build it (HELIX-124), then pu
   buildpacks), the docker + pack commands, and the build run (ok / non-zero / timeout, cwd/timeout
   passthrough).
 
+#### HELIX-125 — Image push to ECR  ✅
+- **What it is:** taking the freshly-built image and putting it in **ECR** (Amazon's container
+  registry), so the deploy step has somewhere to pull it from. Given the AWS account, region and
+  repository, it works out the registry address, **logs in**, **tags** the local image with that
+  address, and **pushes** it.
+- **Why it matters:** a built image only helps once it's somewhere the cloud can reach — pushing to ECR
+  is that hand-off. The address it computes and the three commands it runs (login → tag → push) are pure
+  and deterministic, and the push runs through the same sandbox **command runner** as everything else,
+  stopping at the first step that fails. The live `aws ecr get-login-password` login and `docker push`
+  need real AWS credentials + a Docker daemon, so — like the build itself — they're **deferred** (see
+  [../DEFERRED.md](../DEFERRED.md)); everything up to running the commands is real and offline-tested.
+- **Where it lives:** [ecr.ts](../libs/deployment-agent/src/lib/ecr.ts) in `@helix/deployment-agent` —
+  `ecrRegistry` / `ecrImageUri` (the `<account>.dkr.ecr.<region>.amazonaws.com/<repo>:<tag>` address,
+  defaulting the tag to `latest`, with input validation), `ecrPushCommands` (the AWS login pipe + the
+  `docker tag` / `docker push` commands), and `pushImageToEcr` (run them in order via the
+  `@helix/sandbox` `CommandRunner` → `PushResult`, halting on the first failure). 8 offline tests against
+  a fake runner: the URI/registry computation (default + explicit tag, invalid-input rejection), the
+  login → tag → push command list, and the push run (all-ok / first-step failure stops / push timeout,
+  cwd/timeout passthrough).
+
 ---
 
 ## Fixes & hardening
@@ -1505,6 +1525,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-122 | Testing Agent — failure diagnostics packaging (failing tests + stack traces) | ✅ | #86 |
 | HELIX-123 | Testing Agent — re-invoke coding step + budget (test fix loop) | ✅ | #87 |
 | HELIX-124 | Deployment Agent — Dockerfile/buildpack detection + build | ✅ | #88 |
+| HELIX-125 | Deployment Agent — image push to ECR (login · tag · push) | ✅ | #89 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

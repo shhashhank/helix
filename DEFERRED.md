@@ -69,17 +69,19 @@ else it's tracked.
 - **Deferred from:** HELIX-124 (Build & Artifact Packaging) — the Deployment Agent
   epic (HELIX-8) overall.
 - **What's deferred:** actually running the build/deploy — `docker build` / `pack`
-  (needs a Docker daemon), pushing the image to **ECR**, and the **CDK** deploy to
-  ECS/Lambda — none of which can run in offline CI.
+  (needs a Docker daemon), the live `aws ecr get-login-password` auth + `docker push`
+  to **ECR** (needs AWS creds + a daemon), and the **CDK** deploy to ECS/Lambda —
+  none of which can run in offline CI.
 - **In place instead:** `@helix/deployment-agent` — pure detection + command/IaC
   generation + a runner-backed seam. HELIX-124 ships `detectBuildStrategy` +
-  `buildCommand` + `runBuild(runner, …)`; the build *command* is real and the
-  orchestration runs through the same `@helix/sandbox` `CommandRunner`, only the
-  daemon/cloud execution is stubbed in tests.
-- **To land:** point `runBuild` (and the later ECR push / CDK deploy steps) at a
-  host with Docker + AWS credentials; no change to the detection/command logic.
+  `buildCommand` + `runBuild(runner, …)`; HELIX-125 ships `ecrImageUri` +
+  `ecrPushCommands` (login → tag → push) + `pushImageToEcr(runner, …)`. The
+  *commands* are real and run through the same `@helix/sandbox` `CommandRunner`,
+  only the daemon/cloud execution is stubbed in tests.
+- **To land:** point `runBuild` / `pushImageToEcr` (and the later CDK deploy steps)
+  at a host with Docker + AWS credentials; no change to the detection/command logic.
 - **Trigger / sequencing:** when deploying the demo stack to a real AWS account.
-- **Also tracked:** HELIX-124 PR "Out of scope".
+- **Also tracked:** HELIX-124 / HELIX-125 PR "Out of scope".
 
 ---
 
