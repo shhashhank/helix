@@ -1463,6 +1463,42 @@ single demo stack and deploy it (HELIX-126), then wire its environment + secrets
 
 ---
 
+## Epic: Human Approval System  🛠️ in progress
+
+The human-in-the-loop layer: a configurable gate that decides *when* a person must sign off on an agent's
+action, *who* is allowed to, and *how long* they have before it escalates. (The workflow engine already
+has the durable pause/resume primitive from HELIX-2; this epic is the approval *system* on top of it.)
+
+### Story: Approval Gate Configuration (basic)  🛠️ in progress
+
+The configuration side: model the gate rules + approver roles + SLAs (HELIX-128), then expose an admin
+API/UI to manage them (HELIX-129).
+
+#### HELIX-128 — Approval policy model  ✅
+- **What it is:** the **rulebook** for approvals. A policy is a list of **gate rules**; each rule has a
+  **condition** (does this action match? — by action type, environment like `prod`, the agent doing it,
+  a risk level, an estimated dollar cost, or tags) and a **requirement** (who may approve, how many of
+  them, the response **SLA** in minutes, and who to escalate to if that SLA is missed). Given a specific
+  action, the model tells you whether it needs sign-off and, if so, the exact requirement.
+- **Why it matters:** this is the knob that decides "should a human look at this before it happens?" —
+  the difference between an agent that quietly ships to production and one that pauses for a tech lead. It's
+  deliberately **data, not code**: rules are a validated document (so the next sub-task's admin API/UI can
+  edit them safely), and evaluating them is pure and deterministic. When several rules match one action,
+  their requirements are **folded** sensibly — the approver roles and escalation targets are unioned, the
+  quorum takes the strictest (highest) value, and the SLA takes the tightest (shortest) — so overlapping
+  rules can only make a gate *stronger*, never weaker.
+- **Where it lives:** the new [../libs/approvals](../libs/approvals) library (`@helix/approvals`) —
+  [policy.ts](../libs/approvals/src/lib/policy.ts): the zod schema + types (`ApprovalPolicy`, `GateRule`,
+  `GateCondition`, `ApprovalRequirement`, `RiskLevel`), `matchesCondition` (AND of every present matcher;
+  `{}` is a catch-all), `evaluatePolicy` (fold matched rules → `requiresApproval` + a `ResolvedRequirement`),
+  `parseApprovalPolicy` / `safeParseApprovalPolicy` (validation for the HELIX-129 admin API, incl. a
+  duplicate-rule-id check), and `defaultApprovalPolicy` (a conservative starter: gate prod deploys + any
+  high/critical-risk action). 12 offline tests: condition matching (each matcher + risk bands + the
+  catch-all), evaluation (no-match / multi-rule fold / quorum + SLA defaults / disabled rules), and schema
+  validation (unknown keys, empty roles, bad versions, duplicate ids).
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1582,6 +1618,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-125 | Deployment Agent — image push to ECR (login · tag · push) | ✅ | #89 |
 | HELIX-126 | Deployment Agent — IaC deploy (CDK) for ECS/Lambda | ✅ | #90 |
 | HELIX-127 | Deployment Agent — env/config + secrets wiring (vault refs) | ✅ | #91 |
+| HELIX-128 | Approvals — approval policy model (gate rules · roles · SLAs) | ✅ | #92 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
