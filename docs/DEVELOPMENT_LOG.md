@@ -1359,7 +1359,7 @@ Coding Agent under a budget to fix them (HELIX-123).
 
 ---
 
-## Epic: Deployment Agent  🛠️ in progress
+## Epic: Deployment Agent  ✅ done
 
 The agent that ships the reviewed, tested change: build an artifact, push it, deploy a single demo
 stack to AWS, and return a live URL.
@@ -1407,7 +1407,7 @@ Make the artifact: detect how to build the app and build it (HELIX-124), then pu
   login → tag → push command list, and the push run (all-ok / first-step failure stops / push timeout,
   cwd/timeout passthrough).
 
-### Story: Deploy to Target Environment (single stack)  🛠️ in progress
+### Story: Deploy to Target Environment (single stack)  ✅ done
 
 Stand the image up somewhere it can actually serve traffic: generate the infrastructure-as-code for a
 single demo stack and deploy it (HELIX-126), then wire its environment + secrets (HELIX-127).
@@ -1434,6 +1434,32 @@ single demo stack and deploy it (HELIX-126), then wire its environment + secrets
   ports/cpu/memory, env vars, account-vs-region env, the `LiveUrl` output), input validation, the
   synth/deploy commands, URL parsing, and the deploy run (ok + parsed URL / non-zero / timeout,
   cwd/timeout passthrough).
+
+#### HELIX-127 — Env/config + secrets wiring  ✅
+- **What it is:** giving the deployed app its **settings** — the plain, non-sensitive configuration (like
+  `NODE_ENV` or a log level) and the **secrets** (like a database URL or an API key). The key rule:
+  ordinary config is written straight into the stack, but secret *values* never are — instead the stack
+  gets a **reference** to the secret (an AWS Secrets Manager id/ARN), and the running app fetches the value
+  itself. Before deploying, it also **checks the vault** that every referenced secret actually exists.
+- **Why it matters:** this is the difference between "a running container" and "a running container that can
+  reach its database" — and it's where a careless step would leak credentials. By splitting config into
+  *plain* vs *secret* and only ever putting **references** (never values) into the generated
+  infrastructure, the secret material stays in the vault and out of the IaC, the logs, and the model — the
+  same "secrets never leak" guarantee the rest of the platform holds to (it reuses the redaction-safe
+  [`@helix/secrets`](../libs/secrets) vault, fetching each secret only to confirm it exists, never to read
+  it). The pre-flight means a missing secret fails the deploy early with a clear list, not at runtime.
+  This is the **last sub-task of the Deployment Agent epic.**
+- **Where it lives:** [env-config.ts](../libs/deployment-agent/src/lib/env-config.ts) in
+  `@helix/deployment-agent` — `resolveDeployEnv` (split a `DeployConfig` into a plain `environment` map +
+  a `secrets` map of env var → Secrets Manager id, rejecting a var claimed by both), `secretIdFor` (the
+  default `<scope>/<name>` id), `withDeployConfig` (apply a config onto a `DeploySpec`), and
+  `checkDeploySecrets` (pre-flight every referenced secret against the `@helix/secrets` `SecretsManager`,
+  returning the missing ones, exposing none). The CDK synthesis ([cdk.ts](../libs/deployment-agent/src/lib/cdk.ts))
+  now renders those references — for ECS as a native `secrets:` map (`ecs.Secret.fromSecretsManager`), for
+  Lambda as imported secrets with `grantRead` + the ARN passed in the environment — never the value. 10
+  offline tests: the plain/secret split + id defaulting + conflict rejection, the ECS + Lambda reference
+  rendering (no value present), and the vault pre-flight (all-present / missing list / unexpected-error
+  rethrow / no-secrets no-op).
 
 ---
 
@@ -1555,6 +1581,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-124 | Deployment Agent — Dockerfile/buildpack detection + build | ✅ | #88 |
 | HELIX-125 | Deployment Agent — image push to ECR (login · tag · push) | ✅ | #89 |
 | HELIX-126 | Deployment Agent — IaC deploy (CDK) for ECS/Lambda | ✅ | #90 |
+| HELIX-127 | Deployment Agent — env/config + secrets wiring (vault refs) | ✅ | #91 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
