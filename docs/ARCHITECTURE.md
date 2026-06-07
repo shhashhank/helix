@@ -42,7 +42,7 @@ flowchart TB
     cag["@helix/coding-agent<br/>Coding Agent<br/>file edit tools (read/write/patch in sandbox)<br/>scaffold generators · NestJS CRUD exemplar<br/>workspace diff · commit grouping<br/>build/lint checks · error→fix feedback<br/>self-correction loop (budget · escalate)<br/>branch naming + creation · commit messages"]
     rev["@helix/review-agent<br/>Code Review Agent<br/>diff + surrounding-code context assembly<br/>multi-aspect review (correctness/security/style/perf/plan)<br/>structured findings · severity · secret scan<br/>inline + summary posting · merge gate (severity threshold)"]
     tst["@helix/testing-agent<br/>Testing Agent<br/>test generation prompts per framework (jest/pytest/…)<br/>acceptance-criteria → tests (traceable) · coverage<br/>framework detection · run tests in sandbox<br/>result + coverage parsing (normalized) · report artifact<br/>failure diagnostics → coding-agent fix loop"]
-    dep["@helix/deployment-agent<br/>Deployment Agent<br/>build strategy detection (Dockerfile/buildpack) + build"]
+    dep["@helix/deployment-agent<br/>Deployment Agent<br/>build strategy detection (Dockerfile/buildpack) + build<br/>ECR image push (login · tag · push)"]
   end
 
   subgraph dat["Data & external"]
@@ -155,7 +155,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-5 · Coding Agent** | ✅ done | Isolated sandbox — provision, repo checkout, egress/limits, command runner (HELIX-29); file edit tools, scaffolding, diff + commit grouping (HELIX-30); build/lint runner, error→fix feedback, self-correction loop (HELIX-31); branch naming + commit messages (HELIX-32). Generates compiling, lint-passing changes on a branch |
 | **HELIX-6 · Code Review Agent** | ✅ done | Diff-aware review engine — context assembly, multi-aspect review (correctness/security/style/perf/plan), structured findings + severity (HELIX-33); gitleaks-style secret scan (HELIX-34); inline + summary comment posting + a severity-threshold merge gate (HELIX-35). Reviews the Coding Agent's diffs and blocks or approves per policy |
 | **HELIX-7 · Testing Agent** | ✅ done | Generate tests per-framework + map them to acceptance criteria (HELIX-36); detect the framework, run tests in the sandbox, normalize results/coverage into a report (HELIX-37); package failures + loop them back to the Coding Agent under a budget (HELIX-38) |
-| **HELIX-8 · Deployment Agent** | 🛠️ in progress | Build an artifact (Dockerfile/buildpack detection), push to ECR, deploy a single demo stack via CDK, return a live URL. Build-strategy detection + build seam landed (HELIX-124); docker/ECR/CDK execution deferred |
+| **HELIX-8 · Deployment Agent** | 🛠️ in progress | Build an artifact (Dockerfile/buildpack detection), push to ECR, deploy a single demo stack via CDK, return a live URL. Build-strategy detection + build seam (HELIX-124) and ECR push command seam (HELIX-125) landed; live docker/ECR/CDK execution deferred |
 | HELIX-9 Approvals · HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Human approval system, observability, and the user-facing UI |
 
 ---
