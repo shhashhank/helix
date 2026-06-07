@@ -49,6 +49,27 @@ export class CancelApprovalDto {
   reason?: string;
 }
 
+/** One inbox row: a pending request with quorum progress + SLA (mirrors `InboxItem`). */
+export class InboxItemDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() action!: string;
+  @ApiPropertyOptional({ description: 'The gated run id' }) subjectId?: string;
+  @ApiPropertyOptional() requestedBy?: string;
+  @ApiPropertyOptional() reason?: string;
+  @ApiProperty({ type: [String] }) approverRoles!: string[];
+  @ApiProperty({ description: 'Distinct approvals so far' }) approvals!: number;
+  @ApiProperty({ description: 'Quorum required' }) required!: number;
+  @ApiProperty({ description: 'Approvals still needed' }) remaining!: number;
+  @ApiProperty() rejections!: number;
+  @ApiProperty() createdAt!: string;
+  @ApiProperty({ description: 'Seconds since the request opened' }) ageSeconds!: number;
+  @ApiPropertyOptional() slaMinutes?: number;
+  @ApiPropertyOptional() expiresAt?: string;
+  @ApiPropertyOptional({ description: 'Seconds until the SLA lapses' }) slaRemainingSeconds?: number;
+  @ApiProperty({ type: [String], description: 'Roles that have cast a decision' }) rolesDecided!: string[];
+  @ApiProperty({ type: [String], description: 'Approver roles nobody has voted yet' }) awaitingRoles!: string[];
+}
+
 /** Approval request as returned by the API (mirrors the `@helix/approvals` model). */
 export class ApprovalRequestDto {
   @ApiProperty() id!: string;

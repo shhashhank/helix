@@ -27,6 +27,7 @@ describe('ApprovalController', () => {
       open: jest.fn(),
       get: jest.fn(),
       list: jest.fn(),
+      inbox: jest.fn(),
       decide: jest.fn(),
       cancel: jest.fn(),
     } as unknown as jest.Mocked<ApprovalService>;
@@ -63,6 +64,13 @@ describe('ApprovalController', () => {
     service.list.mockResolvedValue([fakeReq()]);
     await request(app.getHttpServer()).get('/approvals?workflowId=run-7&status=pending').expect(200);
     expect(service.list).toHaveBeenCalledWith({ workflowId: 'run-7', status: 'pending' });
+  });
+
+  it('GET /approvals/inbox resolves before /:id and forwards the role', async () => {
+    service.inbox.mockResolvedValue([]);
+    await request(app.getHttpServer()).get('/approvals/inbox?role=tech-lead').expect(200);
+    expect(service.inbox).toHaveBeenCalledWith('tech-lead');
+    expect(service.get).not.toHaveBeenCalled();
   });
 
   it('GET /approvals/:id returns a request, 404 when missing', async () => {

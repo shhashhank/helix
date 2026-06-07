@@ -1,10 +1,11 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { ApprovalRequest } from '@helix/approvals';
+import { ApprovalRequest, InboxItem } from '@helix/approvals';
 import { ApprovalService } from './approval.service';
 import {
   ApprovalRequestDto,
   CancelApprovalDto,
+  InboxItemDto,
   OpenApprovalDto,
   SubmitDecisionDto,
 } from './dto/approval.dto';
@@ -42,6 +43,14 @@ export class ApprovalController {
     @Query('status') status?: ApprovalRequest['status'],
   ): Promise<ApprovalRequest[]> {
     return this.service.list({ workflowId, status });
+  }
+
+  @Get('inbox')
+  @ApiOperation({ summary: "An approver's inbox: pending requests with progress + SLA, most-urgent first" })
+  @ApiQuery({ name: 'role', required: false, description: 'Only requests this role may approve' })
+  @ApiOkResponse({ type: InboxItemDto, isArray: true })
+  inbox(@Query('role') role?: string): Promise<InboxItem[]> {
+    return this.service.inbox(role);
   }
 
   @Get(':id')

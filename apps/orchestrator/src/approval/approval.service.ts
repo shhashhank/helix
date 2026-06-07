@@ -4,7 +4,9 @@ import {
   ApprovalRequest,
   ApprovalTransitionError,
   DecisionVote,
+  InboxItem,
   ResolvedRequirement,
+  buildInbox,
   cancelRequest,
   createApprovalRequest,
   expireIfDue,
@@ -69,6 +71,22 @@ export class ApprovalService {
 
   list(filter?: ListApprovalsFilter): Promise<ApprovalRequest[]> {
     return this.store.list(filter);
+  }
+
+  /**
+   * The "what's waiting on me" view (HELIX-132): all pending requests (optionally
+   * those a given role may approve), each with quorum progress + SLA, most-urgent
+   * first. Lazily expires past-SLA requests so the inbox never shows a stale gate.
+   */
+  async inbox(role?: string): Promise<InboxItem[]> {
+    const now = new Date();
+    const fresh: ApprovalRequest[] = [];
+    for (const request of await this.store.list({ status: 'pending' })) {
+      const expired = expireIfDue(request, now);
+      if (expired !== request) await this.store.put(expired);
+      if (expired.status === 'pending') fresh.push(expired);
+    }
+    return buildInbox(fresh, { role, now });
   }
 
   /**
