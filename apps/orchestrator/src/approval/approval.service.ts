@@ -18,6 +18,7 @@ import {
   ListApprovalsFilter,
 } from './approval.store';
 import { WORKFLOW_SIGNALER, WorkflowSignaler } from './approval.signaler';
+import { APPROVAL_NOTIFIER, ApprovalNotifier } from './approval.notifier';
 
 export interface OpenApprovalInput {
   /** The workflow run this gate is attached to; the run resumed on decision. */
@@ -49,6 +50,7 @@ export class ApprovalService {
   constructor(
     @Inject(APPROVAL_REQUEST_STORE) private readonly store: ApprovalRequestStore,
     @Inject(WORKFLOW_SIGNALER) private readonly signaler: WorkflowSignaler,
+    @Inject(APPROVAL_NOTIFIER) private readonly notifier: ApprovalNotifier,
   ) {}
 
   async open(input: OpenApprovalInput): Promise<ApprovalRequest> {
@@ -61,6 +63,12 @@ export class ApprovalService {
       reason: input.reason,
     });
     await this.store.put(request);
+    // Notify approvers, best-effort: a notification failure must not block the gate.
+    try {
+      await this.notifier.notifyRequested(request);
+    } catch {
+      /* swallow — notifications are non-critical */
+    }
     return request;
   }
 

@@ -3,6 +3,7 @@ import { ResolvedRequirement } from '@helix/approvals';
 import { ApprovalService, OpenApprovalInput } from '../approval.service';
 import { InMemoryApprovalRequestStore } from '../approval.store';
 import { WorkflowSignaler } from '../approval.signaler';
+import { ApprovalNotifier } from '../approval.notifier';
 
 const requirement = (over: Partial<ResolvedRequirement> = {}): ResolvedRequirement => ({
   approverRoles: ['tech-lead', 'security'],
@@ -23,19 +24,28 @@ const openInput = (over: Partial<OpenApprovalInput> = {}): OpenApprovalInput => 
 describe('ApprovalService', () => {
   let store: InMemoryApprovalRequestStore;
   let signaler: jest.Mocked<WorkflowSignaler>;
+  let notifier: jest.Mocked<ApprovalNotifier>;
   let service: ApprovalService;
 
   beforeEach(() => {
     store = new InMemoryApprovalRequestStore();
     signaler = { signalDecision: jest.fn().mockResolvedValue(undefined) };
-    service = new ApprovalService(store, signaler);
+    notifier = { notifyRequested: jest.fn().mockResolvedValue(undefined) };
+    service = new ApprovalService(store, signaler, notifier);
   });
 
-  it('open() creates and stores a pending request linked to the run', async () => {
+  it('open() creates and stores a pending request linked to the run, and notifies approvers', async () => {
     const req = await service.open(openInput());
     expect(req.status).toBe('pending');
     expect(req.subjectId).toBe('run-7');
     expect(req.id).toMatch(/^appr-/);
+    expect(await store.get(req.id)).toBeDefined();
+    expect(notifier.notifyRequested).toHaveBeenCalledWith(expect.objectContaining({ id: req.id }));
+  });
+
+  it('open() still succeeds if notifying throws (best-effort)', async () => {
+    notifier.notifyRequested.mockRejectedValueOnce(new Error('dispatch boom'));
+    const req = await service.open(openInput());
     expect(await store.get(req.id)).toBeDefined();
   });
 
