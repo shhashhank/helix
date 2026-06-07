@@ -120,6 +120,25 @@ else it's tracked.
 - **Trigger / sequencing:** HELIX-11 (the front-end epic).
 - **Also tracked:** HELIX-132 PR "Out of scope".
 
+### 7. Live Slack / email notification transports
+- **Deferred from:** HELIX-133 (Notification dispatch) — in progress.
+- **What's deferred:** the **real** Slack (incoming-webhook / Web API) and email
+  (SMTP / SES) senders that actually transmit a notification off-box.
+- **In place instead:** `@helix/notifications` — the channel seam
+  (`NotificationSender` per channel) + a `NotificationDispatcher` that routes
+  recipients and collects per-recipient results, a **real in-app sender** (writes to
+  an inbox feed the orchestrator exposes at `GET /notifications`), and a
+  `RecordingNotificationSender` standing in for `slack` / `email` (records what would
+  be sent). The orchestrator wires all three; swapping in live senders is a
+  provider change with no caller impact.
+- **To land:** implement `NotificationSender` for `slack` (POST to a webhook) and
+  `email` (SMTP/SES) — both need network egress + secrets (webhook URL / SMTP creds
+  from the vault, [[project_deferred_registry]] · #2 AWS Secrets Manager). Also a
+  durable in-app inbox (currently in-memory, like the approval store · #5).
+- **Trigger / sequencing:** when running in an env with outbound network + the
+  channel credentials in the secrets vault.
+- **Also tracked:** HELIX-133 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
