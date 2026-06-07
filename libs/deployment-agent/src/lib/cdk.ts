@@ -34,8 +34,13 @@ export interface DeploySpec {
   memoryMiB?: number;
   /** Number of Fargate tasks (ECS only; default 1). */
   desiredCount?: number;
-  /** Environment variables to pass to the container/function. */
+  /** Plain environment variables to inline into the container/function. */
   env?: Record<string, string>;
+  /**
+   * Secret-backed env vars: env var name → AWS Secrets Manager id/ARN. Rendered as
+   * a Secrets Manager *reference* (never an inlined value) — see {@link resolveDeployEnv}.
+   */
+  secrets?: Record<string, string>;
 }
 
 const DEFAULTS = { port: 8080, cpu: 256, memoryMiB: 512, desiredCount: 1 } as const;
@@ -91,13 +96,39 @@ function renderEnv(env: Record<string, string> | undefined, indent: string): str
   return `\n${indent}environment: { ${pairs} },`;
 }
 
+/** `DATABASE_URL` → `DatabaseUrl` (a valid, readable construct-id / identifier fragment). */
+function secretBase(envVar: string): string {
+  return envVar
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .join('');
+}
+const secretConstructId = (envVar: string) => `Secret${secretBase(envVar)}`;
+const secretVarName = (envVar: string) => `secret${secretBase(envVar)}`;
+
+const hasSecrets = (spec: DeploySpec) => Object.keys(spec.secrets ?? {}).length > 0;
+const secretsManagerImport = (spec: DeploySpec) =>
+  hasSecrets(spec) ? `\nimport * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';` : '';
+
+/** ECS task secrets: a native `secrets` map of env var → Secrets Manager reference. */
+function renderEcsSecrets(secrets: Record<string, string>, indent: string): string {
+  const lines = Object.entries(secrets).map(
+    ([envVar, id]) =>
+      `${indent}  ${envVar}: ecs.Secret.fromSecretsManager(` +
+      `secretsmanager.Secret.fromSecretNameV2(this, '${secretConstructId(envVar)}', ${JSON.stringify(id)})),`,
+  );
+  return `\n${indent}secrets: {\n${lines.join('\n')}\n${indent}},`;
+}
+
 function ecsStack(spec: DeploySpec, className: string): string {
   const port = spec.port ?? DEFAULTS.port;
   const env = renderEnv(spec.env, '        ');
+  const secrets = hasSecrets(spec) ? renderEcsSecrets(spec.secrets ?? {}, '        ') : '';
   return `import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';${secretsManagerImport(spec)}
 
 export class ${className} extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -110,7 +141,7 @@ export class ${className} extends cdk.Stack {
       publicLoadBalancer: true,
       taskImageOptions: {
         image: ecs.ContainerImage.fromRegistry(${JSON.stringify(spec.image)}),
-        containerPort: ${port},${env}
+        containerPort: ${port},${env}${secrets}
       },
     });
 
@@ -124,23 +155,41 @@ export class ${className} extends cdk.Stack {
 
 function lambdaStack(spec: DeploySpec, className: string): string {
   const { repository, tag } = parseImageRef(spec.image);
-  const env = renderEnv(spec.env, '      ');
+  const secretEntries = Object.entries(spec.secrets ?? {});
+
+  // Import each secret, expose its ARN to the function via env, and grant read.
+  // The value is resolved by the function at runtime — never inlined into the template.
+  const secretConsts = secretEntries
+    .map(
+      ([envVar, id]) =>
+        `    const ${secretVarName(envVar)} = secretsmanager.Secret.fromSecretNameV2(` +
+        `this, '${secretConstructId(envVar)}', ${JSON.stringify(id)});`,
+    )
+    .join('\n');
+  const grants = secretEntries.map(([envVar]) => `    ${secretVarName(envVar)}.grantRead(fn);`).join('\n');
+
+  const envPairs = [
+    ...Object.entries(spec.env ?? {}).map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`),
+    ...secretEntries.map(([envVar]) => `${JSON.stringify(envVar)}: ${secretVarName(envVar)}.secretArn`),
+  ];
+  const env = envPairs.length ? `\n      environment: { ${envPairs.join(', ')} },` : '';
+
   return `import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambda from 'aws-cdk-lib/aws-lambda';${secretsManagerImport(spec)}
 
 export class ${className} extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const repository = ecr.Repository.fromRepositoryName(this, 'Repo', ${JSON.stringify(repository)});
-    const fn = new lambda.DockerImageFunction(this, 'Function', {
+${secretConsts ? secretConsts + '\n' : ''}    const fn = new lambda.DockerImageFunction(this, 'Function', {
       code: lambda.DockerImageCode.fromEcr(repository, { tagOrDigest: ${JSON.stringify(tag)} }),
       memorySize: ${spec.memoryMiB ?? DEFAULTS.memoryMiB},
       timeout: cdk.Duration.seconds(30),${env}
     });
-
+${grants ? '\n' + grants + '\n' : ''}
     const fnUrl = fn.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.NONE });
 
     new cdk.CfnOutput(this, '${LIVE_URL_OUTPUT}', { value: fnUrl.url });
