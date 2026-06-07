@@ -1,0 +1,7 @@
+{
+  "name": "deployment-agent",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/deployment-agent/src",
+  "projectType": "library",
+  "targets": {}
+}

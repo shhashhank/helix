@@ -65,6 +65,22 @@ else it's tracked.
   code for real (and when there's a host with the privileged runtime + cloud env).
 - **Also tracked:** HELIX-100 PR "Out of scope".
 
+### 4. Real deployment execution (Docker / ECR / CDK on AWS)
+- **Deferred from:** HELIX-124 (Build & Artifact Packaging) — the Deployment Agent
+  epic (HELIX-8) overall.
+- **What's deferred:** actually running the build/deploy — `docker build` / `pack`
+  (needs a Docker daemon), pushing the image to **ECR**, and the **CDK** deploy to
+  ECS/Lambda — none of which can run in offline CI.
+- **In place instead:** `@helix/deployment-agent` — pure detection + command/IaC
+  generation + a runner-backed seam. HELIX-124 ships `detectBuildStrategy` +
+  `buildCommand` + `runBuild(runner, …)`; the build *command* is real and the
+  orchestration runs through the same `@helix/sandbox` `CommandRunner`, only the
+  daemon/cloud execution is stubbed in tests.
+- **To land:** point `runBuild` (and the later ECR push / CDK deploy steps) at a
+  host with Docker + AWS credentials; no change to the detection/command logic.
+- **Trigger / sequencing:** when deploying the demo stack to a real AWS account.
+- **Also tracked:** HELIX-124 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
