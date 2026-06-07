@@ -1590,7 +1590,7 @@ act on (HELIX-132).
   ordering/tiebreaks) and 4 in the orchestrator (ordering, role filter, lazy-expire exclusion, route
   resolution). Closes the **Approval Request & Decision Flow** story.
 
-### Story: Notifications & Escalation (Slack + email)  🛠️ in progress
+### Story: Notifications & Escalation (Slack + email)  ✅ done
 
 Make sure the right people *know* a decision is waiting — dispatch notifications across channels
 (HELIX-133), and chase/escalate them when an SLA is about to lapse (HELIX-134).
@@ -1620,6 +1620,30 @@ Make sure the right people *know* a decision is waiting — dispatch notificatio
   lib (routing, unknown-channel + throwing-sender capture, in-app/recording senders, recipient de-dup,
   message build) and 10 in the orchestrator (notify-on-open, best-effort failure, dispatch fan-out, feed
   endpoint).
+
+#### HELIX-134 — SLA timers + escalation  ✅
+- **What it is:** chasing an approval that's **running out of time**. When a pending request gets close to
+  its SLA deadline without enough sign-off, it **escalates** — pulls in the **backup approvers** the policy
+  named (`escalateTo`), so they can now approve too, and notifies them. Once past the deadline with still
+  no decision, it simply **expires** (fail-safe — the risky action stays blocked).
+- **Why it matters:** without this, an approval with nobody watching just sits there until it silently
+  expires and the run dies — no second chance. Escalation gives a real "backup approver" path: as the
+  clock runs down, more people are empowered to act and are told about it. The logic is a **pure,
+  idempotent** step (a request escalates **at most once**, strictly *before* expiry, and only if it has
+  backups), so the sweep that drives it can run as often as it likes without double-firing or fighting the
+  expiry rule. The actual *timer* that runs the sweep on a schedule is **deferred** (see
+  [../DEFERRED.md](../DEFERRED.md)); the sweep itself is real and can be triggered via the API.
+- **Where it lives:** [escalation.ts](../libs/approvals/src/lib/escalation.ts) in `@helix/approvals` —
+  `escalationDue` (is a pending request inside the `[expiresAt − lead, expiresAt)` window, with backups,
+  not yet escalated?) and `escalateRequest` (stamp `escalatedAt`, widen `approverRoles` with the backups);
+  the `approval.escalated` message builder in
+  [approval-notifications.ts](../libs/notifications/src/lib/approval-notifications.ts). Wired into the
+  orchestrator: `ApprovalService.escalateDue(beforeExpiryMinutes)` sweeps pending requests (expire the
+  past-due, escalate + notify the soon-due), exposed at `POST /approvals/escalate-due`, with the notifier's
+  new `notifyEscalated` targeting the backups. 13 tests: 6 in the lib (window edges, once-only, no-backups/
+  no-SLA/resolved guards, role-widening, a backup then approving) and 7 in the orchestrator (sweep escalate
+  + notify, zero-window/idempotent, expire-not-escalate, best-effort notify, the route, the escalated
+  builder). Closes the **Notifications & Escalation** story.
 
 ---
 
@@ -1748,6 +1772,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-131 | Approvals — decision API + workflow resume signal (orchestrator) | ✅ | #95 |
 | HELIX-132 | Approvals — inbox read-API (rendered UI deferred to HELIX-11) | ✅ | #96 |
 | HELIX-133 | Notifications — dispatch across slack/email/in-app channels | ✅ | #97 |
+| HELIX-134 | Approvals — SLA escalation to backup approvers (sweep) | ✅ | #98 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
