@@ -32,6 +32,25 @@ model AgentDefinition {
   @@map("agent_definitions")
 }
 
+/// A versioned approval policy (HELIX-128/129): gate rules + approver roles + SLAs,
+/// stored as a validated document (the `@helix/approvals` `ApprovalPolicy` shape).
+/// Mirrors AgentDefinition's immutable-version model — each edit appends a new
+/// version; the latest non-deleted row per (orgId, policyId) is the active one.
+model ApprovalPolicy {
+  id        String    @id @default(uuid()) @db.Uuid
+  orgId     String?   @map("org_id") @db.Uuid
+  policyId  String    @map("policy_id") @db.Text
+  version   Int
+  document  Json
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([orgId, policyId, version])
+  @@index([orgId, policyId, deletedAt])
+  @@map("approval_policies")
+}
+
 /// One metered LLM call (HELIX-57): token usage + estimated cost + attribution.
 /// Written by the gateway's usage meter; rolled up by later cost-accounting work.
 model TokenUsage {
