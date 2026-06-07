@@ -1590,6 +1590,37 @@ act on (HELIX-132).
   ordering/tiebreaks) and 4 in the orchestrator (ordering, role filter, lazy-expire exclusion, route
   resolution). Closes the **Approval Request & Decision Flow** story.
 
+### Story: Notifications & Escalation (Slack + email)  🛠️ in progress
+
+Make sure the right people *know* a decision is waiting — dispatch notifications across channels
+(HELIX-133), and chase/escalate them when an SLA is about to lapse (HELIX-134).
+
+#### HELIX-133 — Notification dispatch (Slack/email/in-app)  ✅
+- **What it is:** a small system for **getting a message to people across channels** — Slack, email, or an
+  in-app feed. You hand it a notification with a list of recipients (each tagged with a channel + address),
+  and it routes each one to the right channel and reports back, per recipient, whether it got through. When
+  an approval request opens, the orchestrator uses this to tell the approvers it's waiting on them.
+- **Why it matters:** the approval gate is only useful if the approvers find out — otherwise a run just
+  sits paused. Making **channels a seam** means we can light up the in-app feed for real today and add live
+  Slack/email later without touching the callers; one flaky channel can't sink the others (each delivery is
+  isolated, and a failure is recorded rather than thrown). The live Slack/email **transports** (webhooks /
+  SMTP — they need network + secrets) are **deferred** (see [../DEFERRED.md](../DEFERRED.md)); a recording
+  sender stands in for them, and the **in-app** channel is real (it writes to a per-recipient feed the
+  orchestrator serves at `GET /notifications`).
+- **Where it lives:** the new [../libs/notifications](../libs/notifications) library
+  (`@helix/notifications`) — [notification.ts](../libs/notifications/src/lib/notification.ts)
+  (`NotificationDispatcher` + the `NotificationSender` channel seam, never-throws delivery),
+  [senders.ts](../libs/notifications/src/lib/senders.ts) (`InAppNotificationSender` + an in-app inbox;
+  `RecordingNotificationSender` for the deferred channels), and
+  [recipients.ts](../libs/notifications/src/lib/recipients.ts) / `approval-notifications.ts` (role →
+  recipient directory + the `approval.requested` message builder). Wired into the orchestrator
+  ([../apps/orchestrator/src/approval](../apps/orchestrator/src/approval)): `ApprovalService.open` notifies
+  approvers (best-effort, never blocking the gate) via a `DispatchingApprovalNotifier`, and a
+  `NotificationController` exposes `GET /notifications?address=` for the in-app feed. 20 tests: 10 in the
+  lib (routing, unknown-channel + throwing-sender capture, in-app/recording senders, recipient de-dup,
+  message build) and 10 in the orchestrator (notify-on-open, best-effort failure, dispatch fan-out, feed
+  endpoint).
+
 ---
 
 ## Fixes & hardening
@@ -1716,6 +1747,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-130 | Approvals — approval request state machine (pending→approved/…) | ✅ | #94 |
 | HELIX-131 | Approvals — decision API + workflow resume signal (orchestrator) | ✅ | #95 |
 | HELIX-132 | Approvals — inbox read-API (rendered UI deferred to HELIX-11) | ✅ | #96 |
+| HELIX-133 | Notifications — dispatch across slack/email/in-app channels | ✅ | #97 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
