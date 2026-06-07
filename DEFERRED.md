@@ -89,6 +89,22 @@ else it's tracked.
 - **Trigger / sequencing:** when deploying the demo stack to a real AWS account.
 - **Also tracked:** HELIX-124 / HELIX-125 / HELIX-126 / HELIX-127 PR "Out of scope".
 
+### 5. Durable approval-request persistence
+- **Deferred from:** HELIX-131 (Decision API + workflow signal) — in progress.
+- **What's deferred:** persisting open approval requests in a **database** so they
+  survive an orchestrator restart and are queryable across instances / for audit.
+- **In place instead:** an `ApprovalRequestStore` seam + an `InMemoryApprovalRequestStore`
+  in the orchestrator. The *durable* part of the gate already lives in Temporal (the
+  run is paused on `awaitApproval`), so an orchestrator restart loses the in-flight
+  request record but not the paused run; a decision can still be delivered. The
+  decision → `submitApprovalDecision` signal → resume path is fully real.
+- **To land:** implement `ApprovalRequestStore` over a DB (Prisma, like the registry)
+  with no change to the service — likely folded in with the audit log (HELIX-44,
+  `HELIX-135` append-only store), which needs durable approval history anyway.
+- **Trigger / sequencing:** when the approval inbox (HELIX-132) / audit log (HELIX-44)
+  needs requests to outlive a process, or the orchestrator runs multi-instance.
+- **Also tracked:** HELIX-131 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)

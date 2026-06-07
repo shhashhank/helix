@@ -15,6 +15,11 @@ import {
   approvalStatusQuery,
 } from './approval';
 
+// Re-export the client-relevant approval types so a dispatcher (e.g. the
+// orchestrator) can import them from the client-safe `@helix/workflow/temporal-client`
+// entrypoint without reaching into workflow-sandbox modules.
+export type { ApprovalDecision, ApprovalSignalPayload, ApprovalStatus } from './approval';
+
 /**
  * Deliver a human's decision into a paused workflow, resuming it. Throws if the
  * workflow isn't running (e.g. it already decided or timed out — the decision
