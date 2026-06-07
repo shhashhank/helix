@@ -1,0 +1,7 @@
+{
+  "name": "approvals",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/approvals/src",
+  "projectType": "library",
+  "targets": {}
+}

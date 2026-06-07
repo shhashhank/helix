@@ -27,7 +27,8 @@
       "@helix/coding-agent": ["libs/coding-agent/src/index.ts"],
       "@helix/review-agent": ["libs/review-agent/src/index.ts"],
       "@helix/testing-agent": ["libs/testing-agent/src/index.ts"],
-      "@helix/deployment-agent": ["libs/deployment-agent/src/index.ts"]
+      "@helix/deployment-agent": ["libs/deployment-agent/src/index.ts"],
+      "@helix/approvals": ["libs/approvals/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
