@@ -49,6 +49,16 @@ export class CancelApprovalDto {
   reason?: string;
 }
 
+/** Body for the escalation sweep. */
+export class EscalateDueDto {
+  @ApiPropertyOptional({
+    description: 'Minutes before the SLA deadline to escalate (default 0)',
+    type: Number,
+    example: 15,
+  })
+  beforeExpiryMinutes?: number;
+}
+
 /** One inbox row: a pending request with quorum progress + SLA (mirrors `InboxItem`). */
 export class InboxItemDto {
   @ApiProperty() id!: string;
@@ -86,4 +96,5 @@ export class ApprovalRequestDto {
   @ApiPropertyOptional() expiresAt?: string;
   @ApiProperty({ type: 'array', items: { type: 'object', additionalProperties: true } }) decisions!: unknown[];
   @ApiPropertyOptional() resolvedAt?: string;
+  @ApiPropertyOptional({ description: 'When the request was escalated to backups' }) escalatedAt?: string;
 }

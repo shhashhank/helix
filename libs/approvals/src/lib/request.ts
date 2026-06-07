@@ -62,6 +62,8 @@ export interface ApprovalRequest {
   decisions: ApproverDecision[];
   /** Set when the request leaves `pending`. */
   resolvedAt?: string;
+  /** Set once the request has been escalated to its backup approvers (HELIX-134). */
+  escalatedAt?: string;
 }
 
 export interface CreateApprovalRequestInput {
@@ -107,6 +109,7 @@ export function createApprovalRequest(input: CreateApprovalRequestInput): Approv
     expiresAt,
     decisions: [],
     resolvedAt: undefined,
+    escalatedAt: undefined,
   };
 }
 

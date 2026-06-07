@@ -139,6 +139,22 @@ else it's tracked.
   channel credentials in the secrets vault.
 - **Also tracked:** HELIX-133 PR "Out of scope".
 
+### 8. Automatic SLA escalation scheduler
+- **Deferred from:** HELIX-134 (SLA timers + escalation) — in progress.
+- **What's deferred:** the **timer** that periodically drives the escalation sweep
+  (so requests escalate/expire on their own, without an external nudge).
+- **In place instead:** the sweep itself is real — `escalationDue` / `escalateRequest`
+  in `@helix/approvals` plus `ApprovalService.escalateDue(beforeExpiryMinutes)` on the
+  orchestrator (expire past-SLA requests, escalate the ones in the pre-expiry window
+  to their backup approvers + notify them, once each). It's invoked on demand via
+  `POST /approvals/escalate-due`; a scheduler just needs to call it on a cadence.
+- **To land:** drive `escalateDue` from a periodic trigger — a Temporal cron/timer
+  workflow (we already run on Temporal · [[project_temporal_durable_execution]]) or a
+  Nest `@Interval`/scheduler — with the lead-time + cadence configurable.
+- **Trigger / sequencing:** when approvals run unattended (no operator/UI poking the
+  endpoint) and need hands-off escalation.
+- **Also tracked:** HELIX-134 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
