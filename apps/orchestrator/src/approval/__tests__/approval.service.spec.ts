@@ -122,4 +122,34 @@ describe('ApprovalService', () => {
     expect(await service.list({ status: 'pending' })).toHaveLength(2);
     expect(await service.list({ status: 'approved' })).toHaveLength(0);
   });
+
+  describe('inbox()', () => {
+    it('returns pending requests as rows, soonest-SLA first', async () => {
+      await service.open(openInput({ requirement: requirement({ slaMinutes: 120 }), action: 'later' }));
+      await service.open(openInput({ requirement: requirement({ slaMinutes: 15 }), action: 'soon' }));
+
+      const inbox = await service.inbox();
+      expect(inbox.map((i) => i.action)).toEqual(['soon', 'later']);
+      expect(inbox[0]).toMatchObject({ required: 2, remaining: 2, approvals: 0 });
+    });
+
+    it('filters to a given role', async () => {
+      await service.open(openInput({ requirement: requirement({ approverRoles: ['tech-lead'] }) }));
+      await service.open(openInput({ requirement: requirement({ approverRoles: ['security'] }) }));
+
+      const inbox = await service.inbox('security');
+      expect(inbox).toHaveLength(1);
+      expect(inbox[0].approverRoles).toEqual(['security']);
+    });
+
+    it('lazily expires a past-SLA request and drops it from the inbox', async () => {
+      const stale = await service.open(openInput());
+      await service.open(openInput({ action: 'fresh' }));
+      await store.put({ ...stale, expiresAt: new Date(Date.now() - 1000).toISOString() });
+
+      const inbox = await service.inbox();
+      expect(inbox.map((i) => i.action)).toEqual(['fresh']);
+      expect((await store.get(stale.id))?.status).toBe('expired'); // persisted
+    });
+  });
 });

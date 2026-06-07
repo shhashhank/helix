@@ -1518,7 +1518,7 @@ API/UI to manage them (HELIX-129).
   conflict/not-found), and a testcontainers integration spec (5 — real-Postgres create/list/version/
   soft-delete round-trips). Closes the **Approval Gate Configuration** story.
 
-### Story: Approval Request & Decision Flow  🛠️ in progress
+### Story: Approval Request & Decision Flow  ✅ done
 
 The runtime side of approvals: turn a policy requirement into a live request and drive it to a decision
 (HELIX-130), expose the decide-and-resume API + workflow signal (HELIX-131), and give humans an inbox to
@@ -1568,6 +1568,27 @@ act on (HELIX-132).
   tests: a service spec (10 — open, below-quorum no-signal, quorum→approve+signal, reject fail-fast+signal,
   resolved/role/unknown/expired guards, cancel, list filters) and a controller spec (6 — routing + 404/409
   mapping).
+
+#### HELIX-132 — Approval inbox (read-API)  ✅
+- **What it is:** the **"what's waiting on me" view** — for each pending approval, a compact row showing
+  what's being gated, which run it's on, how far along the quorum is (e.g. *1 of 2*), who has decided vs.
+  who's still awaited, and how long is left before the SLA lapses — ordered **most-urgent-first** so the
+  soonest-to-expire is on top. An approver can ask for just the requests **their role** can act on.
+- **Why it matters:** an approver shouldn't have to fetch each request one by one and do the mental math on
+  deadlines — the inbox does the triage. The actual *clickable* web page is the SaaS UI's job (**HELIX-11**,
+  which owns the frontend the repo doesn't have yet), so this sub-task ships the **data + endpoint** that a
+  UI binds to — keeping with the backend-only repo and the deferred-binding pattern. Computing the view is
+  pure and deterministic; the endpoint also lazily expires any past-SLA request so the inbox never shows a
+  gate that's really already dead.
+- **Where it lives:** [inbox.ts](../libs/approvals/src/lib/inbox.ts) in `@helix/approvals` — `toInboxItem`
+  (project one request: progress, age, SLA-remaining, decided/awaiting roles) and `buildInbox` (filter to
+  pending + an optional role, order most-urgent-first: soonest SLA, SLA before no-SLA, oldest as tiebreak);
+  exposed at `GET /approvals/inbox?role=` on the orchestrator
+  ([approval.controller.ts](../apps/orchestrator/src/approval/approval.controller.ts) /
+  `approval.service.ts`, which also lazily persists SLA expiries). The **rendered UI is deferred to
+  HELIX-11** (see [../DEFERRED.md](../DEFERRED.md)). 10 tests: 6 in the lib (projection + filtering +
+  ordering/tiebreaks) and 4 in the orchestrator (ordering, role filter, lazy-expire exclusion, route
+  resolution). Closes the **Approval Request & Decision Flow** story.
 
 ---
 
@@ -1694,6 +1715,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-129 | Approvals — policy admin API (versioned CRUD in registry) | ✅ | #93 |
 | HELIX-130 | Approvals — approval request state machine (pending→approved/…) | ✅ | #94 |
 | HELIX-131 | Approvals — decision API + workflow resume signal (orchestrator) | ✅ | #95 |
+| HELIX-132 | Approvals — inbox read-API (rendered UI deferred to HELIX-11) | ✅ | #96 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

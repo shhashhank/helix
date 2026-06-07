@@ -105,6 +105,21 @@ else it's tracked.
   needs requests to outlive a process, or the orchestrator runs multi-instance.
 - **Also tracked:** HELIX-131 PR "Out of scope".
 
+### 6. Rendered approval inbox UI
+- **Deferred from:** HELIX-132 (Approval inbox UI) — the repo has no frontend app yet.
+- **What's deferred:** the actual **rendered, clickable inbox** (a web page where an
+  approver sees pending requests and clicks approve/reject).
+- **In place instead:** the inbox **read-model + API** — `buildInbox` / `toInboxItem`
+  in `@helix/approvals` (pending requests with quorum progress, SLA-remaining, decided/
+  awaiting roles, most-urgent-first) exposed at `GET /approvals/inbox?role=` on the
+  orchestrator. A UI is then a thin client over this endpoint + the decision API
+  (`POST /approvals/:id/decisions`) from HELIX-131.
+- **To land:** build the frontend as part of the **SaaS Platform** epic (HELIX-11),
+  which owns the user-facing app + its build tooling; the inbox view binds to the
+  endpoint above.
+- **Trigger / sequencing:** HELIX-11 (the front-end epic).
+- **Also tracked:** HELIX-132 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
