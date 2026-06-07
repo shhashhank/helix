@@ -30,6 +30,7 @@ describe('ApprovalController', () => {
       inbox: jest.fn(),
       decide: jest.fn(),
       cancel: jest.fn(),
+      escalateDue: jest.fn(),
     } as unknown as jest.Mocked<ApprovalService>;
 
     const moduleRef = await Test.createTestingModule({
@@ -102,6 +103,19 @@ describe('ApprovalController', () => {
       .post('/approvals/appr-1/decisions')
       .send({ approver: 'bob', role: 'tech-lead', vote: 'approve' })
       .expect(409);
+  });
+
+  it('POST /approvals/escalate-due runs the sweep and returns escalated requests', async () => {
+    service.escalateDue.mockResolvedValue([fakeReq({ escalatedAt: '2026-06-08T10:45:00.000Z' })]);
+    const res = await request(app.getHttpServer())
+      .post('/approvals/escalate-due')
+      .send({ beforeExpiryMinutes: 15 })
+      .expect(200);
+
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].escalatedAt).toBeDefined();
+    expect(service.escalateDue).toHaveBeenCalledWith(15);
+    expect(service.get).not.toHaveBeenCalled(); // not captured by /:id
   });
 
   it('POST /approvals/:id/cancel cancels and returns 200', async () => {

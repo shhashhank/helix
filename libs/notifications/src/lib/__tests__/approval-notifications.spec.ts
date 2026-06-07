@@ -1,4 +1,4 @@
-import { approvalRequestedNotification } from '../approval-notifications';
+import { approvalEscalatedNotification, approvalRequestedNotification } from '../approval-notifications';
 import { InMemoryRecipientDirectory, recipientsForRoles } from '../recipients';
 import { Recipient } from '../notification';
 
@@ -55,5 +55,29 @@ describe('approvalRequestedNotification', () => {
     expect(ntf.body).toContain('1 approval from lead.');
     expect(ntf.body).not.toContain('Run');
     expect(ntf.body).not.toContain('Respond by');
+  });
+});
+
+describe('approvalEscalatedNotification', () => {
+  it('builds an escalation message for the backup approvers', () => {
+    const recipients: Recipient[] = [{ channel: 'email', address: 'mgr@acme.test' }];
+    const ntf = approvalEscalatedNotification(
+      {
+        requestId: 'appr-1',
+        action: 'deploy prod',
+        runId: 'run-7',
+        approverRoles: ['tech-lead'],
+        minApprovals: 1,
+        expiresAt: '2026-06-08T11:00:00.000Z',
+      },
+      recipients,
+    );
+
+    expect(ntf.type).toBe('approval.escalated');
+    expect(ntf.id).toBe('ntf-appr-1-escalated');
+    expect(ntf.subject).toBe('Escalation: approval needed for deploy prod');
+    expect(ntf.body).toContain('nearing its approval deadline');
+    expect(ntf.body).toContain('Expires 2026-06-08T11:00:00.000Z.');
+    expect(ntf.recipients).toBe(recipients);
   });
 });

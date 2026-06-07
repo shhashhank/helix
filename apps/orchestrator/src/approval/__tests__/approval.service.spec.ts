@@ -30,7 +30,10 @@ describe('ApprovalService', () => {
   beforeEach(() => {
     store = new InMemoryApprovalRequestStore();
     signaler = { signalDecision: jest.fn().mockResolvedValue(undefined) };
-    notifier = { notifyRequested: jest.fn().mockResolvedValue(undefined) };
+    notifier = {
+      notifyRequested: jest.fn().mockResolvedValue(undefined),
+      notifyEscalated: jest.fn().mockResolvedValue(undefined),
+    };
     service = new ApprovalService(store, signaler, notifier);
   });
 
@@ -160,6 +163,49 @@ describe('ApprovalService', () => {
       const inbox = await service.inbox();
       expect(inbox.map((i) => i.action)).toEqual(['fresh']);
       expect((await store.get(stale.id))?.status).toBe('expired'); // persisted
+    });
+  });
+
+  describe('escalateDue()', () => {
+    // A freshly-opened request has a 60-min SLA, so "now" sits ~60 min before expiry:
+    // a 60-min window escalates immediately; a 0-min window never does.
+    it('escalates pending requests inside the window, widening roles + notifying backups', async () => {
+      const req = await service.open(openInput());
+
+      const escalated = await service.escalateDue(60);
+
+      expect(escalated.map((r) => r.id)).toEqual([req.id]);
+      const stored = await store.get(req.id);
+      expect(stored?.escalatedAt).toBeDefined();
+      expect(stored?.approverRoles).toContain('eng-manager'); // backup can now approve
+      expect(notifier.notifyEscalated).toHaveBeenCalledWith(expect.objectContaining({ id: req.id }));
+    });
+
+    it('does nothing with a zero window, and escalates each request at most once', async () => {
+      await service.open(openInput());
+      expect(await service.escalateDue(0)).toEqual([]);
+
+      expect(await service.escalateDue(60)).toHaveLength(1);
+      expect(await service.escalateDue(60)).toEqual([]); // already escalated
+    });
+
+    it('expires a past-SLA request instead of escalating it', async () => {
+      const stale = await service.open(openInput());
+      await store.put({ ...stale, expiresAt: new Date(Date.now() - 1000).toISOString() });
+
+      const escalated = await service.escalateDue(60);
+      expect(escalated).toEqual([]);
+      expect((await store.get(stale.id))?.status).toBe('expired');
+      expect(notifier.notifyEscalated).not.toHaveBeenCalled();
+    });
+
+    it('still escalates if notifying the backups throws (best-effort)', async () => {
+      const req = await service.open(openInput());
+      notifier.notifyEscalated.mockRejectedValueOnce(new Error('dispatch boom'));
+
+      const escalated = await service.escalateDue(60);
+      expect(escalated.map((r) => r.id)).toEqual([req.id]);
+      expect((await store.get(req.id))?.escalatedAt).toBeDefined();
     });
   });
 });

@@ -5,6 +5,7 @@ import { ApprovalService } from './approval.service';
 import {
   ApprovalRequestDto,
   CancelApprovalDto,
+  EscalateDueDto,
   InboxItemDto,
   OpenApprovalDto,
   SubmitDecisionDto,
@@ -31,6 +32,14 @@ export class ApprovalController {
       requestedBy: body.requestedBy,
       reason: body.reason,
     });
+  }
+
+  @Post('escalate-due')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sweep: escalate pending requests nearing their SLA to backup approvers' })
+  @ApiOkResponse({ type: ApprovalRequestDto, isArray: true })
+  escalateDue(@Body() body: EscalateDueDto): Promise<ApprovalRequest[]> {
+    return this.service.escalateDue(body.beforeExpiryMinutes);
   }
 
   @Get()

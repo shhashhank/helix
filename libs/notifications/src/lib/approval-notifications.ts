@@ -1,7 +1,7 @@
 /**
- * Approval-event → notification builders (HELIX-133). Plain-field inputs (not a
+ * Approval-event → notification builders (HELIX-133/134). Plain-field inputs (not a
  * `@helix/approvals` import) keep this lib decoupled; the orchestrator maps an
- * `ApprovalRequest` onto these. HELIX-134 will add an `approval.escalated` builder.
+ * `ApprovalRequest` onto these.
  */
 import { Notification, Recipient } from './notification';
 
@@ -43,6 +43,35 @@ export function approvalRequestedNotification(
     id: options.id ?? `ntf-${input.requestId}-requested`,
     type: 'approval.requested',
     subject: `Approval needed: ${input.action}`,
+    body,
+    recipients,
+    data: { requestId: input.requestId, runId: input.runId, action: input.action },
+    createdAt: now.toISOString(),
+  };
+}
+
+/**
+ * Build the escalation notification for a request nearing its SLA — sent to the
+ * backup approvers pulled in by {@link escalateRequest}.
+ */
+export function approvalEscalatedNotification(
+  input: ApprovalNotificationInput,
+  recipients: Recipient[],
+  options: BuildNotificationOptions = {},
+): Notification {
+  const now = options.now ?? new Date();
+  const body = [
+    `${input.action} is nearing its approval deadline and needs backup sign-off.`,
+    input.runId ? `Run ${input.runId}.` : undefined,
+    input.expiresAt ? `Expires ${input.expiresAt}.` : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return {
+    id: options.id ?? `ntf-${input.requestId}-escalated`,
+    type: 'approval.escalated',
+    subject: `Escalation: approval needed for ${input.action}`,
     body,
     recipients,
     data: { requestId: input.requestId, runId: input.runId, action: input.action },

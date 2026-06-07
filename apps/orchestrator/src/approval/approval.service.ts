@@ -9,6 +9,8 @@ import {
   buildInbox,
   cancelRequest,
   createApprovalRequest,
+  escalateRequest,
+  escalationDue,
   expireIfDue,
   submitDecision,
 } from '@helix/approvals';
@@ -121,6 +123,38 @@ export class ApprovalService {
       });
     }
     return updated;
+  }
+
+  /**
+   * Escalation sweep (HELIX-134): for every pending request, expire the ones past
+   * their SLA and escalate the ones inside the pre-expiry window to their backup
+   * approvers (widening who can sign off + notifying the backups). Returns the
+   * requests that were escalated. Idempotent — a request escalates at most once.
+   *
+   * Meant to be driven on a timer; the scheduler itself is deferred (DEFERRED.md),
+   * so this is callable directly or via `POST /approvals/escalate-due`.
+   */
+  async escalateDue(beforeExpiryMinutes = 0): Promise<ApprovalRequest[]> {
+    const now = new Date();
+    const escalated: ApprovalRequest[] = [];
+    for (const request of await this.store.list({ status: 'pending' })) {
+      const expired = expireIfDue(request, now);
+      if (expired !== request) {
+        await this.store.put(expired);
+        continue; // past SLA — expiry wins, no escalation
+      }
+      if (escalationDue(request, { beforeExpiryMinutes, now })) {
+        const next = escalateRequest(request, { now });
+        await this.store.put(next);
+        try {
+          await this.notifier.notifyEscalated(next);
+        } catch {
+          /* swallow — notifications are non-critical */
+        }
+        escalated.push(next);
+      }
+    }
+    return escalated;
   }
 
   async cancel(id: string, reason?: string): Promise<ApprovalRequest> {

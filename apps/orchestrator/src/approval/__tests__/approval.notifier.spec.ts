@@ -40,4 +40,21 @@ describe('DispatchingApprovalNotifier', () => {
     await new DispatchingApprovalNotifier(dispatcher, new InMemoryRecipientDirectory()).notifyRequested(request);
     expect(slack.sent).toHaveLength(0);
   });
+
+  it('notifyEscalated targets the backup (escalateTo) recipients', async () => {
+    const email = new RecordingNotificationSender('email');
+    const dispatcher = new NotificationDispatcher([email]);
+    const directory = new InMemoryRecipientDirectory({
+      'eng-manager': [{ channel: 'email', address: 'mgr@acme.test' }],
+      'tech-lead': [{ channel: 'email', address: 'lead@acme.test' }],
+    });
+    // request.escalateTo is empty in the fixture; escalate it first to populate backups
+    const escalated = { ...request, escalateTo: ['eng-manager'] };
+
+    await new DispatchingApprovalNotifier(dispatcher, directory).notifyEscalated(escalated);
+
+    expect(email.sent).toHaveLength(1);
+    expect(email.sent[0].recipient.address).toBe('mgr@acme.test'); // the backup, not the lead
+    expect(email.sent[0].notification.type).toBe('approval.escalated');
+  });
 });
