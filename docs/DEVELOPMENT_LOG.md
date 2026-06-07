@@ -1359,6 +1359,36 @@ Coding Agent under a budget to fix them (HELIX-123).
 
 ---
 
+## Epic: Deployment Agent  🛠️ in progress
+
+The agent that ships the reviewed, tested change: build an artifact, push it, deploy a single demo
+stack to AWS, and return a live URL.
+
+### Story: Build & Artifact Packaging  🛠️ in progress
+
+Make the artifact: detect how to build the app and build it (HELIX-124), then push the image to ECR
+(HELIX-125).
+
+#### HELIX-124 — Dockerfile/buildpack detection + build  ✅
+- **What it is:** working out *how* to turn the project into a runnable image — if there's a
+  **Dockerfile**, use it; otherwise fall back to a language **buildpack** (detecting node / python / go
+  / java from the project's files) — then producing the right **build command** and running it.
+- **Why it matters:** different projects build differently; auto-detecting the strategy means the
+  deploy step "just works" without being told. The detection and the command it produces are pure and
+  deterministic; the build *runs* through the same sandbox **command runner** the rest of the platform
+  uses. The actual `docker build` / buildpack execution needs a Docker daemon, so — like the GitHub and
+  AWS bindings — it's **deferred** (see [../DEFERRED.md](../DEFERRED.md)); everything up to running the
+  command is real and offline-tested.
+- **Where it lives:** the new [../libs/deployment-agent](../libs/deployment-agent) library
+  (`@helix/deployment-agent`) — [build.ts](../libs/deployment-agent/src/lib/build.ts):
+  `detectBuildStrategy` (Dockerfile vs language buildpack), `buildCommand` (`docker build …` /
+  `pack build …`), and `runBuild` (run it via the `@helix/sandbox` `CommandRunner` → `BuildResult`).
+  7 offline tests against a fake runner: detection (Dockerfile preference + node/go/python/java/unknown
+  buildpacks), the docker + pack commands, and the build run (ok / non-zero / timeout, cwd/timeout
+  passthrough).
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1474,6 +1504,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-121 | Testing Agent — test report artifact (structured + markdown) | ✅ | #84 |
 | HELIX-122 | Testing Agent — failure diagnostics packaging (failing tests + stack traces) | ✅ | #86 |
 | HELIX-123 | Testing Agent — re-invoke coding step + budget (test fix loop) | ✅ | #87 |
+| HELIX-124 | Deployment Agent — Dockerfile/buildpack detection + build | ✅ | #88 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
