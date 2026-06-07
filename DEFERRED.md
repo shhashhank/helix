@@ -75,13 +75,15 @@ else it's tracked.
 - **In place instead:** `@helix/deployment-agent` — pure detection + command/IaC
   generation + a runner-backed seam. HELIX-124 ships `detectBuildStrategy` +
   `buildCommand` + `runBuild(runner, …)`; HELIX-125 ships `ecrImageUri` +
-  `ecrPushCommands` (login → tag → push) + `pushImageToEcr(runner, …)`. The
-  *commands* are real and run through the same `@helix/sandbox` `CommandRunner`,
-  only the daemon/cloud execution is stubbed in tests.
-- **To land:** point `runBuild` / `pushImageToEcr` (and the later CDK deploy steps)
-  at a host with Docker + AWS credentials; no change to the detection/command logic.
+  `ecrPushCommands` (login → tag → push) + `pushImageToEcr(runner, …)`; HELIX-126
+  ships `synthesizeCdkApp` (the CDK app files for an ECS/Lambda stack) +
+  `cdkDeployCommand` + `runCdkDeploy(runner, …)` (parsing the live URL). The
+  *commands and generated IaC* are real and run through the same `@helix/sandbox`
+  `CommandRunner`, only the daemon/cloud execution is stubbed in tests.
+- **To land:** point `runBuild` / `pushImageToEcr` / `runCdkDeploy` at a host with
+  Docker + the AWS CDK CLI + AWS credentials; no change to the synth/command logic.
 - **Trigger / sequencing:** when deploying the demo stack to a real AWS account.
-- **Also tracked:** HELIX-124 / HELIX-125 PR "Out of scope".
+- **Also tracked:** HELIX-124 / HELIX-125 / HELIX-126 PR "Out of scope".
 
 ---
 
