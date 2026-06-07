@@ -14,5 +14,6 @@ export default {
   moduleNameMapper: {
     '^@helix/workflow/temporal-client$': '<rootDir>/../../libs/workflow/src/temporal-client.ts',
     '^@helix/workflow$': '<rootDir>/../../libs/workflow/src/index.ts',
+    '^@helix/approvals$': '<rootDir>/../../libs/approvals/src/index.ts',
   },
 };

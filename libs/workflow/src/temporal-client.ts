@@ -7,3 +7,4 @@
  */
 export * from './lib/temporal/shared';
 export * from './lib/temporal/client';
+export * from './lib/temporal/decision';
