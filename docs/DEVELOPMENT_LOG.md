@@ -1518,6 +1518,32 @@ API/UI to manage them (HELIX-129).
   conflict/not-found), and a testcontainers integration spec (5 — real-Postgres create/list/version/
   soft-delete round-trips). Closes the **Approval Gate Configuration** story.
 
+### Story: Approval Request & Decision Flow  🛠️ in progress
+
+The runtime side of approvals: turn a policy requirement into a live request and drive it to a decision
+(HELIX-130), expose the decide-and-resume API + workflow signal (HELIX-131), and give humans an inbox to
+act on (HELIX-132).
+
+#### HELIX-130 — Approval service + state machine  ✅
+- **What it is:** the **lifecycle engine** for one approval. From a policy requirement (who must approve,
+  how many, by when) it opens a **pending** request, then records each approver's vote and moves the
+  request to its outcome: **approved** once enough distinct people have signed off, **rejected** the
+  moment anyone says no, **expired** if the SLA window passes, or **cancelled** if the work is abandoned.
+- **Why it matters:** this is the part that has to be *correct under messy reality* — two people clicking
+  approve at once, the same person voting twice, a late vote arriving after the deadline, someone trying to
+  approve who isn't allowed to. Modelling it as a strict, **pure state machine** (every operation returns a
+  new request and illegal moves throw rather than silently corrupt) means the storage + API layer on top
+  (HELIX-131) can't accidentally drive an approval into a nonsensical state. Decisions are de-duplicated by
+  person (so the quorum counts distinct approvers), a single rejection is fail-fast, and the SLA is honored
+  consistently whether the request is read or written.
+- **Where it lives:** [request.ts](../libs/approvals/src/lib/request.ts) in `@helix/approvals` —
+  `createApprovalRequest` (from a `ResolvedRequirement` → a pending request with a computed `expiresAt`),
+  `submitDecision` (record a vote; resolve on quorum or rejection; reject repeat/illegal/expired votes),
+  `expireIfDue` (lazily expire a past-SLA pending request), `cancelRequest`, and `approvalProgress` /
+  `isPending` / `isResolved` helpers, plus an `ApprovalTransitionError` for illegal moves. 13 offline
+  tests: creation + SLA expiry computation, quorum accumulation, fail-fast rejection, role/duplicate/
+  terminal/expired guards, lazy expiry, and cancellation.
+
 ---
 
 ## Fixes & hardening
@@ -1641,6 +1667,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-127 | Deployment Agent — env/config + secrets wiring (vault refs) | ✅ | #91 |
 | HELIX-128 | Approvals — approval policy model (gate rules · roles · SLAs) | ✅ | #92 |
 | HELIX-129 | Approvals — policy admin API (versioned CRUD in registry) | ✅ | #93 |
+| HELIX-130 | Approvals — approval request state machine (pending→approved/…) | ✅ | #94 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
