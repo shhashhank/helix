@@ -1544,6 +1544,31 @@ act on (HELIX-132).
   tests: creation + SLA expiry computation, quorum accumulation, fail-fast rejection, role/duplicate/
   terminal/expired guards, lazy expiry, and cancellation.
 
+#### HELIX-131 — Decision API + workflow signal  ✅
+- **What it is:** the **inbound half of human-in-the-loop** — the HTTP API approvers actually use, wired to
+  the durable workflow. You open an approval request against a paused run, people POST their decisions, and
+  the moment the gate **resolves** (enough approvals, or a rejection) the orchestrator **signals the
+  Temporal run to resume**. While the gate is still short of quorum, nothing is signalled — the run stays
+  paused.
+- **Why it matters:** HELIX-74/76 gave a workflow the ability to *durably pause* for sign-off and *resume*
+  on a signal; HELIX-130 gave us the multi-approver decision logic. This sub-task is the **bridge** between
+  them: it turns "a paused run somewhere in Temporal" into "a thing a person can approve from an API," and
+  guarantees the run is resumed exactly once, with the right outcome, only when the policy's quorum is
+  truly met. It honours all the state-machine guards (late/duplicate/out-of-role decisions are rejected
+  with a `409`), and it signals `approved` or `rejected` so the run's own `awaitApproval` continues down the
+  right branch.
+- **Where it lives:** the new [../apps/orchestrator/src/approval](../apps/orchestrator/src/approval) module —
+  `approval.controller.ts` (`POST /approvals`, `GET /approvals`, `GET /approvals/:id`,
+  `POST /approvals/:id/decisions`, `POST /approvals/:id/cancel`), `approval.service.ts` (opens requests,
+  applies decisions via `@helix/approvals`, and signals on resolution), an `ApprovalRequestStore` seam with
+  an in-memory implementation (durable DB store **deferred** — see [../DEFERRED.md](../DEFERRED.md); the
+  *durable* state is the paused Temporal run), and a `WorkflowSignaler` seam whose Temporal implementation
+  calls `submitApprovalDecision`. Enabling change in `@helix/workflow`: the existing client-side decision
+  helpers are now re-exported from `@helix/workflow/temporal-client` so the orchestrator can reach them. 16
+  tests: a service spec (10 — open, below-quorum no-signal, quorum→approve+signal, reject fail-fast+signal,
+  resolved/role/unknown/expired guards, cancel, list filters) and a controller spec (6 — routing + 404/409
+  mapping).
+
 ---
 
 ## Fixes & hardening
@@ -1668,6 +1693,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-128 | Approvals — approval policy model (gate rules · roles · SLAs) | ✅ | #92 |
 | HELIX-129 | Approvals — policy admin API (versioned CRUD in registry) | ✅ | #93 |
 | HELIX-130 | Approvals — approval request state machine (pending→approved/…) | ✅ | #94 |
+| HELIX-131 | Approvals — decision API + workflow resume signal (orchestrator) | ✅ | #95 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
