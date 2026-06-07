@@ -1469,7 +1469,7 @@ The human-in-the-loop layer: a configurable gate that decides *when* a person mu
 action, *who* is allowed to, and *how long* they have before it escalates. (The workflow engine already
 has the durable pause/resume primitive from HELIX-2; this epic is the approval *system* on top of it.)
 
-### Story: Approval Gate Configuration (basic)  🛠️ in progress
+### Story: Approval Gate Configuration (basic)  ✅ done
 
 The configuration side: model the gate rules + approver roles + SLAs (HELIX-128), then expose an admin
 API/UI to manage them (HELIX-129).
@@ -1496,6 +1496,27 @@ API/UI to manage them (HELIX-129).
   high/critical-risk action). 12 offline tests: condition matching (each matcher + risk bands + the
   catch-all), evaluation (no-match / multi-rule fold / quorum + SLA defaults / disabled rules), and schema
   validation (unknown keys, empty roles, bad versions, duplicate ids).
+
+#### HELIX-129 — Policy admin API/UI  ✅
+- **What it is:** the **management surface** for those approval policies — a set of REST endpoints in the
+  Registry service to create, list, fetch, update, and retire policies. It reuses the HELIX-128 schema as
+  the gatekeeper: a policy that doesn't validate is rejected with a clear `400` before it's ever stored.
+- **Why it matters:** the policy model is only useful if someone can actually *edit the gates* without a
+  code deploy — turn on a prod-deploy approval, add a reviewer role, tighten an SLA. It follows the exact
+  same shape as the agent-definition admin API the registry already exposes, so it behaves predictably:
+  policies are **versioned and immutable** (each edit appends a new version rather than overwriting), they
+  can be **org-scoped** via the `x-org-id` header, and they're **soft-deleted** (retired, not erased) — so
+  there's always history of what a gate used to be. Storage versioning is authoritative, so the stored
+  document's version is normalized to the row version and can't drift.
+- **Where it lives:** the new [../apps/registry/src/approval-policy](../apps/registry/src/approval-policy)
+  module — `approval-policy.controller.ts` (`POST` / `GET` / `GET /latest` / `GET /:id` / `PUT /:id` /
+  `DELETE /:id` under `/approval-policies`), `approval-policy.service.ts` (validates via
+  `@helix/approvals` `safeParseApprovalPolicy`, then create/version/soft-delete logic), and
+  `approval-policy.repository.ts` (Prisma, latest-per-policy reads). Persisted by a new `ApprovalPolicy`
+  Prisma model + migration (`approval_policies`, unique on `[orgId, policyId, version]`). 22 tests: a
+  controller spec (8 — routing, org header, 400/404 mapping), a service spec (9 — validation, versioning,
+  conflict/not-found), and a testcontainers integration spec (5 — real-Postgres create/list/version/
+  soft-delete round-trips). Closes the **Approval Gate Configuration** story.
 
 ---
 
@@ -1619,6 +1640,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-126 | Deployment Agent — IaC deploy (CDK) for ECS/Lambda | ✅ | #90 |
 | HELIX-127 | Deployment Agent — env/config + secrets wiring (vault refs) | ✅ | #91 |
 | HELIX-128 | Approvals — approval policy model (gate rules · roles · SLAs) | ✅ | #92 |
+| HELIX-129 | Approvals — policy admin API (versioned CRUD in registry) | ✅ | #93 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
