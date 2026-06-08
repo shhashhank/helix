@@ -1645,6 +1645,33 @@ Make sure the right people *know* a decision is waiting — dispatch notificatio
   + notify, zero-window/idempotent, expire-not-escalate, best-effort notify, the route, the escalated
   builder). Closes the **Notifications & Escalation** story.
 
+### Story: Audit Log (basic)  🛠️ in progress
+
+Keep a trustworthy record of every approval decision: an append-only, tamper-evident log (HELIX-135), then
+a way to read and export it (HELIX-136).
+
+#### HELIX-135 — Append-only audit store  ✅
+- **What it is:** a **write-once history** of approval events — opened, decided, escalated, expired,
+  cancelled — that **can't be quietly rewritten**. Each entry is chained to the one before it with a
+  cryptographic hash (like links in a chain), so if anyone edited, removed, or reordered a past entry, a
+  quick check (`verifyChain`) spots exactly where the chain breaks.
+- **Why it matters:** an approval trail is only worth anything if you can trust it wasn't doctored after the
+  fact — "who approved the prod deploy, and when" needs to be **provable**. Making the store **append-only**
+  (no update, no delete) and **hash-chained** gives that for free: the history is self-verifying. It's
+  generic (an event is about any `subject`), so future areas (monitoring, billing) can reuse it; the
+  orchestrator records every approval lifecycle transition through it. The store is in-memory for now —
+  a **durable** append-only DB table is **deferred** (see [../DEFERRED.md](../DEFERRED.md)), but the chain
+  format is already storage-ready.
+- **Where it lives:** the new [../libs/audit](../libs/audit) library (`@helix/audit`) —
+  [audit.ts](../libs/audit/src/lib/audit.ts): `auditEvent` (build an event draft), `hashEvent` /
+  `verifyChain` (the SHA-256 chain + its tamper check), the `AuditLog` seam, and `InMemoryAuditLog`
+  (append-only, freezes each stored event, filterable `list`). Wired into the orchestrator
+  ([../apps/orchestrator/src/approval/approval.service.ts](../apps/orchestrator/src/approval/approval.service.ts)):
+  `ApprovalService` appends an event on open / decision / escalation / expiry / cancellation (best-effort),
+  against one shared log instance the HELIX-136 query API will read. 13 tests: 6 in the lib (drafting,
+  chaining + freeze, intact-chain verify, tamper/drop detection, list filter + limit) and 7 in the
+  orchestrator (an event per transition with a verifiable chain, escalated/expired from the sweep).
+
 ---
 
 ## Fixes & hardening
@@ -1773,6 +1800,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-132 | Approvals — inbox read-API (rendered UI deferred to HELIX-11) | ✅ | #96 |
 | HELIX-133 | Notifications — dispatch across slack/email/in-app channels | ✅ | #97 |
 | HELIX-134 | Approvals — SLA escalation to backup approvers (sweep) | ✅ | #98 |
+| HELIX-135 | Audit — append-only hash-chained event store | ✅ | #99 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
