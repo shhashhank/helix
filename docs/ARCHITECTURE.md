@@ -45,6 +45,7 @@ flowchart TB
     dep["@helix/deployment-agent<br/>Deployment Agent<br/>build strategy detection (Dockerfile/buildpack) + build<br/>ECR image push (login · tag · push)<br/>CDK IaC synth (ECS/Lambda) + deploy · live URL<br/>env/config + Secrets Manager refs · vault preflight"]
     apv["@helix/approvals<br/>Human Approval System<br/>approval policy model · gate rules / roles / SLAs<br/>policy evaluation → resolved requirement<br/>request state machine · pending→approved/rejected/expired/cancelled<br/>inbox read-model · progress / SLA / most-urgent-first<br/>SLA escalation → backup approvers (sweep · timer deferred)"]
     ntf["@helix/notifications<br/>Notification dispatch<br/>channel seam + dispatcher · slack / email / in-app<br/>in-app feed real · slack/email recorded (live deferred)"]
+    aud["@helix/audit<br/>Append-only audit log<br/>hash-chained · tamper-evident (verifyChain)<br/>in-memory store (durable store deferred)"]
   end
 
   subgraph dat["Data & external"]
@@ -89,6 +90,7 @@ flowchart TB
   dep -.->|secret refs · vault preflight| sec
   orc -->|approval requests · decisions · resume signal| apv
   orc -->|notify approvers on open| ntf
+  orc -->|record approval events| aud
   ntf -.->|live slack/email transports · planned| ext
   reg -->|policy CRUD + schema validate| apv
   rev -.->|post review · planned · GitHub tools| gh
@@ -163,7 +165,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-6 · Code Review Agent** | ✅ done | Diff-aware review engine — context assembly, multi-aspect review (correctness/security/style/perf/plan), structured findings + severity (HELIX-33); gitleaks-style secret scan (HELIX-34); inline + summary comment posting + a severity-threshold merge gate (HELIX-35). Reviews the Coding Agent's diffs and blocks or approves per policy |
 | **HELIX-7 · Testing Agent** | ✅ done | Generate tests per-framework + map them to acceptance criteria (HELIX-36); detect the framework, run tests in the sandbox, normalize results/coverage into a report (HELIX-37); package failures + loop them back to the Coding Agent under a budget (HELIX-38) |
 | **HELIX-8 · Deployment Agent** | ✅ done | Build an artifact — Dockerfile/buildpack detection + build (HELIX-124); push to ECR — login·tag·push (HELIX-125); deploy a single demo stack via CDK (ECS/Lambda) returning a live URL (HELIX-126); env/config + Secrets-Manager-referenced secrets with a vault preflight (HELIX-127). All as pure synthesis + a runner-backed command seam; the live docker/ECR/CDK execution against a real AWS account is deferred (DEFERRED.md) |
-| **HELIX-9 · Human Approval System** | 🛠️ in progress | Configurable approval gates — *when* a human must sign off, *who* may approve, and the *SLA*. Approval policy model + evaluation (HELIX-128) and a versioned policy admin API in the registry (HELIX-129) landed — Approval Gate Configuration done; the request state machine (HELIX-130), the decision API that signals the durable run to resume (HELIX-131), and the inbox read-API (HELIX-132; rendered UI deferred to HELIX-11) are in — Approval Request & Decision Flow done; notification dispatch across slack/email/in-app channels (HELIX-133; live slack/email transports deferred) and SLA escalation to backup approvers (HELIX-134; sweep real, auto-timer deferred) landed — Notifications & Escalation done; the audit log (HELIX-44) is the last story |
+| **HELIX-9 · Human Approval System** | 🛠️ in progress | Configurable approval gates — *when* a human must sign off, *who* may approve, and the *SLA*. Approval policy model + evaluation (HELIX-128) and a versioned policy admin API in the registry (HELIX-129) landed — Approval Gate Configuration done; the request state machine (HELIX-130), the decision API that signals the durable run to resume (HELIX-131), and the inbox read-API (HELIX-132; rendered UI deferred to HELIX-11) are in — Approval Request & Decision Flow done; notification dispatch across slack/email/in-app channels (HELIX-133; live slack/email transports deferred) and SLA escalation to backup approvers (HELIX-134; sweep real, auto-timer deferred) landed — Notifications & Escalation done; the append-only hash-chained audit store landed (HELIX-135; durable store deferred), with the audit query/export API (HELIX-136) the last sub-task |
 | HELIX-10 Monitoring · HELIX-11 SaaS | ⬜ | Observability and the user-facing UI |
 
 ---
@@ -186,6 +188,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Deployment Agent | [libs/deployment-agent](../libs/deployment-agent) (`@helix/deployment-agent`) |
 | Approvals | [libs/approvals](../libs/approvals) (`@helix/approvals`) |
 | Notifications | [libs/notifications](../libs/notifications) (`@helix/notifications`) |
+| Audit log | [libs/audit](../libs/audit) (`@helix/audit`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |

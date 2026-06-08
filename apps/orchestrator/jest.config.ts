@@ -16,5 +16,6 @@ export default {
     '^@helix/workflow$': '<rootDir>/../../libs/workflow/src/index.ts',
     '^@helix/approvals$': '<rootDir>/../../libs/approvals/src/index.ts',
     '^@helix/notifications$': '<rootDir>/../../libs/notifications/src/index.ts',
+    '^@helix/audit$': '<rootDir>/../../libs/audit/src/index.ts',
   },
 };

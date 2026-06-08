@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ResolvedRequirement } from '@helix/approvals';
+import { InMemoryAuditLog } from '@helix/audit';
 import { ApprovalService, OpenApprovalInput } from '../approval.service';
 import { InMemoryApprovalRequestStore } from '../approval.store';
 import { WorkflowSignaler } from '../approval.signaler';
@@ -25,6 +26,7 @@ describe('ApprovalService', () => {
   let store: InMemoryApprovalRequestStore;
   let signaler: jest.Mocked<WorkflowSignaler>;
   let notifier: jest.Mocked<ApprovalNotifier>;
+  let audit: InMemoryAuditLog;
   let service: ApprovalService;
 
   beforeEach(() => {
@@ -34,7 +36,8 @@ describe('ApprovalService', () => {
       notifyRequested: jest.fn().mockResolvedValue(undefined),
       notifyEscalated: jest.fn().mockResolvedValue(undefined),
     };
-    service = new ApprovalService(store, signaler, notifier);
+    audit = new InMemoryAuditLog();
+    service = new ApprovalService(store, signaler, notifier, audit);
   });
 
   it('open() creates and stores a pending request linked to the run, and notifies approvers', async () => {
@@ -206,6 +209,41 @@ describe('ApprovalService', () => {
       const escalated = await service.escalateDue(60);
       expect(escalated.map((r) => r.id)).toEqual([req.id]);
       expect((await store.get(req.id))?.escalatedAt).toBeDefined();
+    });
+  });
+
+  describe('audit trail', () => {
+    it('records an intact, hash-chained event for each lifecycle transition', async () => {
+      const req = await service.open(openInput({ requirement: requirement({ minApprovals: 1 }) }));
+      await service.decide(req.id, { approver: 'alice', role: 'tech-lead', vote: 'approve', comment: 'lgtm' });
+
+      const cancelMe = await service.open(openInput());
+      await service.cancel(cancelMe.id, 'aborted');
+
+      expect((await audit.list({ subjectId: req.id })).map((e) => e.type)).toEqual([
+        'approval.opened',
+        'approval.decision',
+      ]);
+      const decided = (await audit.list({ subjectId: req.id }))[1];
+      expect(decided).toMatchObject({ actor: 'alice', data: { vote: 'approve', outcome: 'approved' } });
+      expect((await audit.list({ subjectId: cancelMe.id })).map((e) => e.type)).toEqual([
+        'approval.opened',
+        'approval.cancelled',
+      ]);
+
+      // the whole log is a verifiable, tamper-evident chain
+      expect(await audit.verify()).toEqual({ ok: true });
+    });
+
+    it('records escalated/expired events from the sweep', async () => {
+      const esc = await service.open(openInput());
+      await service.escalateDue(60);
+      expect((await audit.list({ subjectId: esc.id, type: 'approval.escalated' }))).toHaveLength(1);
+
+      const exp = await service.open(openInput());
+      await store.put({ ...exp, expiresAt: new Date(Date.now() - 1000).toISOString() });
+      await service.escalateDue(60);
+      expect((await audit.list({ subjectId: exp.id, type: 'approval.expired' }))).toHaveLength(1);
     });
   });
 });

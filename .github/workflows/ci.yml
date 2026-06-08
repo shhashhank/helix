@@ -78,6 +78,9 @@ jobs:
       - name: Typecheck (notifications lib)
         run: pnpm exec tsc --noEmit -p libs/notifications/tsconfig.spec.json
 
+      - name: Typecheck (audit lib)
+        run: pnpm exec tsc --noEmit -p libs/audit/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -133,3 +136,6 @@ jobs:
 
       - name: Unit tests (notifications lib)
         run: pnpm exec jest --config libs/notifications/jest.config.ts --ci
+
+      - name: Unit tests (audit lib)
+        run: pnpm exec jest --config libs/audit/jest.config.ts --ci
