@@ -16,11 +16,12 @@ import { TemporalWorkflowSignaler, WORKFLOW_SIGNALER } from './approval.signaler
 import { APPROVAL_REQUEST_STORE, InMemoryApprovalRequestStore } from './approval.store';
 import { NotificationController } from './notification.controller';
 import { IN_APP_INBOX, NOTIFICATION_DISPATCHER, RECIPIENT_DIRECTORY } from './notification.tokens';
+import { AuditController } from './audit.controller';
 import { AUDIT_LOG } from './audit.tokens';
 
 @Module({
   imports: [TemporalModule],
-  controllers: [ApprovalController, NotificationController],
+  controllers: [ApprovalController, NotificationController, AuditController],
   providers: [
     ApprovalService,
     { provide: APPROVAL_REQUEST_STORE, useClass: InMemoryApprovalRequestStore },
