@@ -19,8 +19,10 @@ import {
   ApprovalRequestStore,
   ListApprovalsFilter,
 } from './approval.store';
+import { AuditLog, auditEvent } from '@helix/audit';
 import { WORKFLOW_SIGNALER, WorkflowSignaler } from './approval.signaler';
 import { APPROVAL_NOTIFIER, ApprovalNotifier } from './approval.notifier';
+import { AUDIT_LOG } from './audit.tokens';
 
 export interface OpenApprovalInput {
   /** The workflow run this gate is attached to; the run resumed on decision. */
@@ -53,7 +55,28 @@ export class ApprovalService {
     @Inject(APPROVAL_REQUEST_STORE) private readonly store: ApprovalRequestStore,
     @Inject(WORKFLOW_SIGNALER) private readonly signaler: WorkflowSignaler,
     @Inject(APPROVAL_NOTIFIER) private readonly notifier: ApprovalNotifier,
+    @Inject(AUDIT_LOG) private readonly auditLog: AuditLog,
   ) {}
+
+  /** Append an approval lifecycle event to the audit log (best-effort). */
+  private async record(
+    type: string,
+    request: ApprovalRequest,
+    opts: { actor?: string; data?: Record<string, unknown> } = {},
+  ): Promise<void> {
+    try {
+      await this.auditLog.append(
+        auditEvent({
+          type,
+          subject: { type: 'approval', id: request.id },
+          actor: opts.actor,
+          data: { runId: request.subjectId, action: request.action, status: request.status, ...opts.data },
+        }),
+      );
+    } catch {
+      /* swallow — best-effort; a durable store will harden this */
+    }
+  }
 
   async open(input: OpenApprovalInput): Promise<ApprovalRequest> {
     const request = createApprovalRequest({
@@ -65,6 +88,7 @@ export class ApprovalService {
       reason: input.reason,
     });
     await this.store.put(request);
+    await this.record('approval.opened', request, { actor: request.requestedBy });
     // Notify approvers, best-effort: a notification failure must not block the gate.
     try {
       await this.notifier.notifyRequested(request);
@@ -114,6 +138,10 @@ export class ApprovalService {
       throw err;
     }
     await this.store.put(updated);
+    await this.record('approval.decision', updated, {
+      actor: decision.approver,
+      data: { vote: decision.vote, comment: decision.comment, outcome: updated.status },
+    });
 
     if (updated.status === 'approved' || updated.status === 'rejected') {
       await this.signaler.signalDecision(updated.subjectId ?? updated.id, {
@@ -141,11 +169,13 @@ export class ApprovalService {
       const expired = expireIfDue(request, now);
       if (expired !== request) {
         await this.store.put(expired);
+        await this.record('approval.expired', expired);
         continue; // past SLA — expiry wins, no escalation
       }
       if (escalationDue(request, { beforeExpiryMinutes, now })) {
         const next = escalateRequest(request, { now });
         await this.store.put(next);
+        await this.record('approval.escalated', next, { data: { escalateTo: next.escalateTo } });
         try {
           await this.notifier.notifyEscalated(next);
         } catch {
@@ -167,6 +197,7 @@ export class ApprovalService {
       throw err;
     }
     await this.store.put(cancelled);
+    await this.record('approval.cancelled', cancelled, { data: { reason } });
     return cancelled;
   }
 

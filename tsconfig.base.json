@@ -29,7 +29,8 @@
       "@helix/testing-agent": ["libs/testing-agent/src/index.ts"],
       "@helix/deployment-agent": ["libs/deployment-agent/src/index.ts"],
       "@helix/approvals": ["libs/approvals/src/index.ts"],
-      "@helix/notifications": ["libs/notifications/src/index.ts"]
+      "@helix/notifications": ["libs/notifications/src/index.ts"],
+      "@helix/audit": ["libs/audit/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

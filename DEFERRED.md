@@ -155,6 +155,24 @@ else it's tracked.
   endpoint) and need hands-off escalation.
 - **Also tracked:** HELIX-134 PR "Out of scope".
 
+### 9. Durable append-only audit store
+- **Deferred from:** HELIX-135 (Append-only audit store) — in progress.
+- **What's deferred:** persisting the audit log in **durable storage** so the
+  approval history survives restarts and is shared across instances.
+- **In place instead:** `@helix/audit` — an `AuditLog` seam + a hash-chained
+  `InMemoryAuditLog`. Every event links to the prior one by a SHA-256 chain
+  (`verifyChain` is tamper-evident), and the store is strictly append-only. The
+  orchestrator records every approval lifecycle event (opened / decision /
+  escalated / expired / cancelled) through it.
+- **To land:** implement `AuditLog` over an **append-only DB table** (Prisma, like
+  the registry) — insert-only, no update/delete grants — carrying the `prevHash` /
+  `hash` columns so the chain is verifiable in storage. Pairs with the deferred
+  durable approval-request store (#5) and the AWS Secrets/KMS work (#2) if the chain
+  is anchored/signed. The query + export API is HELIX-136.
+- **Trigger / sequencing:** when approval history must outlive a process / be
+  audited for real (compliance), or the orchestrator runs multi-instance.
+- **Also tracked:** HELIX-135 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)

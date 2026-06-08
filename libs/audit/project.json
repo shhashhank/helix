@@ -1,0 +1,7 @@
+{
+  "name": "audit",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/audit/src",
+  "projectType": "library",
+  "targets": {}
+}
