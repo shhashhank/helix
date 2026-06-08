@@ -1463,7 +1463,7 @@ single demo stack and deploy it (HELIX-126), then wire its environment + secrets
 
 ---
 
-## Epic: Human Approval System  🛠️ in progress
+## Epic: Human Approval System  ✅ done
 
 The human-in-the-loop layer: a configurable gate that decides *when* a person must sign off on an agent's
 action, *who* is allowed to, and *how long* they have before it escalates. (The workflow engine already
@@ -1645,7 +1645,7 @@ Make sure the right people *know* a decision is waiting — dispatch notificatio
   + notify, zero-window/idempotent, expire-not-escalate, best-effort notify, the route, the escalated
   builder). Closes the **Notifications & Escalation** story.
 
-### Story: Audit Log (basic)  🛠️ in progress
+### Story: Audit Log (basic)  ✅ done
 
 Keep a trustworthy record of every approval decision: an append-only, tamper-evident log (HELIX-135), then
 a way to read and export it (HELIX-136).
@@ -1671,6 +1671,26 @@ a way to read and export it (HELIX-136).
   against one shared log instance the HELIX-136 query API will read. 13 tests: 6 in the lib (drafting,
   chaining + freeze, intact-chain verify, tamper/drop detection, list filter + limit) and 7 in the
   orchestrator (an event per transition with a verifiable chain, escalated/expired from the sweep).
+
+#### HELIX-136 — Audit query + export API  ✅
+- **What it is:** the **read side** of the audit log — endpoints to look through the approval history
+  (filter by approval, run, or event type, and grab just the most-recent few), to **download** it as a
+  file (NDJSON or CSV), and to **verify** the hash chain is intact in one call.
+- **Why it matters:** an audit trail you can't easily query or hand to someone (an auditor, a compliance
+  review, a spreadsheet) isn't much use. This makes the history *legible* — a filtered API for digging in,
+  exports for taking it elsewhere, and a one-shot integrity check that re-walks the chain and says whether
+  anything was tampered with. It reads the same shared, append-only log the rest of the approval system
+  writes to, so what you read is exactly what happened. This is the **last sub-task of the Human Approval
+  epic.**
+- **Where it lives:** the NDJSON/CSV formatters are pure + reusable in `@helix/audit`
+  ([export.ts](../libs/audit/src/lib/export.ts) — `toNdjson` round-trips losslessly; `toCsv` flattens with
+  proper quoting). The orchestrator exposes them at
+  [audit.controller.ts](../apps/orchestrator/src/approval/audit.controller.ts): `GET /audit`
+  (filtered query), `GET /audit/verify` (chain integrity → `{ ok, brokenAt?, reason? }`), and
+  `GET /audit/export?format=ndjson|csv` (a download, filter-aware), over the shared `AuditLog`. 8 tests: 3
+  in the lib (NDJSON round-trip, CSV header/rows/escaping, blank-field rendering) and 5 in the orchestrator
+  (subject/type filter, recent-N limit, verify, NDJSON + CSV export with download headers). Closes the
+  **Audit Log** story and the **Human Approval System** epic.
 
 ---
 
@@ -1801,6 +1821,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-133 | Notifications — dispatch across slack/email/in-app channels | ✅ | #97 |
 | HELIX-134 | Approvals — SLA escalation to backup approvers (sweep) | ✅ | #98 |
 | HELIX-135 | Audit — append-only hash-chained event store | ✅ | #99 |
+| HELIX-136 | Audit — query + NDJSON/CSV export + verify API | ✅ | #100 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
