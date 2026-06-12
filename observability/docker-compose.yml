@@ -1,0 +1,44 @@
+# Local observability backend (HELIX-138): OTel Collector → Tempo (traces) +
+# Prometheus (metrics), browsed through Grafana. Dev-only — CI never runs this;
+# the services opt in via OTEL_TRACE_EXPORTER=otlp (see docs/LOCAL_TESTING.md).
+#
+#   docker compose -f observability/docker-compose.yml up -d
+#   Grafana: http://localhost:3001 (anonymous admin) → Explore → Tempo / Prometheus
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    command: ['--config=/etc/otel-collector.yaml']
+    volumes:
+      - ./otel-collector.yaml:/etc/otel-collector.yaml:ro
+    ports:
+      - '4317:4317' # OTLP gRPC in
+      - '4318:4318' # OTLP HTTP in (what @helix/telemetry sends to)
+      - '8889:8889' # Prometheus scrape endpoint (collector-exported metrics)
+    depends_on:
+      - tempo
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - '3200:3200' # Tempo query API (Grafana datasource)
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - '9090:9090'
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    ports:
+      - '3001:3000' # 3000 is the registry; Grafana moves to 3001

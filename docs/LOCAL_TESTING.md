@@ -105,7 +105,30 @@ Other things to try:
 
 ---
 
-## 3. What's only proven by tests (not yet a manual flow)
+## 3. Observability stack (traces in Grafana)
+
+See what the services are doing (HELIX-137/138). Start the local backend — OTel Collector,
+Tempo, Prometheus, Grafana:
+
+```bash
+docker compose -f observability/docker-compose.yml up -d
+```
+
+Then run any service with the OTLP exporter switched on:
+
+```bash
+OTEL_TRACE_EXPORTER=otlp pnpm exec nx serve registry      # or orchestrator
+# console-only alternative (no stack needed): OTEL_TRACE_EXPORTER=console
+```
+
+Open **Grafana** at http://localhost:3001 (anonymous admin) → **Explore** → the **Tempo**
+datasource → search by `service.name` (`registry` / `orchestrator`) to browse traces;
+the **Prometheus** datasource has the collector-side metrics. Tear down with
+`docker compose -f observability/docker-compose.yml down`.
+
+---
+
+## 4. What's only proven by tests (not yet a manual flow)
 
 Real durability, crash-recovery, human approvals, retries, the agent loop, and embeddings
 run green in the suites (the workflow tests use a real in-memory Temporal server):

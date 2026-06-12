@@ -1,4 +1,5 @@
 import { trace } from '@opentelemetry/api';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { ConsoleSpanExporter, InMemorySpanExporter } from '@opentelemetry/sdk-trace-base';
 import { exporterFromEnv, initTelemetry } from '../telemetry';
 
@@ -55,10 +56,25 @@ describe('initTelemetry', () => {
 });
 
 describe('exporterFromEnv', () => {
-  it('returns a console exporter only when OTEL_TRACE_EXPORTER=console', () => {
+  it('returns a console exporter when OTEL_TRACE_EXPORTER=console', () => {
     expect(exporterFromEnv({ OTEL_TRACE_EXPORTER: 'console' })).toBeInstanceOf(ConsoleSpanExporter);
     expect(exporterFromEnv({ OTEL_TRACE_EXPORTER: 'CONSOLE' })).toBeInstanceOf(ConsoleSpanExporter);
     expect(exporterFromEnv({})).toBeUndefined();
-    expect(exporterFromEnv({ OTEL_TRACE_EXPORTER: 'otlp' })).toBeUndefined(); // deferred binding
+    expect(exporterFromEnv({ OTEL_TRACE_EXPORTER: 'nonsense' })).toBeUndefined();
+  });
+
+  it('returns the OTLP exporter for OTEL_TRACE_EXPORTER=otlp (default local collector)', () => {
+    expect(exporterFromEnv({ OTEL_TRACE_EXPORTER: 'otlp' })).toBeInstanceOf(OTLPTraceExporter);
+  });
+
+  it('returns the OTLP exporter whenever an OTLP endpoint is configured', () => {
+    const exporter = exporterFromEnv({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://collector:4318/' });
+    expect(exporter).toBeInstanceOf(OTLPTraceExporter);
+  });
+
+  it('console wins when both console and an endpoint are set (explicit choice)', () => {
+    expect(
+      exporterFromEnv({ OTEL_TRACE_EXPORTER: 'console', OTEL_EXPORTER_OTLP_ENDPOINT: 'http://x:4318' }),
+    ).toBeInstanceOf(ConsoleSpanExporter);
   });
 });
