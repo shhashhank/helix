@@ -1727,6 +1727,28 @@ Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), p
   both deploy manifests). 5 offline tests: exporter delivery with the service/environment resource,
   batch + forceFlush behaviour, the no-exporter no-op, global registration, and the env switch.
 
+#### HELIX-138 — Metrics/log/trace backend  ✅
+- **What it is:** somewhere for the telemetry to actually **land and be looked at**. Two halves: the
+  services can now send their spans **off-process over OTLP** (the standard OpenTelemetry wire protocol),
+  and the repo ships a one-command local backend — an **OTel Collector** fanning out to **Tempo** (traces)
+  and **Prometheus** (metrics), all browsed in **Grafana** with the datasources pre-wired.
+- **Why it matters:** until now a trace died with the process (in-memory) or scrolled past in a console.
+  With a real backend you can *go look*: find a run's trace by service name in Grafana, see its spans and
+  timing, watch metrics accumulate. It's strictly **opt-in by env var** — CI and tests never need it, and
+  with nothing configured the services behave exactly as before. This also **lands deferral #10** (the
+  OTLP exporter + collector), the first deferred binding to graduate to DEFERRED.md's Landed section:
+  turning it on is `docker compose -f observability/docker-compose.yml up -d` + `OTEL_TRACE_EXPORTER=otlp`.
+  The pipeline was **verified live** — a span sent from the telemetry lib was found in Tempo by search,
+  Grafana healthy, Prometheus scraping the collector. (OTLP *logs* have no producer yet; the collector's
+  logs pipeline is a placeholder.)
+- **Where it lives:** `exporterFromEnv` in
+  [telemetry.ts](../libs/telemetry/src/lib/telemetry.ts) now returns an `OTLPTraceExporter`
+  (`@opentelemetry/exporter-trace-otlp-http`, a new runtime dep) for `OTEL_TRACE_EXPORTER=otlp` or
+  whenever `OTEL_EXPORTER_OTLP_ENDPOINT` is set; the backend is the new
+  [../observability/](../observability) folder (compose file + collector/Tempo/Prometheus/Grafana
+  configs), documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §3. 8 lib tests (3 new: the otlp switch,
+  endpoint-triggered selection, console-wins precedence).
+
 ---
 
 ## Fixes & hardening
@@ -1858,6 +1880,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-135 | Audit — append-only hash-chained event store | ✅ | #99 |
 | HELIX-136 | Audit — query + NDJSON/CSV export + verify API | ✅ | #100 |
 | HELIX-137 | Telemetry — OTel service bootstrap (tracer + exporter seam) | ✅ | #101 |
+| HELIX-138 | Telemetry — OTLP exporter + Tempo/Prometheus/Grafana stack | ✅ | #102 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
