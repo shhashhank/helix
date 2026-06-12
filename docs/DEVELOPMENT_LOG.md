@@ -1694,6 +1694,41 @@ a way to read and export it (HELIX-136).
 
 ---
 
+## Epic: Monitoring & Observability  🛠️ in progress
+
+See what the platform is doing while it runs: one telemetry pipeline (logs, metrics, traces) across all
+the services and agents, and dashboards for runs and cost.
+
+### Story: Telemetry Pipeline (Logs/Metrics/Traces)  🛠️ in progress
+
+Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), point it at a real backend
+(HELIX-138), and carry one correlation id end-to-end (HELIX-139).
+
+#### HELIX-137 — OTel SDK + collector  ✅
+- **What it is:** switching on **OpenTelemetry** in the services. At startup, each service (registry,
+  orchestrator) now stands up a **tracer provider** that stamps every span with *which service produced
+  it* (`service.name`, plus the environment) and registers it process-wide — so anything in that process
+  that records a span lands in one consistent pipeline, including the per-run agent spans the platform
+  already produces (HELIX-65/66's `OtelTraceSink` plugs straight into it).
+- **Why it matters:** observability starts with everything speaking the same protocol. OTel is the
+  industry-standard one — once the services emit it, any backend (Jaeger, Tempo, Grafana, …) can show
+  what's happening without re-instrumenting. The design keeps **where the spans go** as a swappable seam:
+  tests inject an in-memory exporter, dev can flip on a console printout with one env var
+  (`OTEL_TRACE_EXPORTER=console`), and the real **OTLP push to a collector** (a separate daemon, the
+  network leg) is the **deferred binding** (see [../DEFERRED.md](../DEFERRED.md)) — landing it is an
+  exporter drop-in, no caller changes.
+- **Where it lives:** the new [../libs/telemetry](../libs/telemetry) library (`@helix/telemetry`) —
+  [telemetry.ts](../libs/telemetry/src/lib/telemetry.ts): `initTelemetry({ serviceName, environment,
+  exporter, simple, global })` → `{ tracer, provider, shutdown }` (resource-stamped `BasicTracerProvider`,
+  batch or simple processor, optional global registration) and `exporterFromEnv`. Wired into both
+  service entrypoints ([../apps/registry/src/main.ts](../apps/registry/src/main.ts),
+  [../apps/orchestrator/src/main.ts](../apps/orchestrator/src/main.ts)) with a flush-on-shutdown signal
+  hook; `@opentelemetry/sdk-trace-base` + `resources` moved into runtime dependencies (they now ship in
+  both deploy manifests). 5 offline tests: exporter delivery with the service/environment resource,
+  batch + forceFlush behaviour, the no-exporter no-op, global registration, and the env switch.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1822,6 +1857,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-134 | Approvals — SLA escalation to backup approvers (sweep) | ✅ | #98 |
 | HELIX-135 | Audit — append-only hash-chained event store | ✅ | #99 |
 | HELIX-136 | Audit — query + NDJSON/CSV export + verify API | ✅ | #100 |
+| HELIX-137 | Telemetry — OTel service bootstrap (tracer + exporter seam) | ✅ | #101 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
