@@ -1,0 +1,14 @@
+# Grafana datasource provisioning (HELIX-138): Tempo + Prometheus pre-wired so
+# Explore works the moment the stack is up.
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: true
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090

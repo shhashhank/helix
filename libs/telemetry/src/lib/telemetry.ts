@@ -8,6 +8,7 @@
  * into the returned `Tracer`, so per-run spans flow through the same pipeline.
  */
 import { trace, type Tracer } from '@opentelemetry/api';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import {
   BasicTracerProvider,
@@ -66,13 +67,26 @@ export function initTelemetry(options: TelemetryOptions): Telemetry {
   };
 }
 
+/** Default OTLP/HTTP traces endpoint (the local `observability/` collector). */
+const DEFAULT_OTLP_TRACES_URL = 'http://localhost:4318/v1/traces';
+
 /**
- * Pick the span exporter from the environment: `OTEL_TRACE_EXPORTER=console`
- * prints finished spans; unset/anything else exports nothing. The OTLP exporter
- * pointed at a collector slots in here once that binding lands (DEFERRED.md).
+ * Pick the span exporter from the environment (HELIX-137/138):
+ * - `OTEL_TRACE_EXPORTER=console` → print finished spans to stdout (dev).
+ * - `OTEL_TRACE_EXPORTER=otlp` *or* `OTEL_EXPORTER_OTLP_ENDPOINT=…` → OTLP/HTTP
+ *   to the collector (the `observability/` compose stack: collector → Tempo,
+ *   browsable in Grafana). The endpoint defaults to localhost:4318.
+ * - unset/anything else → no exporter (a structural no-op).
  */
 export function exporterFromEnv(env: NodeJS.ProcessEnv = process.env): SpanExporter | undefined {
-  return (env.OTEL_TRACE_EXPORTER ?? '').toLowerCase() === 'console'
-    ? new ConsoleSpanExporter()
-    : undefined;
+  const kind = (env.OTEL_TRACE_EXPORTER ?? '').toLowerCase();
+  if (kind === 'console') return new ConsoleSpanExporter();
+
+  const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT?.replace(/\/$/, '');
+  if (kind === 'otlp' || endpoint) {
+    return new OTLPTraceExporter({
+      url: endpoint ? `${endpoint}/v1/traces` : DEFAULT_OTLP_TRACES_URL,
+    });
+  }
+  return undefined;
 }
