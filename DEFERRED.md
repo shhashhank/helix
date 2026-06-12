@@ -173,6 +173,26 @@ else it's tracked.
   audited for real (compliance), or the orchestrator runs multi-instance.
 - **Also tracked:** HELIX-135 PR "Out of scope".
 
+### 10. OTLP exporter + OpenTelemetry Collector
+- **Deferred from:** HELIX-137 (OTel SDK + collector) — in progress.
+- **What's deferred:** the **live telemetry pipeline off-box** — an
+  `@opentelemetry/exporter-trace-otlp-http` exporter pointed at a running
+  **OTel Collector** (a separate container/daemon), which then fans out to the
+  metrics/log/trace backend (HELIX-138).
+- **In place instead:** `@helix/telemetry` — `initTelemetry(serviceName, …)`
+  bootstraps a `BasicTracerProvider` with the standard `service.name` resource
+  and the **exporter as the seam**: in-memory in tests, `ConsoleSpanExporter` via
+  `OTEL_TRACE_EXPORTER=console` in dev, nothing otherwise. Both services
+  (registry, orchestrator) initialize it at boot with a flush-on-shutdown hook;
+  the agent-side `OtelTraceSink` (HELIX-66) plugs into the same tracer.
+- **To land:** add the OTLP exporter package, return it from `exporterFromEnv`
+  when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, and run a collector (docker compose /
+  sidecar) with a backend behind it. No change to callers — it's an exporter
+  drop-in.
+- **Trigger / sequencing:** with HELIX-138 (metrics/log/trace backend), when an
+  environment exists that can run the collector container.
+- **Also tracked:** HELIX-137 PR "Out of scope".
+
 ---
 
 ## Why we defer (the rule)
