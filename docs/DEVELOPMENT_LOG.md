@@ -1919,6 +1919,23 @@ build the endpoints now, defer the rendered screens to a UI push (same call as t
   9 tests; documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2. The run dashboard (HELIX-146) and artifact
   views (HELIX-147) consume this.
 
+#### HELIX-146 — Run dashboard API (live status + traces)  ✅
+- **What it is:** the **"watch your build"** data — for the requests you submitted, where is each run *right
+  now*, and a **live feed** that updates as each step finishes. The screen is deferred; this is everything a
+  screen would call.
+- **Why it matters:** submitting a request (HELIX-145) is only half the loop — you want to *watch it run*.
+  The key bit is that it's all **scoped through your request**: you ask "how's *my* request doing", not "show
+  me run X", so one tenant can never watch another's run by guessing an id (a cross-tenant id is a **404**).
+  It reuses the engine's existing live-status machinery (the per-step progress stream from HELIX-79) and the
+  **trace id** carried since HELIX-139, so a run links straight to its Grafana/Tempo trace. Built API-first
+  (the dashboard UI is the deferred [#13](../DEFERRED.md) push).
+- **Where it lives:** the [request module](../apps/orchestrator/src/request) gains three reads —
+  `GET /api/requests/overview` (your org's requests each joined with its run status, one call),
+  `GET /api/requests/:id/run` (one run's status + trace id), and `GET /api/requests/:id/stream`
+  (live per-step status over **Server-Sent Events**) — all tenant-scoped, all behind the `AuthGuard`,
+  all delegating to the existing run service. 8 new tests (17 in the request module); documented in
+  [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
+
 ---
 
 ## Fixes & hardening
@@ -2058,6 +2075,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-143 | Tenancy — row-level org isolation (`@helix/tenancy`) + registry | ✅ | #107 |
 | HELIX-144 | Auth — RBAC roles + `RolesGuard` enforcement (`@helix/auth`) | ✅ | #108 |
 | HELIX-145 | Requests — submit→run API, org-scoped (`/api/requests`) | ✅ | #109 |
+| HELIX-146 | Run dashboard API — overview + per-run status + live SSE | ✅ | #110 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

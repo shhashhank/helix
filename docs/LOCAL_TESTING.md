@@ -144,9 +144,19 @@ curl -s localhost:3100/api/requests -H "Authorization: Bearer $TOKEN"           
 curl -s localhost:3100/api/requests/<id> -H "Authorization: Bearer $TOKEN"        # one (404 across tenants)
 ```
 
-Watch the started run with the `workflowId` via §2's run stream. The prompt is recorded for
-the (deferred) planning-driven workflow; for now the run uses the standard pipeline (or pass
-an explicit `workflow`). No session → **401**.
+The prompt is recorded for the (deferred) planning-driven workflow; for now the run uses the
+standard pipeline (or pass an explicit `workflow`). No session → **401**.
+
+**Run dashboard (HELIX-146)** — the request-scoped, tenant-safe view of runs (data API; screen deferred):
+
+```bash
+curl -s localhost:3100/api/requests/overview -H "Authorization: Bearer $TOKEN"   # your requests + each run's status
+curl -s localhost:3100/api/requests/<id>/run -H "Authorization: Bearer $TOKEN"    # one request's run status (+ trace id)
+curl -N localhost:3100/api/requests/<id>/stream -H "Authorization: Bearer $TOKEN" # live per-step status (SSE)
+```
+
+These go through the request (so they're org-scoped — a cross-tenant id is **404**) rather than
+hitting `/api/runs/:id` directly. The `traceId` on each request/run links straight to Grafana/Tempo (§3).
 
 ---
 
