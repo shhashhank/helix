@@ -35,3 +35,24 @@ export class DashboardItemDto {
   @ApiProperty({ type: BuildRequestDto }) request!: BuildRequestDto;
   @ApiProperty({ type: RunStatusDto }) run!: RunStatusDto;
 }
+
+class PullRequestArtifactDto {
+  @ApiProperty() url!: string;
+  @ApiPropertyOptional() title?: string;
+}
+class TestsArtifactDto {
+  @ApiProperty() passed!: number;
+  @ApiProperty() failed!: number;
+  @ApiPropertyOptional() coverage?: number;
+}
+class DeploymentArtifactDto {
+  @ApiProperty() url!: string;
+  @ApiPropertyOptional() environment?: string;
+}
+
+/** The outputs a run produced — each present only once its step has run (HELIX-147). */
+export class RunArtifactsDto {
+  @ApiPropertyOptional({ type: PullRequestArtifactDto }) pullRequest?: PullRequestArtifactDto;
+  @ApiPropertyOptional({ type: TestsArtifactDto }) tests?: TestsArtifactDto;
+  @ApiPropertyOptional({ type: DeploymentArtifactDto }) deployment?: DeploymentArtifactDto;
+}

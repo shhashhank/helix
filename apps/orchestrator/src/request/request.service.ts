@@ -7,6 +7,7 @@ import { type TenantScope, belongsToTenant, tenantScope } from '@helix/tenancy';
 import type { WorkflowDefinition, WorkflowProgress } from '@helix/workflow';
 import type { RunStatus } from '@helix/workflow/temporal-client';
 import { WorkflowRunService } from '../workflow-run/workflow-run.service';
+import { RunArtifacts, extractArtifacts } from './artifacts';
 import { BuildRequest } from './request.model';
 import { REQUEST_STORE, RequestStore } from './request.store';
 import { requestToWorkflow } from './request.workflow';
@@ -85,6 +86,12 @@ export class RequestService {
   async overview(principal: AuthPrincipal, mineOnly = false): Promise<DashboardItem[]> {
     const requests = await this.list(principal, mineOnly);
     return Promise.all(requests.map(async (request) => ({ request, run: await this.runs.get(request.workflowId) })));
+  }
+
+  /** The PR/test/deploy artifacts a request's run has produced (tenant-scoped, HELIX-147). */
+  async artifacts(id: string, principal: AuthPrincipal): Promise<RunArtifacts> {
+    const request = await this.get(id, principal);
+    return extractArtifacts(await this.runs.progress(request.workflowId));
   }
 
   /**

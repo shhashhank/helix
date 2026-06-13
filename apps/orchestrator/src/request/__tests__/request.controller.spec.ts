@@ -41,6 +41,7 @@ describe('RequestController', () => {
       runStatus: jest.fn(),
       overview: jest.fn(),
       streamProgress: jest.fn(),
+      artifacts: jest.fn(),
     } as unknown as jest.Mocked<RequestService>;
     const moduleRef = await Test.createTestingModule({
       controllers: [RequestController],
@@ -106,9 +107,17 @@ describe('RequestController', () => {
     expect(service.runStatus).toHaveBeenCalledWith('req-1', expect.objectContaining({ userId: 'u1' }));
   });
 
-  it('overview/run require a session (401 without one)', async () => {
+  it("GET /requests/:id/artifacts returns the run's artifacts", async () => {
+    service.artifacts.mockResolvedValue({ pullRequest: { url: 'https://x/pull/1' } });
+    const res = await request(app.getHttpServer()).get('/requests/req-1/artifacts').set('Authorization', `Bearer ${token()}`).expect(200);
+    expect(res.body.pullRequest.url).toBe('https://x/pull/1');
+    expect(service.artifacts).toHaveBeenCalledWith('req-1', expect.objectContaining({ userId: 'u1' }));
+  });
+
+  it('overview/run/artifacts require a session (401 without one)', async () => {
     await request(app.getHttpServer()).get('/requests/overview').expect(401);
     await request(app.getHttpServer()).get('/requests/req-1/run').expect(401);
+    await request(app.getHttpServer()).get('/requests/req-1/artifacts').expect(401);
   });
 
   it('stream maps the run progress to SSE message events', async () => {

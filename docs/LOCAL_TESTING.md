@@ -150,13 +150,17 @@ standard pipeline (or pass an explicit `workflow`). No session → **401**.
 **Run dashboard (HELIX-146)** — the request-scoped, tenant-safe view of runs (data API; screen deferred):
 
 ```bash
-curl -s localhost:3100/api/requests/overview -H "Authorization: Bearer $TOKEN"   # your requests + each run's status
-curl -s localhost:3100/api/requests/<id>/run -H "Authorization: Bearer $TOKEN"    # one request's run status (+ trace id)
-curl -N localhost:3100/api/requests/<id>/stream -H "Authorization: Bearer $TOKEN" # live per-step status (SSE)
+curl -s localhost:3100/api/requests/overview -H "Authorization: Bearer $TOKEN"      # your requests + each run's status
+curl -s localhost:3100/api/requests/<id>/run -H "Authorization: Bearer $TOKEN"       # one request's run status (+ trace id)
+curl -N localhost:3100/api/requests/<id>/stream -H "Authorization: Bearer $TOKEN"    # live per-step status (SSE)
+curl -s localhost:3100/api/requests/<id>/artifacts -H "Authorization: Bearer $TOKEN" # PR / tests / deploy outputs
 ```
 
 These go through the request (so they're org-scoped — a cross-tenant id is **404**) rather than
 hitting `/api/runs/:id` directly. The `traceId` on each request/run links straight to Grafana/Tempo (§3).
+**Artifacts** (HELIX-147) are pulled from the run's step outputs, so they populate as the real coding /
+testing / deployment agents produce a PR, test results, and a live URL — with the **stub worker** the run
+surfaces none/simulated outputs until the agent executor is wired in.
 
 ---
 
