@@ -2059,6 +2059,19 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   `planningExecutor` / `codeReviewExecutor`, `planningInput` / `reviewInput`, and `registerLlmRoles`; plus the
   extracted `priorOutputsDigest` / `withPriorContext` helpers. 4 tests.
 
+#### HELIX-156 — Coding + Testing role executors (sandbox + tools)  ✅
+- **What it is:** the two roles that **do real work on files** — coding (write the change) and testing
+  (generate + run tests). Unlike planning/review, they need a **workspace**.
+- **Why it matters:** these roles have a lifecycle the LLM-only ones don't — **provision** a sandbox
+  workspace, run the agent with **workspace-bound tools** (file edits, test runs), then **dispose** the
+  workspace afterward (even if the run errors). That orchestration is the new piece; the workspace and tools
+  themselves are **injected seams**, so the real `@helix/sandbox` + file/test tools plug in at the worker
+  (HELIX-158) while the executor lib stays pure and offline-tested. An unknown role fails *before* a
+  workspace is provisioned (no wasted setup), and a failing teardown never masks a good result.
+- **Where it lives:** [workspace-roles.ts](../libs/executor/src/lib/workspace-roles.ts) in `@helix/executor` —
+  `workspaceRoleExecutor`, the `WorkspaceProvider` / `WorkspaceTools` seams, `codingExecutor` /
+  `testingExecutor`, and `registerWorkspaceRoles`. 6 tests.
+
 ---
 
 ## Fixes & hardening
@@ -2206,6 +2219,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-153 | Executor — AgentSpecResolver + default per-role specs | ✅ | #116 |
 | HELIX-154 | Executor — generic runAgent-backed role executor + context flow | ✅ | #117 |
 | HELIX-155 | Executor — planning + code_review role executors | ✅ | #118 |
+| HELIX-156 | Executor — coding + testing role executors (sandbox) | ✅ | #119 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
