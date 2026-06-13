@@ -1856,6 +1856,27 @@ model with isolation (HELIX-143), and roles that are actually enforced (HELIX-14
   and a `@Principal()` decorator. Tenant isolation (HELIX-143) and role enforcement (HELIX-144)
   build on the principal this produces. 20 tests; documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
 
+#### HELIX-143 — Org/tenant model + isolation  ✅
+- **What it is:** making sure **one customer can never see or touch another customer's data** — "row-level
+  isolation." Every stored row already carries an owning org; this makes every read, update, and delete
+  actually *check* it, so a row only exists as far as its own tenant is concerned.
+- **Why it matters:** this is **the** safety property of a multi-tenant SaaS, and there was a real hole. Most
+  registry queries were already org-scoped, but **fetch-by-id, update, and delete were keyed by the row id
+  alone** — so anyone who knew (or guessed) a row's id could read, re-version, or delete **another org's**
+  agent definition or approval policy. Now those paths are scoped to the caller's tenant: a cross-tenant id
+  comes back as a plain **404** (it's invisible, not "forbidden" — you can't even tell it exists), and a
+  delete/update of someone else's row is refused. The scope's *source* is a seam — it comes from the
+  `x-org-id` header today and can come straight from the signed-in principal's org (HELIX-142) with no data-
+  layer change.
+- **Where it lives:** the new [../libs/tenancy](../libs/tenancy) library (`@helix/tenancy`) —
+  [tenant.ts](../libs/tenancy/src/lib/tenant.ts): `TenantScope`, `scopedWhere` (adds the org filter to a
+  query), `assertTenant` / `belongsToTenant`, and `TenantIsolationError`. Applied across the registry's
+  two org-owned resources — agent definitions and approval policies (repository `findById` scoped; service
+  `findById` / `update` / `softDelete` confirm the tenant; controllers thread the scope from `@OrgId()`).
+  Proven with **cross-tenant isolation tests against real Postgres** (owner sees the row; another tenant gets
+  404 on read/update/delete). 6 tenancy-lib tests + the registry isolation suites; `ARCHITECTURE.md`
+  refreshed. RBAC enforcement (HELIX-144) is the remaining piece of this story.
+
 ---
 
 ## Fixes & hardening
@@ -1992,6 +2013,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-140 | Analytics — run success/latency/cost aggregation library | ✅ | #104 |
 | HELIX-141 | Dashboards — provisioned Grafana run/cost + pipeline boards | ✅ | #105 |
 | HELIX-142 | Auth — OIDC sign-in + Helix app sessions (`@helix/auth`) | ✅ | #106 |
+| HELIX-143 | Tenancy — row-level org isolation (`@helix/tenancy`) + registry | ✅ | #107 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

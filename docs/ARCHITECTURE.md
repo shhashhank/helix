@@ -46,7 +46,10 @@ flowchart TB
     apv["@helix/approvals<br/>Human Approval System<br/>approval policy model · gate rules / roles / SLAs<br/>policy evaluation → resolved requirement<br/>request state machine · pending→approved/rejected/expired/cancelled<br/>inbox read-model · progress / SLA / most-urgent-first<br/>SLA escalation → backup approvers (sweep · timer deferred)"]
     ntf["@helix/notifications<br/>Notification dispatch<br/>channel seam + dispatcher · slack / email / in-app<br/>in-app feed real · slack/email recorded (live deferred)"]
     aud["@helix/audit<br/>Append-only audit log<br/>hash-chained · tamper-evident (verifyChain)<br/>query + NDJSON/CSV export · in-memory store (durable deferred)"]
-    tel["@helix/telemetry<br/>OTel service bootstrap<br/>tracer provider · service.name resource<br/>exporter seam · console / in-memory / OTLP→collector"]
+    tel["@helix/telemetry<br/>OTel service bootstrap<br/>tracer provider · service.name resource<br/>exporter seam · console / in-memory / OTLP→collector<br/>W3C trace-context propagation"]
+    an["@helix/analytics<br/>Run analytics rollups<br/>success rate · latency p50/p95/p99 · cost<br/>grouping · daily buckets · source seam"]
+    au["@helix/auth<br/>OIDC sign-in + app sessions<br/>HS256 JWT · OidcVerifier seam · SessionService<br/>AuthPrincipal · Auth0/Cognito stand-in"]
+    tn["@helix/tenancy<br/>Row-level tenant isolation<br/>TenantScope · scopedWhere · assertTenant<br/>org-scoped data access"]
   end
 
   subgraph dat["Data & external"]
@@ -171,8 +174,8 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | **HELIX-7 · Testing Agent** | ✅ done | Generate tests per-framework + map them to acceptance criteria (HELIX-36); detect the framework, run tests in the sandbox, normalize results/coverage into a report (HELIX-37); package failures + loop them back to the Coding Agent under a budget (HELIX-38) |
 | **HELIX-8 · Deployment Agent** | ✅ done | Build an artifact — Dockerfile/buildpack detection + build (HELIX-124); push to ECR — login·tag·push (HELIX-125); deploy a single demo stack via CDK (ECS/Lambda) returning a live URL (HELIX-126); env/config + Secrets-Manager-referenced secrets with a vault preflight (HELIX-127). All as pure synthesis + a runner-backed command seam; the live docker/ECR/CDK execution against a real AWS account is deferred (DEFERRED.md) |
 | **HELIX-9 · Human Approval System** | ✅ done | Configurable approval gates — *when* a human signs off, *who* may approve, the *SLA*. Policy model + eval (HELIX-128) + versioned admin API (HELIX-129); request state machine (HELIX-130) + decision API that resumes the durable run (HELIX-131) + inbox read-API (HELIX-132); notification dispatch across slack/email/in-app (HELIX-133) + SLA escalation to backups (HELIX-134); and an append-only **hash-chained** audit log (HELIX-135) with a query/export/verify API (HELIX-136). Live slack/email transports, the escalation auto-timer, the rendered inbox UI (→ HELIX-11), and durable stores are deferred (DEFERRED.md) |
-| **HELIX-10 · Monitoring & Observability** | 🛠️ in progress | Telemetry pipeline (logs/metrics/traces) + run/cost dashboards. Service-level OTel bootstrap (HELIX-137) and the trace/metrics backend (HELIX-138: OTLP exporter + a local Collector→Tempo/Prometheus/Grafana compose stack, verified live) landed; correlation IDs, analytics, dashboards still open |
-| HELIX-11 SaaS | ⬜ | The user-facing UI (incl. the deferred approval inbox) |
+| **HELIX-10 · Monitoring & Observability** | ✅ done | Telemetry pipeline + run/cost dashboards: service-level OTel bootstrap (HELIX-137); trace/metrics backend (HELIX-138: OTLP exporter + a local Collector→Tempo/Prometheus/Grafana stack, verified live); W3C correlation IDs end-to-end (HELIX-139); a pure run-analytics aggregation lib — success/latency/cost (HELIX-140); and provisioned Grafana dashboards — live pipeline + a runs-&-cost board on a fixed metric contract (HELIX-141) |
+| **HELIX-11 · SaaS Platform** | 🛠️ in progress | Accounts, orgs & the user-facing surface. OIDC sign-in + Helix app sessions — `@helix/auth`, with the real IdP verifier deferred (HELIX-142); row-level tenant isolation — `@helix/tenancy`, closing cross-tenant read/update/delete gaps in the registry (HELIX-143). RBAC enforcement, the request/run dashboard, and GitHub onboarding still open; the rendered approval inbox UI lands here |
 
 ---
 
@@ -196,6 +199,9 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Notifications | [libs/notifications](../libs/notifications) (`@helix/notifications`) |
 | Audit log | [libs/audit](../libs/audit) (`@helix/audit`) |
 | Telemetry | [libs/telemetry](../libs/telemetry) (`@helix/telemetry`) |
+| Run analytics | [libs/analytics](../libs/analytics) (`@helix/analytics`) |
+| Auth & sessions | [libs/auth](../libs/auth) (`@helix/auth`) |
+| Tenant isolation | [libs/tenancy](../libs/tenancy) (`@helix/tenancy`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |

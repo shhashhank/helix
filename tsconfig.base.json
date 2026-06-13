@@ -33,7 +33,8 @@
       "@helix/audit": ["libs/audit/src/index.ts"],
       "@helix/telemetry": ["libs/telemetry/src/index.ts"],
       "@helix/analytics": ["libs/analytics/src/index.ts"],
-      "@helix/auth": ["libs/auth/src/index.ts"]
+      "@helix/auth": ["libs/auth/src/index.ts"],
+      "@helix/tenancy": ["libs/tenancy/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

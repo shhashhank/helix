@@ -19,6 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApprovalPolicy } from '@prisma/client';
+import { tenantScope } from '@helix/tenancy';
 import { ORG_HEADER, OrgId } from '../agent-definition/org-id.decorator';
 import { ApprovalPolicyService } from './approval-policy.service';
 import {
@@ -92,23 +93,28 @@ export class ApprovalPolicyController {
   @ApiOkResponse({ type: ApprovalPolicyResponseDto })
   findById(
     @Param('id') id: string,
+    @OrgId() orgId: string | null,
     @Query('includeDeleted') includeDeleted?: string,
   ): Promise<ApprovalPolicy> {
-    return this.service.findById(id, asBool(includeDeleted));
+    return this.service.findById(id, tenantScope(orgId), asBool(includeDeleted));
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Add a new version of an existing policy (immutable update)' })
   @ApiOkResponse({ type: ApprovalPolicyResponseDto })
-  update(@Param('id') id: string, @Body() body: ApprovalPolicyBodyDto): Promise<ApprovalPolicy> {
-    return this.service.update({ id, document: body });
+  update(
+    @Param('id') id: string,
+    @OrgId() orgId: string | null,
+    @Body() body: ApprovalPolicyBodyDto,
+  ): Promise<ApprovalPolicy> {
+    return this.service.update({ id, scope: tenantScope(orgId), document: body });
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft-delete a policy version' })
   @ApiOkResponse({ type: ApprovalPolicyResponseDto })
-  remove(@Param('id') id: string): Promise<ApprovalPolicy> {
-    return this.service.softDelete(id);
+  remove(@Param('id') id: string, @OrgId() orgId: string | null): Promise<ApprovalPolicy> {
+    return this.service.softDelete(id, tenantScope(orgId));
   }
 }

@@ -111,11 +111,18 @@ describe('ApprovalPolicyController', () => {
     expect(service.findById).not.toHaveBeenCalled();
   });
 
-  it('GET /approval-policies/:id forwards id and includeDeleted', async () => {
+  it('GET /approval-policies/:id forwards id, tenant scope, and includeDeleted', async () => {
     service.findById.mockResolvedValue(fakeRow({ id: 'abc' }));
 
     await request(app.getHttpServer()).get('/approval-policies/abc?includeDeleted=true').expect(200);
-    expect(service.findById).toHaveBeenCalledWith('abc', true);
+    expect(service.findById).toHaveBeenCalledWith('abc', { orgId: null }, true);
+  });
+
+  it('GET /approval-policies/:id scopes to the x-org-id tenant (row-level isolation)', async () => {
+    service.findById.mockResolvedValue(fakeRow({ id: 'abc', orgId: 'acme' }));
+
+    await request(app.getHttpServer()).get('/approval-policies/abc').set('x-org-id', 'acme').expect(200);
+    expect(service.findById).toHaveBeenCalledWith('abc', { orgId: 'acme' }, false);
   });
 
   it('GET /approval-policies/:id surfaces NotFoundException as 404', async () => {
@@ -129,7 +136,11 @@ describe('ApprovalPolicyController', () => {
     const res = await request(app.getHttpServer()).put('/approval-policies/row-id').send(body).expect(200);
     expect(res.body.version).toBe(2);
     expect(service.update).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'row-id', document: expect.objectContaining({ id: 'default' }) }),
+      expect.objectContaining({
+        id: 'row-id',
+        scope: { orgId: null },
+        document: expect.objectContaining({ id: 'default' }),
+      }),
     );
   });
 
@@ -138,6 +149,6 @@ describe('ApprovalPolicyController', () => {
 
     const res = await request(app.getHttpServer()).delete('/approval-policies/row-id').expect(200);
     expect(res.body.deletedAt).not.toBeNull();
-    expect(service.softDelete).toHaveBeenCalledWith('row-id');
+    expect(service.softDelete).toHaveBeenCalledWith('row-id', { orgId: null });
   });
 });

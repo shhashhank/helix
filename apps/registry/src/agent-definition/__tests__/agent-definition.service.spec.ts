@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AgentDefinition } from '@prisma/client';
+import { tenantScope } from '@helix/tenancy';
 import {
   AgentDefinitionValidator,
   AgentDefinitionValidationError,
@@ -96,7 +97,7 @@ describe('AgentDefinitionService', () => {
         fakeRow({ ...(data as object), id: 'new-row' } as Partial<AgentDefinition>),
       );
 
-      const result = await service.update({ id: 'cur', payload: validPayload() });
+      const result = await service.update({ id: 'cur', scope: tenantScope(null), payload: validPayload() });
 
       expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ version: 3 }));
       expect(result.id).toBe('new-row');
@@ -107,16 +108,16 @@ describe('AgentDefinitionService', () => {
       repo.findMaxVersion.mockResolvedValue(1);
 
       await expect(
-        service.update({ id: 'cur', payload: validPayload({ role: 'coding' }) }),
+        service.update({ id: 'cur', scope: tenantScope(null), payload: validPayload({ role: 'coding' }) }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
     it('404 when the target id is missing', async () => {
       repo.findById.mockResolvedValue(null);
 
-      await expect(service.update({ id: 'nope', payload: validPayload() })).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.update({ id: 'nope', scope: tenantScope(null), payload: validPayload() }),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
@@ -134,11 +135,23 @@ describe('AgentDefinitionService', () => {
   });
 
   describe('softDelete', () => {
-    it('delegates to repo', async () => {
+    it('deletes after confirming the row is in the caller tenant', async () => {
+      repo.findById.mockResolvedValue(fakeRow({ id: 'row-id', orgId: 'acme' }));
       repo.softDelete.mockResolvedValue(fakeRow({ deletedAt: new Date() }));
-      const result = await service.softDelete('row-id');
+
+      const result = await service.softDelete('row-id', tenantScope('acme'));
+
+      expect(repo.findById).toHaveBeenCalledWith('row-id', tenantScope('acme'), false);
       expect(repo.softDelete).toHaveBeenCalledWith('row-id');
       expect(result.deletedAt).not.toBeNull();
+    });
+
+    it('404 (no delete) when the id is not in the caller tenant', async () => {
+      repo.findById.mockResolvedValue(null); // scoped lookup misses → cross-tenant/unknown
+      await expect(service.softDelete('row-id', tenantScope('globex'))).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.softDelete).not.toHaveBeenCalled();
     });
   });
 });

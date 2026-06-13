@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AgentDefinition, Prisma } from '@prisma/client';
+import { type TenantScope, scopedWhere } from '@helix/tenancy';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface FindAllOptions {
@@ -18,9 +19,10 @@ export class AgentDefinitionRepository {
     return this.prisma.agentDefinition.create({ data });
   }
 
-  findById(id: string, includeDeleted = false): Promise<AgentDefinition | null> {
+  /** Look up a row by id **within a tenant** — returns null for another org's row (HELIX-143). */
+  findById(id: string, scope: TenantScope, includeDeleted = false): Promise<AgentDefinition | null> {
     return this.prisma.agentDefinition.findFirst({
-      where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
+      where: scopedWhere(scope, { id, ...(includeDeleted ? {} : { deletedAt: null }) }),
     });
   }
 

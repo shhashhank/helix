@@ -26,6 +26,7 @@ import {
   ListAgentDefinitionsQueryDto,
 } from './dto/agent-definition-http.dto';
 import { AgentDefinitionPayload } from './dto/agent-definition.types';
+import { tenantScope } from '@helix/tenancy';
 import { ORG_HEADER, OrgId } from './org-id.decorator';
 
 function asBool(v?: string): boolean {
@@ -96,9 +97,10 @@ export class AgentDefinitionController {
   @ApiOkResponse({ type: AgentDefinitionResponseDto })
   findById(
     @Param('id') id: string,
+    @OrgId() orgId: string | null,
     @Query('includeDeleted') includeDeleted?: string,
   ): Promise<AgentDefinition> {
-    return this.service.findById(id, asBool(includeDeleted));
+    return this.service.findById(id, tenantScope(orgId), asBool(includeDeleted));
   }
 
   @Put(':id')
@@ -106,16 +108,17 @@ export class AgentDefinitionController {
   @ApiOkResponse({ type: AgentDefinitionResponseDto })
   update(
     @Param('id') id: string,
+    @OrgId() orgId: string | null,
     @Body() body: AgentDefinitionBodyDto,
   ): Promise<AgentDefinition> {
-    return this.service.update({ id, payload: body as unknown as AgentDefinitionPayload });
+    return this.service.update({ id, scope: tenantScope(orgId), payload: body as unknown as AgentDefinitionPayload });
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Soft-delete a definition version' })
   @ApiOkResponse({ type: AgentDefinitionResponseDto })
-  remove(@Param('id') id: string): Promise<AgentDefinition> {
-    return this.service.softDelete(id);
+  remove(@Param('id') id: string, @OrgId() orgId: string | null): Promise<AgentDefinition> {
+    return this.service.softDelete(id, tenantScope(orgId));
   }
 }
