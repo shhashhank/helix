@@ -1895,7 +1895,7 @@ model with isolation (HELIX-143), and roles that are actually enforced (HELIX-14
   4 HTTP enforcement: admin 200, owner-via-hierarchy 200, lesser role 403, no session 401). **Closes the
   Auth, Orgs & RBAC story.**
 
-### Story: Request Submission & Run Dashboard  🛠️ in progress
+### Story: Request Submission & Run Dashboard  ✅ done
 
 The user-facing loop: submit a request and watch it run. Submit → start a run (HELIX-145), a live
 run dashboard (HELIX-146), and views of the artifacts it produces (HELIX-147). **Decision:** API-first —
@@ -1935,6 +1935,23 @@ build the endpoints now, defer the rendered screens to a UI push (same call as t
   (live per-step status over **Server-Sent Events**) — all tenant-scoped, all behind the `AuthGuard`,
   all delegating to the existing run service. 8 new tests (17 in the request module); documented in
   [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
+
+#### HELIX-147 — Artifact views (PR/tests/deploy)  ✅
+- **What it is:** the **payoff** — the actual *things* a run produces: the **pull request** it opened, the
+  **test results**, and the **deployed URL**. One call gathers them for a request.
+- **Why it matters:** a run is only useful for its outputs, and they're scattered across different steps
+  (the coding agent opens the PR, the testing agent reports results, the deployment agent returns a URL).
+  This **gathers and normalizes** them into one tidy shape so a screen can just show "here's your PR, here's
+  your tests, here's where it's live." It's deliberately **source-agnostic** — it scans each step's output
+  for the well-known fields, first match wins — and **partial-friendly**: a run that's only finished coding
+  surfaces just the PR, and surfaces more as later steps complete. Tenant-scoped like the rest (a cross-tenant
+  id is a 404). Honest caveat: artifacts populate only as the **real agents** produce them — with today's
+  stub worker a run surfaces none/simulated outputs until the agent executor is wired in.
+- **Where it lives:** [artifacts.ts](../apps/orchestrator/src/request/artifacts.ts) — a pure
+  `extractArtifacts(run steps) → { pullRequest?, tests?, deployment? }`; surfaced at
+  `GET /api/requests/:id/artifacts` (auth-guarded, tenant-scoped) via a new one-shot
+  `WorkflowRunService.progress()`. 8 new tests (6 extractor + service + controller). **Closes the Request
+  Submission & Run Dashboard story.**
 
 ---
 
@@ -2076,6 +2093,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-144 | Auth — RBAC roles + `RolesGuard` enforcement (`@helix/auth`) | ✅ | #108 |
 | HELIX-145 | Requests — submit→run API, org-scoped (`/api/requests`) | ✅ | #109 |
 | HELIX-146 | Run dashboard API — overview + per-run status + live SSE | ✅ | #110 |
+| HELIX-147 | Artifact views — PR/tests/deploy from run step outputs | ✅ | #111 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
