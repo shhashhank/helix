@@ -215,6 +215,24 @@ else it's tracked.
 - **Trigger / sequencing:** when sign-in must work against a real IdP / in a
   deployed environment.
 
+### 13. Request → planning-driven workflow, durable store & submission UI
+- **Deferred from:** HELIX-145 (Request submission UI + API) — in progress.
+- **What's deferred:** (a) turning a request's free-text `prompt` into a **custom
+  workflow** via the Planning Agent (`@helix/planning` → spec → task DAG → workflow)
+  — it needs the LLM, which CI can't call; (b) a **durable** request store; (c) the
+  rendered **submission form / list UI** (the API-first decision for the SaaS epic).
+- **In place instead:** `POST/GET /api/requests` (auth-guarded, org-scoped) that
+  records a `BuildRequest` and starts a run from the **standard delivery pipeline**
+  (plan→code→review→test→deploy) — or an explicit workflow override — reusing the
+  run service (so it gets a W3C trace id). An `InMemoryRequestStore` seam holds the
+  records.
+- **To land:** swap `requestToWorkflow` for a planning-backed generator (behind the
+  agent/LLM seam); implement `RequestStore` over a DB (pairs with the orchestrator's
+  other in-memory seams — approvals); build the UI (the run dashboard is HELIX-146,
+  artifacts HELIX-147). The rendered approval inbox (#6) lands in the same UI push.
+- **Trigger / sequencing:** HELIX-146 / HELIX-147 (the dashboard + artifact views)
+  consume this API; the UI push delivers the screens.
+
 ---
 
 ## Why we defer (the rule)

@@ -127,7 +127,26 @@ curl -s localhost:3100/api/auth/me                                      # → 40
 
 Override the dev secrets in real use with `AUTH_OIDC_SECRET` / `AUTH_OIDC_ISSUER` /
 `AUTH_OIDC_AUDIENCE` / `AUTH_SESSION_SECRET`. Org-scoped isolation and role enforcement
-ride on the returned principal and arrive in HELIX-143 / HELIX-144.
+ride on the returned principal (HELIX-143 / HELIX-144) — e.g. `GET /api/auth/admin/ping`
+is **403** unless the session's roles include `admin`.
+
+### Submit a build request (HELIX-145)
+
+With a session `$TOKEN` from above, submit a request — it starts a workflow run and is
+scoped to your org (the rendered form is deferred; this is the API):
+
+```bash
+curl -s -X POST localhost:3100/api/requests -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{ "title": "Todo app", "prompt": "build me a todo API" }'
+# → { "id": "req-…", "workflowId": "run-…", "runId": "…", "traceId": "…", "status": "submitted", … }
+
+curl -s localhost:3100/api/requests -H "Authorization: Bearer $TOKEN"            # list your org's requests
+curl -s localhost:3100/api/requests/<id> -H "Authorization: Bearer $TOKEN"        # one (404 across tenants)
+```
+
+Watch the started run with the `workflowId` via §2's run stream. The prompt is recorded for
+the (deferred) planning-driven workflow; for now the run uses the standard pipeline (or pass
+an explicit `workflow`). No session → **401**.
 
 ---
 
