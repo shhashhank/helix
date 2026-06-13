@@ -2030,6 +2030,22 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
 - **Where it lives:** [agent-spec.ts](../libs/executor/src/lib/agent-spec.ts) in `@helix/executor` —
   the `AgentSpecResolver` interface, `DefaultAgentSpecResolver`, and `DEFAULT_AGENT_SPECS`. 5 tests.
 
+#### HELIX-154 — Generic role executor  ✅
+- **What it is:** the piece that **actually runs an agent for a step** — it takes the role's spec (HELIX-153),
+  writes the agent's instructions from the step + what earlier steps produced, runs the agent loop, and
+  reports the step as succeeded or failed.
+- **Why it matters:** this is where the dispatcher and the spec resolver come together into a working step.
+  Two design choices make it solid: **(1)** the **step-to-step context flow** — each step's input includes a
+  digest of prior step outputs, so the coding step sees the plan, review sees the code, and so on; **(2)** the
+  agent loop is **injected** (a runner function = `runAgent`'s signature), so the executor lib stays
+  runtime-dependency-free and is **fully testable with a scripted runner** — no real LLM, no network. Real
+  `runAgent` is wired in at the worker (HELIX-158). Result mapping is deliberate: a clean finish
+  (`end_turn`) is success (output = the validated structured output, or the final text); a guardrail breach,
+  refusal, or hitting a limit is a failure the workflow can route.
+- **Where it lives:** [role-executor.ts](../libs/executor/src/lib/role-executor.ts) in `@helix/executor` —
+  `createRoleExecutor(deps)`, `defaultBuildInput`, `mapResult`, and the `AgentRunner` seam. 9 tests
+  (result mapping, input building + context flow, run wiring, role tools, missing-spec failure).
+
 ---
 
 ## Fixes & hardening
@@ -2175,6 +2191,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-149 | GitHub onboarding — connection health check (verify seam) | ✅ | #113 |
 | HELIX-152 | Executor — role-dispatch seam (`@helix/executor`) | ✅ | #115 |
 | HELIX-153 | Executor — AgentSpecResolver + default per-role specs | ✅ | #116 |
+| HELIX-154 | Executor — generic runAgent-backed role executor + context flow | ✅ | #117 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
