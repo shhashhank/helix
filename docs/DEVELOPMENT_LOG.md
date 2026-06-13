@@ -1694,7 +1694,7 @@ a way to read and export it (HELIX-136).
 
 ---
 
-## Epic: Monitoring & Observability  🛠️ in progress
+## Epic: Monitoring & Observability  ✅ done
 
 See what the platform is doing while it runs: one telemetry pipeline (logs, metrics, traces) across all
 the services and agents, and dashboards for runs and cost.
@@ -1774,7 +1774,7 @@ Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), p
   inbound-continuation, the "span inherits the run trace id" end-to-end check, memo attach + readback, and
   the controller echo/continue behaviour). Closes the Telemetry Pipeline story.
 
-### Story: Run & Cost Dashboards (basic)  🛠️ in progress
+### Story: Run & Cost Dashboards (basic)  ✅ done
 
 Turn the raw telemetry into **numbers people read**: aggregate runs into success/latency/cost rollups
 (HELIX-140), then put them on dashboards (HELIX-141).
@@ -1797,6 +1797,28 @@ Turn the raw telemetry into **numbers people read**: aggregate runs into success
   `RunAnalyticsSource` seam with an `InMemoryRunAnalyticsSource`. Wired into `tsconfig.base` + CI
   (typecheck + jest). 15 tests (percentile edge cases, latency/cost rollups, grouping, daily buckets,
   the status mapping, and the in-memory source's filtering).
+
+#### HELIX-141 — Dashboards  ✅
+- **What it is:** the **screens** people actually look at — Grafana dashboards that ship **with the repo**
+  and load themselves when the observability stack starts (no clicking "import"). Two of them: a
+  **Telemetry Pipeline** view (is telemetry flowing? how many spans in/out?) and a **Runs & Cost** view
+  (success rate, latency, spend).
+- **Why it matters:** dashboards-as-code means everyone sees the *same* charts, versioned and reviewed like
+  any other code — not hand-built panels that live in one person's browser. The **Telemetry Pipeline**
+  board is **live today**: it reads the collector's own metrics (span receive/export rates), so you can
+  confirm the pipeline is healthy at a glance. The **Runs & Cost** board is wired to a fixed metric
+  contract (`helix_runs_total`, `helix_run_latency_ms_bucket`, `helix_run_cost_usd_total`) and ships
+  ready — it lights up the moment the run-analytics metrics exporter is connected
+  ([../DEFERRED.md](../DEFERRED.md) #11), with no further dashboard work. Verified live: both boards
+  provision into a **Helix** folder and the pipeline metric returns data **through Grafana's datasource
+  proxy**, not just in Prometheus.
+- **Where it lives:** [../observability/dashboards/](../observability/dashboards) (the two dashboard
+  JSONs) provisioned by [grafana-dashboards.yaml](../observability/grafana-dashboards.yaml); datasources
+  got stable UIDs ([grafana-datasources.yaml](../observability/grafana-datasources.yaml)); the collector
+  now exposes its self-telemetry on `:8888` ([otel-collector.yaml](../observability/otel-collector.yaml))
+  which Prometheus scrapes ([prometheus.yml](../observability/prometheus.yml)). Documented in
+  [LOCAL_TESTING.md](LOCAL_TESTING.md) §3. Config-only — no app code, CI unaffected. **Closes the Run &
+  Cost Dashboards story and the Monitoring & Observability epic.**
 
 ---
 
@@ -1932,6 +1954,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-138 | Telemetry — OTLP exporter + Tempo/Prometheus/Grafana stack | ✅ | #102 |
 | HELIX-139 | Telemetry — correlation IDs end-to-end (W3C trace context) | ✅ | #103 |
 | HELIX-140 | Analytics — run success/latency/cost aggregation library | ✅ | #104 |
+| HELIX-141 | Dashboards — provisioned Grafana run/cost + pipeline boards | ✅ | #105 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

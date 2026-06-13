@@ -186,9 +186,15 @@ else it's tracked.
   names → outcomes, so wiring is a thin adapter, not new math.
 - **To land:** implement `RunAnalyticsSource` over `client.workflow.list()` (map each
   `WorkflowExecutionInfo` → `RunRecord`, cost via `TokenUsageRollupService.byRun`),
-  or over a runs table if/when runs are persisted; surface it on an orchestrator
-  endpoint. This is what the HELIX-141 dashboards consume.
-- **Trigger / sequencing:** HELIX-141 (Run & cost dashboards) — the consumer.
+  or over a runs table if/when runs are persisted; then **publish the rollups as
+  Prometheus metrics** so the dashboards light up. The **Helix Runs & Cost** Grafana
+  dashboard (HELIX-141) already queries a fixed metric contract — the exporter just
+  has to emit it:
+  - `helix_runs_total{outcome="completed|failed|cancelled|terminated|timed_out"}` (counter)
+  - `helix_run_latency_ms_bucket` / `_sum` / `_count` (histogram, for p50/p95)
+  - `helix_run_cost_usd_total` (counter)
+- **Trigger / sequencing:** HELIX-141 (the dashboards) is done and ships the contract;
+  this is the producer that fills it.
 
 ---
 

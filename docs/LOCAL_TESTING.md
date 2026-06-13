@@ -126,6 +126,18 @@ datasource → search by `service.name` (`registry` / `orchestrator`) to browse 
 the **Prometheus** datasource has the collector-side metrics. Tear down with
 `docker compose -f observability/docker-compose.yml down`.
 
+**Dashboards (HELIX-141)** auto-load into a **Helix** folder (Dashboards → Helix):
+- **Helix Telemetry Pipeline** — live now: span receive/export throughput from the
+  collector's own telemetry (scraped off `:8888`). Drive some traffic with
+  `OTEL_TRACE_EXPORTER=otlp` to see it move.
+- **Helix Runs & Cost** — success rate, latency (p50/p95), and cost. It queries a fixed
+  Prometheus metric contract (`helix_runs_total`, `helix_run_latency_ms_bucket`,
+  `helix_run_cost_usd_total`) that lights up once the run-analytics metrics exporter is
+  wired (DEFERRED.md #11) — the panels ship ready.
+
+Dashboards live in [../observability/dashboards/](../observability/dashboards) and are
+provisioned by [grafana-dashboards.yaml](../observability/grafana-dashboards.yaml).
+
 ### Correlate a run to its trace (HELIX-139)
 
 `POST /api/runs` now returns a `traceId` and `traceparent`, and echoes the `traceparent`

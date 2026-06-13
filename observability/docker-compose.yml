@@ -13,7 +13,8 @@ services:
     ports:
       - '4317:4317' # OTLP gRPC in
       - '4318:4318' # OTLP HTTP in (what @helix/telemetry sends to)
-      - '8889:8889' # Prometheus scrape endpoint (collector-exported metrics)
+      - '8889:8889' # Prometheus scrape endpoint (app metrics forwarded over OTLP)
+      - '8888:8888' # Collector self-telemetry (pipeline throughput) — HELIX-141
     depends_on:
       - tempo
 
@@ -40,5 +41,7 @@ services:
       - GF_AUTH_DISABLE_LOGIN_FORM=true
     volumes:
       - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - '3001:3000' # 3000 is the registry; Grafana moves to 3001
