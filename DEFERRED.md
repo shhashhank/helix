@@ -233,6 +233,24 @@ else it's tracked.
 - **Trigger / sequencing:** HELIX-146 / HELIX-147 (the dashboard + artifact views)
   consume this API; the UI push delivers the screens.
 
+### 14. GitHub onboarding — real install verification & connect wizard
+- **Deferred from:** HELIX-148 (Integration connect wizard) — in progress.
+- **What's deferred:** the rendered **connect wizard** (API-first), and confirming a
+  connection against **real GitHub** — fetching the installation's account, listing
+  repos, minting an installation token from the App key. Those are network hops the
+  GitHub client (#1) and the real KMS-backed vault (#2) cover.
+- **In place instead:** `POST/GET/DELETE /api/integrations/github*` — an org-scoped,
+  auth-guarded connect flow (install URL → single-use, tenant-bound `state` →
+  callback) that stores the connection **encrypted in the vault** (`@helix/secrets`,
+  `EncryptedSecretStore` + `LocalKms`, in-memory record repo). The `@helix/github-mcp`
+  App-token machinery (`GitHubAppTokenProvider`) is ready to mint tokens once wired.
+- **To land:** on callback, use the App credentials to fetch the installation's
+  account/repos (GitHub client #1); back the secret repo with a DB / AWS Secrets
+  Manager (#2); build the wizard UI. **HELIX-149** adds the connection health check
+  (verify access) on top.
+- **Trigger / sequencing:** HELIX-149 verifies the connection; the UI push + the live
+  GitHub/AWS bindings make it real.
+
 ---
 
 ## Why we defer (the rule)
