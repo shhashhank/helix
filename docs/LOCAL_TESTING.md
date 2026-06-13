@@ -162,6 +162,27 @@ hitting `/api/runs/:id` directly. The `traceId` on each request/run links straig
 testing / deployment agents produce a PR, test results, and a live URL — with the **stub worker** the run
 surfaces none/simulated outputs until the agent executor is wired in.
 
+### Connect GitHub (HELIX-148)
+
+Onboard an org's GitHub via the App install flow — the credential is stored **encrypted in the vault**
+(`@helix/secrets`), scoped to your org. The wizard screen is deferred; this is the API it drives:
+
+```bash
+# 1. Start — returns the GitHub App install URL (visit it to install the app) + a state.
+curl -s -X POST localhost:3100/api/integrations/github/connect -H "Authorization: Bearer $TOKEN"
+# → { "installUrl": "https://github.com/apps/helix-dev/installations/new?state=…", "state": "…" }
+
+# 2. After installing, GitHub redirects back with an installation_id — complete the connect:
+curl -s -X POST localhost:3100/api/integrations/github/callback -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d '{ "installationId": "12345678", "state": "<state from step 1>" }'
+
+curl -s localhost:3100/api/integrations/github -H "Authorization: Bearer $TOKEN"           # status: connected?
+curl -s -X DELETE localhost:3100/api/integrations/github -H "Authorization: Bearer $TOKEN"  # disconnect
+```
+
+The `state` is single-use and tenant-bound (a callback for another org's state is **400**). Verifying the
+install actually works against GitHub is **HELIX-149**; minting tokens against the real GitHub API is deferred.
+
 ---
 
 ## 3. Observability stack (traces in Grafana)
