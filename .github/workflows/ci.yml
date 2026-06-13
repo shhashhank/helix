@@ -84,6 +84,9 @@ jobs:
       - name: Typecheck (telemetry lib)
         run: pnpm exec tsc --noEmit -p libs/telemetry/tsconfig.spec.json
 
+      - name: Typecheck (analytics lib)
+        run: pnpm exec tsc --noEmit -p libs/analytics/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -145,3 +148,6 @@ jobs:
 
       - name: Unit tests (telemetry lib)
         run: pnpm exec jest --config libs/telemetry/jest.config.ts --ci
+
+      - name: Unit tests (analytics lib)
+        run: pnpm exec jest --config libs/analytics/jest.config.ts --ci
