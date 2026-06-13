@@ -1,7 +1,17 @@
 import { Body, Controller, Get, Inject, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
-import { type AuthPrincipal, type OidcVerifier, OidcError, type SessionService, authenticateWithIdToken } from '@helix/auth';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { ADMIN, type AuthPrincipal, type OidcVerifier, OidcError, type SessionService, authenticateWithIdToken } from '@helix/auth';
 import { AuthGuard } from './auth.guard';
+import { RolesGuard } from './roles.guard';
+import { Roles } from './roles.decorator';
 import { Principal } from './principal.decorator';
 import { CreateSessionDto, SessionResponseDto, AuthPrincipalDto } from './dto/auth.dto';
 import { OIDC_VERIFIER, SESSION_SERVICE } from './auth.tokens';
@@ -37,5 +47,17 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Missing, invalid, or expired session' })
   me(@Principal() principal: AuthPrincipal): AuthPrincipal {
     return principal;
+  }
+
+  @Get('admin/ping')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin-only endpoint — demonstrates RBAC enforcement (HELIX-144)' })
+  @ApiOkResponse({ description: 'Caller holds the admin role (or higher)' })
+  @ApiUnauthorizedResponse({ description: 'Missing, invalid, or expired session' })
+  @ApiForbiddenResponse({ description: 'Authenticated but lacking the admin role' })
+  adminPing(@Principal() principal: AuthPrincipal): { ok: true; principal: AuthPrincipal } {
+    return { ok: true, principal };
   }
 }

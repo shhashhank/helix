@@ -4,6 +4,7 @@ import request from 'supertest';
 import { SessionService, StaticKeyOidcVerifier, signJwt } from '@helix/auth';
 import { AuthController } from '../auth.controller';
 import { AuthGuard } from '../auth.guard';
+import { RolesGuard } from '../roles.guard';
 import { OIDC_VERIFIER, SESSION_SERVICE } from '../auth.tokens';
 
 const IDP_SECRET = 'test-idp-secret';
@@ -25,6 +26,7 @@ describe('AuthController (sign-in + session)', () => {
         { provide: SESSION_SERVICE, useValue: sessions },
         { provide: OIDC_VERIFIER, useValue: new StaticKeyOidcVerifier({ secret: IDP_SECRET, issuer: ISSUER, audience: AUDIENCE }) },
         AuthGuard,
+        RolesGuard,
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -67,5 +69,30 @@ describe('AuthController (sign-in + session)', () => {
   it('GET /auth/me is 401 without a token and with a garbage token', async () => {
     await request(app.getHttpServer()).get('/auth/me').expect(401);
     await request(app.getHttpServer()).get('/auth/me').set('Authorization', 'Bearer not-a-real-token').expect(401);
+  });
+
+  describe('GET /auth/admin/ping (RBAC enforcement)', () => {
+    const ping = (roles: string[]) => {
+      const { token } = sessions.issue({ userId: 'u', roles });
+      return request(app.getHttpServer()).get('/auth/admin/ping').set('Authorization', `Bearer ${token}`);
+    };
+
+    it('allows an admin (200)', async () => {
+      const res = await ping(['admin']).expect(200);
+      expect(res.body).toEqual({ ok: true, principal: { userId: 'u', name: undefined, email: undefined, orgId: undefined, roles: ['admin'] } });
+    });
+
+    it('allows a higher role via the hierarchy — owner satisfies admin (200)', async () => {
+      await ping(['owner']).expect(200);
+    });
+
+    it('forbids a lesser role with 403', async () => {
+      await ping(['member']).expect(403);
+      await ping([]).expect(403);
+    });
+
+    it('is 401 without a session (AuthGuard runs first)', async () => {
+      await request(app.getHttpServer()).get('/auth/admin/ping').expect(401);
+    });
   });
 });

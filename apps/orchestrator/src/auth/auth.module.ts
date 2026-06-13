@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { SessionService, StaticKeyOidcVerifier } from '@helix/auth';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
+import { RolesGuard } from './roles.guard';
 import { OIDC_VERIFIER, SESSION_SERVICE } from './auth.tokens';
 
 // Dev-only fallbacks so the service runs locally without an IdP. In any real
@@ -39,7 +40,8 @@ const DEV_OIDC_AUDIENCE = 'helix';
         }),
     },
     AuthGuard,
+    RolesGuard,
   ],
-  exports: [SESSION_SERVICE, AuthGuard],
+  exports: [SESSION_SERVICE, AuthGuard, RolesGuard],
 })
 export class AuthModule {}
