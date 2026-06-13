@@ -2046,6 +2046,19 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   `createRoleExecutor(deps)`, `defaultBuildInput`, `mapResult`, and the `AgentRunner` seam. 9 tests
   (result mapping, input building + context flow, run wiring, role tools, missing-spec failure).
 
+#### HELIX-155 — Planning + Review role executors  ✅
+- **What it is:** the first two **real roles** wired onto the executor — **planning** (turn the request into
+  a plan) and **code review** (look over what was built). Both are "LLM-only": they think, they don't touch a
+  sandbox or external tools.
+- **Why it matters:** these prove the role pattern end to end on the generic executor — the only role-specific
+  part is **how the prompt is framed**: planning frames the submitted request as "produce a plan"; review
+  frames it as "review the prior steps' changes" and is fed those changes via the context flow. Registering
+  them is a one-liner (`registerLlmRoles`), and they run on their default specs (planning on `opus`, review on
+  `sonnet`). Still exercised with a scripted runner — no real LLM until the worker wiring (HELIX-158).
+- **Where it lives:** [pipeline-roles.ts](../libs/executor/src/lib/pipeline-roles.ts) in `@helix/executor` —
+  `planningExecutor` / `codeReviewExecutor`, `planningInput` / `reviewInput`, and `registerLlmRoles`; plus the
+  extracted `priorOutputsDigest` / `withPriorContext` helpers. 4 tests.
+
 ---
 
 ## Fixes & hardening
@@ -2192,6 +2205,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-152 | Executor — role-dispatch seam (`@helix/executor`) | ✅ | #115 |
 | HELIX-153 | Executor — AgentSpecResolver + default per-role specs | ✅ | #116 |
 | HELIX-154 | Executor — generic runAgent-backed role executor + context flow | ✅ | #117 |
+| HELIX-155 | Executor — planning + code_review role executors | ✅ | #118 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
