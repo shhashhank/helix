@@ -20,6 +20,7 @@ describe('GithubIntegrationController', () => {
       completeConnect: jest.fn(),
       status: jest.fn(),
       disconnect: jest.fn(),
+      verify: jest.fn(),
     } as unknown as jest.Mocked<GithubIntegrationService>;
     const moduleRef = await Test.createTestingModule({
       controllers: [GithubIntegrationController],
@@ -74,5 +75,13 @@ describe('GithubIntegrationController', () => {
     service.disconnect.mockResolvedValue({ disconnected: true });
     await request(app.getHttpServer()).delete('/integrations/github').set('Authorization', `Bearer ${token()}`).expect(200);
     expect(service.disconnect).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1' }));
+  });
+
+  it('POST /test health-checks the connection (HELIX-149)', async () => {
+    service.verify.mockResolvedValue({ ok: true, status: 'verified', installationId: '42', checkedAt: '2026-06-13T00:00:00.000Z' });
+    const res = await request(app.getHttpServer()).post('/integrations/github/test').set('Authorization', `Bearer ${token()}`).expect(200);
+    expect(res.body).toEqual({ ok: true, status: 'verified', installationId: '42', checkedAt: '2026-06-13T00:00:00.000Z' });
+    expect(service.verify).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1' }));
+    await request(app.getHttpServer()).post('/integrations/github/test').expect(401); // no session
   });
 });

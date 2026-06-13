@@ -4,20 +4,29 @@ import { EncryptedSecretStore, InMemorySecretRecordRepository, LocalKms } from '
 import type { AuthPrincipal } from '@helix/auth';
 import { GithubIntegrationService } from '../github-integration.service';
 import { InMemoryPendingInstallStore } from '../pending-install.store';
+import type { GithubConnectionVerifier } from '../github.verify';
 
 const principal = (over: Partial<AuthPrincipal> = {}): AuthPrincipal => ({ userId: 'u1', roles: [], orgId: 'acme', ...over });
 
 describe('GithubIntegrationService', () => {
   let repo: InMemorySecretRecordRepository;
   let pending: InMemoryPendingInstallStore;
+  let verifier: jest.Mocked<GithubConnectionVerifier>;
   let service: GithubIntegrationService;
 
   beforeEach(() => {
     repo = new InMemorySecretRecordRepository();
     const vault = new EncryptedSecretStore(new LocalKms(randomBytes(32)), repo);
     pending = new InMemoryPendingInstallStore();
-    service = new GithubIntegrationService(vault, pending, { appSlug: 'helix-test' });
+    verifier = { verify: jest.fn().mockResolvedValue({ ok: true, status: 'verified', tokenExpiresAtMs: 999 }) };
+    service = new GithubIntegrationService(vault, pending, { appSlug: 'helix-test' }, verifier);
   });
+
+  /** Connect helper: run the begin→complete dance for a principal. */
+  const connect = async (p: AuthPrincipal, installationId = '42') => {
+    const { state } = service.beginConnect(p);
+    return service.completeConnect(p, { installationId, state });
+  };
 
   it('beginConnect returns an install URL carrying the state', () => {
     const { installUrl, state } = service.beginConnect(principal());
@@ -72,5 +81,34 @@ describe('GithubIntegrationService', () => {
     expect(record).toBeDefined();
     expect(record!.ciphertext.toString('utf8')).not.toContain('super-secret-inst'); // ciphertext only
     expect((await service.status(principal())).installationId).toBe('super-secret-inst'); // but decrypts back
+  });
+
+  describe('verify (HELIX-149)', () => {
+    it('reports not_connected when the org has no connection (no verifier call)', async () => {
+      const result = await service.verify(principal());
+      expect(result).toEqual({ ok: false, status: 'not_connected', checkedAt: expect.any(String) });
+      expect(verifier.verify).not.toHaveBeenCalled();
+    });
+
+    it('delegates to the verifier for a connected org and stamps the result', async () => {
+      await connect(principal(), 'inst-7');
+      const result = await service.verify(principal());
+
+      expect(verifier.verify).toHaveBeenCalledWith('inst-7');
+      expect(result).toEqual({
+        ok: true,
+        status: 'verified',
+        tokenExpiresAtMs: 999,
+        installationId: 'inst-7',
+        checkedAt: expect.any(String),
+      });
+    });
+
+    it('surfaces a verifier failure as an error result', async () => {
+      await connect(principal(), 'inst-7');
+      verifier.verify.mockResolvedValue({ ok: false, status: 'error', error: 'token mint failed' });
+      const result = await service.verify(principal());
+      expect(result).toMatchObject({ ok: false, status: 'error', error: 'token mint failed', installationId: 'inst-7' });
+    });
   });
 });

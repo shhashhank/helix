@@ -1,11 +1,12 @@
-import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import type { AuthPrincipal } from '@helix/auth';
 import { AuthGuard } from '../auth/auth.guard';
 import { Principal } from '../auth/principal.decorator';
 import { GithubConnection, GithubConnectionStatus } from './github.model';
 import { GithubIntegrationService } from './github-integration.service';
-import { CompleteConnectDto, ConnectGithubResponseDto, GithubConnectionDto, GithubConnectionStatusDto } from './dto/github.dto';
+import { VerifyResult } from './github.verify';
+import { CompleteConnectDto, ConnectGithubResponseDto, GithubConnectionDto, GithubConnectionStatusDto, VerifyResultDto } from './dto/github.dto';
 
 /**
  * GitHub onboarding (HELIX-148): the org-scoped, auth-guarded connect flow. The
@@ -45,5 +46,13 @@ export class GithubIntegrationController {
   @ApiOkResponse({ schema: { properties: { disconnected: { type: 'boolean' } } } })
   disconnect(@Principal() principal: AuthPrincipal): Promise<{ disconnected: boolean }> {
     return this.service.disconnect(principal);
+  }
+
+  @Post('test')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Health-check the GitHub connection — verify access (HELIX-149)' })
+  @ApiOkResponse({ type: VerifyResultDto })
+  test(@Principal() principal: AuthPrincipal): Promise<VerifyResult> {
+    return this.service.verify(principal);
   }
 }

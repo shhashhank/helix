@@ -5,7 +5,8 @@ import { type SecretRef, type SecretsManager, SecretNotFoundError } from '@helix
 import { GithubAppConfig, installUrl } from './github.config';
 import { GithubConnection, GithubConnectionStatus } from './github.model';
 import { PendingInstallStore } from './pending-install.store';
-import { GITHUB_APP_CONFIG, PENDING_INSTALL_STORE, SECRETS_MANAGER } from './integration.tokens';
+import { GithubConnectionVerifier, VerifyResult } from './github.verify';
+import { GITHUB_APP_CONFIG, GITHUB_CONNECTION_VERIFIER, PENDING_INSTALL_STORE, SECRETS_MANAGER } from './integration.tokens';
 
 /** Vault key under which an org's GitHub connection is stored. */
 const CONNECTION_SECRET = 'github.connection';
@@ -30,6 +31,7 @@ export class GithubIntegrationService {
     @Inject(SECRETS_MANAGER) private readonly vault: SecretsManager,
     @Inject(PENDING_INSTALL_STORE) private readonly pending: PendingInstallStore,
     @Inject(GITHUB_APP_CONFIG) private readonly config: GithubAppConfig,
+    @Inject(GITHUB_CONNECTION_VERIFIER) private readonly verifier: GithubConnectionVerifier,
   ) {}
 
   /** Per-tenant vault scope (an org, or the user when there's no org). */
@@ -78,5 +80,20 @@ export class GithubIntegrationService {
   /** Disconnect — delete the org's stored GitHub credential. */
   async disconnect(principal: AuthPrincipal): Promise<{ disconnected: boolean }> {
     return { disconnected: await this.vault.deleteSecret(this.refFor(principal)) };
+  }
+
+  /**
+   * Health-check the org's GitHub connection (HELIX-149): confirm it's connected,
+   * then ask the verifier to prove access. Reports a status rather than throwing, so
+   * a UI can show "connect first" / "reconnect" plainly. Returns 200 either way.
+   */
+  async verify(principal: AuthPrincipal): Promise<VerifyResult> {
+    const checkedAt = new Date().toISOString();
+    const status = await this.status(principal);
+    if (!status.connected || !status.installationId) {
+      return { ok: false, status: 'not_connected', checkedAt };
+    }
+    const outcome = await this.verifier.verify(status.installationId);
+    return { ...outcome, installationId: status.installationId, checkedAt };
   }
 }
