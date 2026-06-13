@@ -31,7 +31,8 @@
       "@helix/approvals": ["libs/approvals/src/index.ts"],
       "@helix/notifications": ["libs/notifications/src/index.ts"],
       "@helix/audit": ["libs/audit/src/index.ts"],
-      "@helix/telemetry": ["libs/telemetry/src/index.ts"]
+      "@helix/telemetry": ["libs/telemetry/src/index.ts"],
+      "@helix/analytics": ["libs/analytics/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

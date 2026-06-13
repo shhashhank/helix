@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "module": "commonjs",
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "target": "es2021",
+    "moduleResolution": "node",
+    "strict": true
+  },
+  "include": ["src/**/*.spec.ts", "src/**/*.ts"]
+}

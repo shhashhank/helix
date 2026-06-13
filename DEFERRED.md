@@ -173,6 +173,23 @@ else it's tracked.
   audited for real (compliance), or the orchestrator runs multi-instance.
 - **Also tracked:** HELIX-135 PR "Out of scope".
 
+### 11. Live run-analytics data source
+- **Deferred from:** HELIX-140 (Run analytics aggregation) — in progress.
+- **What's deferred:** the **source of finished-run records** the analytics
+  aggregators run over — listing real runs (from Temporal's execution history
+  and/or a persisted runs table) and joining each run's cost from the token-usage
+  rollup, then exposing the rollups over HTTP for the dashboards.
+- **In place instead:** `@helix/analytics` — pure, source-agnostic aggregators
+  (`aggregateRuns` / `aggregateRunsBy` / `bucketRunsDaily`: success rate, latency
+  percentiles, cost) plus a `RunAnalyticsSource` seam and an
+  `InMemoryRunAnalyticsSource`. `runOutcomeFromStatus` already maps Temporal status
+  names → outcomes, so wiring is a thin adapter, not new math.
+- **To land:** implement `RunAnalyticsSource` over `client.workflow.list()` (map each
+  `WorkflowExecutionInfo` → `RunRecord`, cost via `TokenUsageRollupService.byRun`),
+  or over a runs table if/when runs are persisted; surface it on an orchestrator
+  endpoint. This is what the HELIX-141 dashboards consume.
+- **Trigger / sequencing:** HELIX-141 (Run & cost dashboards) — the consumer.
+
 ---
 
 ## Why we defer (the rule)

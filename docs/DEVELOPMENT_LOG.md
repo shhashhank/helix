@@ -1774,6 +1774,30 @@ Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), p
   inbound-continuation, the "span inherits the run trace id" end-to-end check, memo attach + readback, and
   the controller echo/continue behaviour). Closes the Telemetry Pipeline story.
 
+### Story: Run & Cost Dashboards (basic)  🛠️ in progress
+
+Turn the raw telemetry into **numbers people read**: aggregate runs into success/latency/cost rollups
+(HELIX-140), then put them on dashboards (HELIX-141).
+
+#### HELIX-140 — Run analytics aggregation  ✅
+- **What it is:** the **math that turns a pile of finished runs into a scorecard** — how many ran, what
+  fraction succeeded, how long they took (typical and worst-case), and what they cost. You can ask for the
+  whole picture, the picture **per workflow** (or any other grouping), or a **day-by-day** trend.
+- **Why it matters:** "is the platform healthy and what is it costing me?" is the first question an
+  operator asks, and it's the data a dashboard draws. Keeping it as **pure, source-agnostic** functions
+  means the same rollups work whether the runs come from Temporal's history, a future runs table, or a
+  test fixture — and they're trivial to unit-test exactly (no DB, no clock). The **cost** half reuses the
+  existing per-run cost rollup (HELIX-67); this adds the **success-rate and latency** half and stitches
+  cost in. Where the run records actually *come from* (listing real runs + joining their cost) is the one
+  swappable seam, deferred to the dashboards work — see [../DEFERRED.md](../DEFERRED.md) #11.
+- **Where it lives:** the new [../libs/analytics](../libs/analytics) library (`@helix/analytics`) —
+  [analytics.ts](../libs/analytics/src/lib/analytics.ts): `aggregateRuns`, `aggregateRunsBy` (grouping),
+  `bucketRunsDaily` (UTC daily series), latency `percentile`s and a `RunRecord` model, plus
+  `runOutcomeFromStatus` (maps Temporal status names → outcomes, excluding still-running ones) and a
+  `RunAnalyticsSource` seam with an `InMemoryRunAnalyticsSource`. Wired into `tsconfig.base` + CI
+  (typecheck + jest). 15 tests (percentile edge cases, latency/cost rollups, grouping, daily buckets,
+  the status mapping, and the in-memory source's filtering).
+
 ---
 
 ## Fixes & hardening
@@ -1907,6 +1931,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-137 | Telemetry — OTel service bootstrap (tracer + exporter seam) | ✅ | #101 |
 | HELIX-138 | Telemetry — OTLP exporter + Tempo/Prometheus/Grafana stack | ✅ | #102 |
 | HELIX-139 | Telemetry — correlation IDs end-to-end (W3C trace context) | ✅ | #103 |
+| HELIX-140 | Analytics — run success/latency/cost aggregation library | ✅ | #104 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
