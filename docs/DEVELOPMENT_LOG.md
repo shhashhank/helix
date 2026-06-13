@@ -2018,6 +2018,18 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   dispatches through it (behaviour preserved; real executors register in HELIX-155…158). Wired into
   `tsconfig.base` + CI; `ARCHITECTURE.md` updated. 8 tests.
 
+#### HELIX-153 — AgentSpecResolver + default per-role specs  ✅
+- **What it is:** the **job description** each role's agent gets — its system prompt and which model tier to
+  use. A small lookup: given a role (`coding`, `planning`, …), hand back the spec the agent loop runs with.
+- **Why it matters:** the executor (next sub-task) needs to know *how* to run each role, and **where those
+  specs come from is a seam**: built-in defaults ship now, and a registry-backed resolver (pulling the
+  org's customised agent definitions from the registry API) drops in later **without touching any executor**.
+  The defaults cover the five standard pipeline roles, each with a sensible prompt + tier (planning/coding on
+  `opus`, the rest on `sonnet`). `AgentSpec` is imported **type-only**, so the lib stays
+  runtime-dependency-free.
+- **Where it lives:** [agent-spec.ts](../libs/executor/src/lib/agent-spec.ts) in `@helix/executor` —
+  the `AgentSpecResolver` interface, `DefaultAgentSpecResolver`, and `DEFAULT_AGENT_SPECS`. 5 tests.
+
 ---
 
 ## Fixes & hardening
@@ -2162,6 +2174,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-148 | GitHub onboarding — App connect flow, vault-stored credential | ✅ | #112 |
 | HELIX-149 | GitHub onboarding — connection health check (verify seam) | ✅ | #113 |
 | HELIX-152 | Executor — role-dispatch seam (`@helix/executor`) | ✅ | #115 |
+| HELIX-153 | Executor — AgentSpecResolver + default per-role specs | ✅ | #116 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
