@@ -1822,6 +1822,42 @@ Turn the raw telemetry into **numbers people read**: aggregate runs into success
 
 ---
 
+## Epic: SaaS Platform  🛠️ in progress
+
+The last epic — turn the engine into a product people can sign into and use: accounts and
+orgs (HELIX-47), a way to submit requests and watch runs (HELIX-48), and guided GitHub
+onboarding (HELIX-49).
+
+### Story: Auth, Orgs & RBAC  🛠️ in progress
+
+Secure sign-in and org-scoped access: OIDC/SSO login + sessions (HELIX-142), an org/tenant
+model with isolation (HELIX-143), and roles that are actually enforced (HELIX-144).
+
+#### HELIX-142 — Auth (OIDC/OAuth) + session  ✅
+- **What it is:** **signing in.** A user authenticates with an identity provider (the kind of
+  "Log in with…" you've seen everywhere — Auth0, Cognito), and Helix turns that into its own
+  **session** so the rest of the app knows who you are on every request. Two endpoints: one
+  trades the provider's token for a Helix session, one returns "who am I".
+- **Why it matters:** everything multi-user starts here — you can't scope data to an org or
+  enforce roles until you know *who is asking*. The design keeps the **identity provider as a
+  swappable seam**: locally (and in CI, which can't reach a real login service) a built-in
+  **stand-in** verifies tokens with a shared key, while the real provider check (the
+  industry-standard RS256-against-the-provider's-keys) is the **deferred binding**
+  ([../DEFERRED.md](../DEFERRED.md) #12) — a one-line swap, nothing else changes. Helix also
+  mints its **own** session rather than leaning on the provider for every request, so the app
+  keeps working even if the login service hiccups, and session length is ours to set.
+- **Where it lives:** the new [../libs/auth](../libs/auth) library (`@helix/auth`) — a
+  dependency-free HS256 [JWT impl](../libs/auth/src/lib/jwt.ts) (`node:crypto`), the
+  [OIDC verifier seam + stand-in](../libs/auth/src/lib/oidc.ts), and the
+  [SessionService](../libs/auth/src/lib/session.ts) that exchanges a verified ID token for a
+  Helix session. Wired into the orchestrator as [AuthModule](../apps/orchestrator/src/auth/auth.module.ts)
+  — `POST /api/auth/session` + guarded `GET /api/auth/me`, an
+  [AuthGuard](../apps/orchestrator/src/auth/auth.guard.ts) (Bearer session → request principal)
+  and a `@Principal()` decorator. Tenant isolation (HELIX-143) and role enforcement (HELIX-144)
+  build on the principal this produces. 20 tests; documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -1955,6 +1991,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-139 | Telemetry — correlation IDs end-to-end (W3C trace context) | ✅ | #103 |
 | HELIX-140 | Analytics — run success/latency/cost aggregation library | ✅ | #104 |
 | HELIX-141 | Dashboards — provisioned Grafana run/cost + pipeline boards | ✅ | #105 |
+| HELIX-142 | Auth — OIDC sign-in + Helix app sessions (`@helix/auth`) | ✅ | #106 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
