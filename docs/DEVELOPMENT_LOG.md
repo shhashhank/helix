@@ -1699,7 +1699,7 @@ a way to read and export it (HELIX-136).
 See what the platform is doing while it runs: one telemetry pipeline (logs, metrics, traces) across all
 the services and agents, and dashboards for runs and cost.
 
-### Story: Telemetry Pipeline (Logs/Metrics/Traces)  🛠️ in progress
+### Story: Telemetry Pipeline (Logs/Metrics/Traces)  ✅ done
 
 Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), point it at a real backend
 (HELIX-138), and carry one correlation id end-to-end (HELIX-139).
@@ -1748,6 +1748,31 @@ Stand up the plumbing: instrument the services with OpenTelemetry (HELIX-137), p
   [../observability/](../observability) folder (compose file + collector/Tempo/Prometheus/Grafana
   configs), documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §3. 8 lib tests (3 new: the otlp switch,
   endpoint-triggered selection, console-wins precedence).
+
+#### HELIX-139 — Correlation IDs end-to-end  ✅
+- **What it is:** giving every run **one shared id** that ties its telemetry together. When you start a
+  run, the orchestrator now mints (or continues) a standard **W3C trace id** and hands it back in the
+  response — `traceId` + `traceparent`, also echoed as a response header. That same id is attached to the
+  durable Temporal run and used as the parent for the orchestrator's own span, so the API call, the
+  workflow run, and (once the real agent executor is wired in) the per-run agent spans all line up under
+  **a single trace** you can paste into Grafana/Tempo.
+- **Why it matters:** observability only pays off if you can follow *one* request through *all* the moving
+  parts. Before this, a run id and a trace lived in different worlds; now `GET /api/runs/<id>` gives you
+  the trace id back and a trace id finds the run — so debugging a run is "copy the id, open Grafana." It
+  also makes the platform a **good distributed-trace citizen**: send your own `traceparent` and the run
+  *joins your upstream trace* instead of starting a fresh one, which is what lets a caller see Helix as
+  one hop inside their bigger picture.
+- **Where it lives:** the new [propagation.ts](../libs/telemetry/src/lib/propagation.ts) in `@helix/telemetry`
+  — `runCorrelation(incoming?)` (parse-or-mint), the W3C `traceparent` parse/format helpers, and an OTel
+  context builder (`contextWithCorrelation`) so a span started for a run inherits its trace id. The
+  orchestrator [run service](../apps/orchestrator/src/workflow-run/workflow-run.service.ts) attaches the
+  trace context to the Temporal start as a **memo** and wraps the dispatch in a span on that trace; the
+  [controller](../apps/orchestrator/src/workflow-run/workflow-run.controller.ts) reads/echoes the
+  `traceparent` header; the [temporal client](../libs/workflow/src/lib/temporal/client.ts) threads the
+  memo through start/retry and surfaces `traceId`/`traceparent` back from `describe()`. Documented in
+  [LOCAL_TESTING.md](LOCAL_TESTING.md) §3. 15 tests (10 new: parse/format round-trips, parse-or-mint and
+  inbound-continuation, the "span inherits the run trace id" end-to-end check, memo attach + readback, and
+  the controller echo/continue behaviour). Closes the Telemetry Pipeline story.
 
 ---
 
@@ -1881,6 +1906,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-136 | Audit — query + NDJSON/CSV export + verify API | ✅ | #100 |
 | HELIX-137 | Telemetry — OTel service bootstrap (tracer + exporter seam) | ✅ | #101 |
 | HELIX-138 | Telemetry — OTLP exporter + Tempo/Prometheus/Grafana stack | ✅ | #102 |
+| HELIX-139 | Telemetry — correlation IDs end-to-end (W3C trace context) | ✅ | #103 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

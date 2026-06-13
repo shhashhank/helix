@@ -1,10 +1,16 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, MessageEvent, Param, Post, Sse } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, HttpStatus, MessageEvent, Param, Post, Res, Sse } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { runCorrelation } from '@helix/telemetry';
 import { WorkflowDefinition } from '@helix/workflow';
 import { RunStatusDto, RetryRunDto, StartRunDto, StartedRunDto } from './dto/workflow-run.dto';
 import { WorkflowRunService } from './workflow-run.service';
+
+/** Minimal structural view of the HTTP response — avoids a hard dependency on express types. */
+interface HeaderResponse {
+  setHeader(name: string, value: string): void;
+}
 
 @ApiTags('workflow-runs')
 @Controller('runs')
@@ -14,8 +20,15 @@ export class WorkflowRunController {
   @Post()
   @ApiOperation({ summary: 'Start a workflow run' })
   @ApiCreatedResponse({ type: StartedRunDto })
-  start(@Body() body: StartRunDto): Promise<StartedRunDto> {
-    return this.service.start(body.workflow as unknown as WorkflowDefinition, body.workflowId);
+  async start(
+    @Body() body: StartRunDto,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<StartedRunDto> {
+    const correlation = runCorrelation(traceparent);
+    const run = await this.service.start(body.workflow as unknown as WorkflowDefinition, body.workflowId, correlation);
+    res.setHeader('traceparent', run.traceparent);
+    return run;
   }
 
   @Get(':id')
@@ -41,7 +54,15 @@ export class WorkflowRunController {
   @Post(':id/retry')
   @ApiOperation({ summary: 'Retry a failed run under the same id' })
   @ApiCreatedResponse({ type: StartedRunDto })
-  retry(@Param('id') id: string, @Body() body: RetryRunDto): Promise<StartedRunDto> {
-    return this.service.retry(id, body.workflow as unknown as WorkflowDefinition);
+  async retry(
+    @Param('id') id: string,
+    @Body() body: RetryRunDto,
+    @Headers('traceparent') traceparent: string | undefined,
+    @Res({ passthrough: true }) res: HeaderResponse,
+  ): Promise<StartedRunDto> {
+    const correlation = runCorrelation(traceparent);
+    const run = await this.service.retry(id, body.workflow as unknown as WorkflowDefinition, correlation);
+    res.setHeader('traceparent', run.traceparent);
+    return run;
   }
 }

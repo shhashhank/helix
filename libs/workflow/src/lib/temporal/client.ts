@@ -16,6 +16,13 @@ export interface StartWorkflowOptions {
   workflowId: string;
   /** Task queue to dispatch to. Defaults to {@link HELIX_TASK_QUEUE}. */
   taskQueue?: string;
+  /**
+   * Arbitrary run metadata durably attached to the Temporal run and returned by
+   * `describe()` (HELIX-139). The orchestrator stamps the run's W3C trace context
+   * here (`traceId` / `traceparent`) so a run id can be correlated back to its
+   * telemetry trace after the fact.
+   */
+  memo?: Record<string, unknown>;
 }
 
 /** A run's lifecycle status, mapped from Temporal's describe() (no Temporal types leak out). */
@@ -26,6 +33,10 @@ export interface RunStatus {
   status: string;
   startTime?: string;
   closeTime?: string;
+  /** W3C trace id correlating this run with its telemetry (from the run memo, HELIX-139). */
+  traceId?: string;
+  /** The run's `traceparent` header value, if recorded at start. */
+  traceparent?: string;
 }
 
 /** Start a durable workflow run and return its handle (does not wait for completion). */
@@ -38,6 +49,7 @@ export function startWorkflowRun(
     args: [def],
     taskQueue: opts.taskQueue ?? HELIX_TASK_QUEUE,
     workflowId: opts.workflowId,
+    memo: opts.memo,
   });
 }
 
@@ -54,12 +66,15 @@ export async function executeWorkflowRun(
 /** Look up a run's current lifecycle status. */
 export async function describeWorkflowRun(client: Client, workflowId: string): Promise<RunStatus> {
   const d = await client.workflow.getHandle(workflowId).describe();
+  const memo = d.memo ?? {};
   return {
     workflowId: d.workflowId,
     runId: d.runId,
     status: d.status.name,
     startTime: d.startTime?.toISOString(),
     closeTime: d.closeTime?.toISOString(),
+    ...(typeof memo.traceId === 'string' ? { traceId: memo.traceId } : {}),
+    ...(typeof memo.traceparent === 'string' ? { traceparent: memo.traceparent } : {}),
   };
 }
 
@@ -90,6 +105,7 @@ export function retryWorkflowRun(
     args: [def],
     taskQueue: opts.taskQueue ?? HELIX_TASK_QUEUE,
     workflowId: opts.workflowId,
+    memo: opts.memo,
     workflowIdReusePolicy: WorkflowIdReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY,
   });
 }

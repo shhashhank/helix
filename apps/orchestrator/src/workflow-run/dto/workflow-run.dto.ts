@@ -22,6 +22,10 @@ export class RetryRunDto {
 export class StartedRunDto {
   @ApiProperty() workflowId!: string;
   @ApiProperty() runId!: string;
+  @ApiProperty({ description: 'W3C trace id for this run — paste into Grafana/Tempo to find its trace' })
+  traceId!: string;
+  @ApiProperty({ description: 'W3C traceparent for this run (also returned as a response header)' })
+  traceparent!: string;
 }
 
 /** A run's lifecycle status. */
@@ -32,4 +36,8 @@ export class RunStatusDto {
   status!: string;
   @ApiPropertyOptional() startTime?: string;
   @ApiPropertyOptional() closeTime?: string;
+  @ApiPropertyOptional({ description: 'W3C trace id correlating this run with its telemetry' })
+  traceId?: string;
+  @ApiPropertyOptional({ description: "The run's W3C traceparent, if recorded at start" })
+  traceparent?: string;
 }

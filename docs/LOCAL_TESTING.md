@@ -126,6 +126,24 @@ datasource → search by `service.name` (`registry` / `orchestrator`) to browse 
 the **Prometheus** datasource has the collector-side metrics. Tear down with
 `docker compose -f observability/docker-compose.yml down`.
 
+### Correlate a run to its trace (HELIX-139)
+
+`POST /api/runs` now returns a `traceId` and `traceparent`, and echoes the `traceparent`
+as a response header — so you can jump straight from a run to its trace:
+
+```bash
+curl -si -X POST localhost:3100/api/runs -H 'Content-Type: application/json' -d '{ "workflow": {
+  "name": "demo", "steps": [{ "id": "plan", "agentRole": "planning" }], "edges": [] } }'
+# → response header  traceparent: 00-<traceId>-<spanId>-01
+# → body            { "workflowId": "run-…", "runId": "…", "traceId": "<traceId>", "traceparent": "…" }
+```
+
+Paste that `traceId` into Grafana → Explore → Tempo (**Search by Trace ID**) to see the run's
+trace. The same id is durably attached to the Temporal run (as a memo) and comes back on
+`GET /api/runs/<workflowId>`, so a run id always maps back to its trace. Send your own
+`traceparent` request header to make the run **join an upstream trace** (the orchestrator
+continues that trace id rather than minting a new one).
+
 ---
 
 ## 4. What's only proven by tests (not yet a manual flow)

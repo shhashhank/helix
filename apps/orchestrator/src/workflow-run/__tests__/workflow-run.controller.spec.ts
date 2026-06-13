@@ -36,14 +36,39 @@ describe('WorkflowRunController', () => {
     await app.close();
   });
 
-  it('POST /runs starts a run', async () => {
-    service.start.mockResolvedValue({ workflowId: 'run-1', runId: 'rid-1' });
+  const startedRun = {
+    workflowId: 'run-1',
+    runId: 'rid-1',
+    traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+  };
+
+  it('POST /runs starts a run and returns + echoes the run trace context', async () => {
+    service.start.mockResolvedValue(startedRun);
     const res = await request(app.getHttpServer())
       .post('/runs')
       .send({ workflow, workflowId: 'run-1' })
       .expect(201);
-    expect(res.body).toEqual({ workflowId: 'run-1', runId: 'rid-1' });
-    expect(service.start).toHaveBeenCalledWith(workflow, 'run-1');
+    expect(res.body).toEqual(startedRun);
+    expect(res.headers.traceparent).toBe(startedRun.traceparent);
+    expect(service.start).toHaveBeenCalledWith(
+      workflow,
+      'run-1',
+      expect.objectContaining({ traceId: expect.any(String), traceparent: expect.any(String) }),
+    );
+  });
+
+  it('POST /runs continues an inbound traceparent (same trace id)', async () => {
+    service.start.mockResolvedValue(startedRun);
+    const inbound = '00-4bf92f3577b34da6a3ce929d0e0e4736-aaaaaaaaaaaaaaaa-01';
+    await request(app.getHttpServer())
+      .post('/runs')
+      .set('traceparent', inbound)
+      .send({ workflow })
+      .expect(201);
+    const correlation = service.start.mock.calls[0][2];
+    expect(correlation?.traceId).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+    expect(correlation?.spanId).not.toBe('aaaaaaaaaaaaaaaa'); // our own root span
   });
 
   it('GET /runs/:id returns the status', async () => {
@@ -59,14 +84,19 @@ describe('WorkflowRunController', () => {
     expect(service.cancel).toHaveBeenCalledWith('run-1');
   });
 
-  it('POST /runs/:id/retry retries the run', async () => {
-    service.retry.mockResolvedValue({ workflowId: 'run-1', runId: 'rid-2' });
+  it('POST /runs/:id/retry retries the run with a fresh run trace context', async () => {
+    service.retry.mockResolvedValue({ ...startedRun, runId: 'rid-2' });
     const res = await request(app.getHttpServer())
       .post('/runs/run-1/retry')
       .send({ workflow })
       .expect(201);
-    expect(res.body).toEqual({ workflowId: 'run-1', runId: 'rid-2' });
-    expect(service.retry).toHaveBeenCalledWith('run-1', workflow);
+    expect(res.body).toEqual({ ...startedRun, runId: 'rid-2' });
+    expect(res.headers.traceparent).toBe(startedRun.traceparent);
+    expect(service.retry).toHaveBeenCalledWith(
+      'run-1',
+      workflow,
+      expect.objectContaining({ traceId: expect.any(String), traceparent: expect.any(String) }),
+    );
   });
 
   it('GET /runs/:id/stream maps progress snapshots to SSE message events', async () => {
