@@ -1,0 +1,16 @@
+# Grafana dashboard provisioning (HELIX-141): load every dashboard JSON under
+# ./dashboards into a "Helix" folder when the stack starts, so the dashboards are
+# there the moment Grafana is up — no manual import.
+apiVersion: 1
+
+providers:
+  - name: Helix
+    orgId: 1
+    folder: Helix
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
