@@ -2072,6 +2072,17 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   `workspaceRoleExecutor`, the `WorkspaceProvider` / `WorkspaceTools` seams, `codingExecutor` /
   `testingExecutor`, and `registerWorkspaceRoles`. 6 tests.
 
+#### HELIX-157 — Deployment role executor  ✅
+- **What it is:** the **ship it** role — build the artifact, deploy the demo stack, hand back the **live URL**.
+- **Why it matters:** deployment is the odd one out — it isn't an LLM loop, it's a **deterministic
+  build → deploy → URL** (matching how the Deployment Agent was built: pure synthesis + a runner-backed
+  command seam). So it runs through an injected **`DeploymentRunner`** rather than `runAgent`; the real
+  build / ECR / CDK execution against AWS is the deferred binding, wired at the worker. On success the step's
+  output is `{ liveUrl, environment }` — exactly the shape the **artifact views (HELIX-147)** read, so the
+  deployed URL shows up there once a real run produces it.
+- **Where it lives:** [deployment-role.ts](../libs/executor/src/lib/deployment-role.ts) in `@helix/executor` —
+  `deploymentExecutor`, the `DeploymentRunner` seam, and `registerDeploymentRole`. 4 tests.
+
 ---
 
 ## Fixes & hardening
@@ -2220,6 +2231,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-154 | Executor — generic runAgent-backed role executor + context flow | ✅ | #117 |
 | HELIX-155 | Executor — planning + code_review role executors | ✅ | #118 |
 | HELIX-156 | Executor — coding + testing role executors (sandbox) | ✅ | #119 |
+| HELIX-157 | Executor — deployment role executor (build/deploy seam) | ✅ | #120 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
