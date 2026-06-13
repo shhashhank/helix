@@ -103,6 +103,32 @@ Other things to try:
 - **Cancel / retry:** `POST /api/runs/<id>/cancel`; `POST /api/runs/<id>/retry` (with the workflow body) re-runs a failed run.
 - **Temporal Web UI** (http://localhost:8233) shows the same run, its history, and per-activity detail.
 
+### Sign in & sessions (HELIX-142)
+
+The orchestrator exposes OIDC sign-in + app sessions. Locally there's no real IdP, so a
+**static HS256 verifier** stands in for Auth0/Cognito (the real RS256/JWKS verifier is a
+deferred binding). Mint a stand-in ID token with the dev secrets, exchange it for a Helix
+session, then call a protected route:
+
+```bash
+# Mint a stand-in OIDC ID token (what a real IdP would return), then exchange it.
+ID_TOKEN=$(node -e '
+  const { signJwt } = require("./dist/libs/auth"); // or use @helix/auth in-repo
+  console.log(signJwt({ iss:"https://dev-idp.helix.local/", aud:"helix",
+    sub:"user-1", email:"a@b.com", org:"acme", roles:["member"] },
+    "dev-insecure-oidc-secret", { expiresInSeconds: 300 }));')
+
+TOKEN=$(curl -s -X POST localhost:3100/api/auth/session -H 'Content-Type: application/json' \
+  -d "{\"idToken\":\"$ID_TOKEN\"}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+
+curl -s localhost:3100/api/auth/me -H "Authorization: Bearer $TOKEN"   # → the principal
+curl -s localhost:3100/api/auth/me                                      # → 401 (no session)
+```
+
+Override the dev secrets in real use with `AUTH_OIDC_SECRET` / `AUTH_OIDC_ISSUER` /
+`AUTH_OIDC_AUDIENCE` / `AUTH_SESSION_SECRET`. Org-scoped isolation and role enforcement
+ride on the returned principal and arrive in HELIX-143 / HELIX-144.
+
 ---
 
 ## 3. Observability stack (traces in Grafana)

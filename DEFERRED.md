@@ -196,6 +196,25 @@ else it's tracked.
 - **Trigger / sequencing:** HELIX-141 (the dashboards) is done and ships the contract;
   this is the producer that fills it.
 
+### 12. Real OIDC provider (Auth0 / Cognito) verification
+- **Deferred from:** HELIX-142 (Auth + session) — in progress.
+- **What's deferred:** verifying ID tokens against a **real hosted IdP** — OIDC
+  discovery + the provider's rotating **JWKS** with **RS256** signatures (Auth0,
+  Cognito, …), and the browser-facing OAuth redirect/PKCE login itself.
+- **In place instead:** `@helix/auth` — an `OidcVerifier` seam with a
+  `StaticKeyOidcVerifier` (symmetric **HS256** stand-in that checks signature +
+  `iss`/`aud`/`exp`), a dependency-free HS256 JWT impl (`node:crypto`), and a
+  `SessionService` that exchanges a verified ID token for a Helix app session. The
+  orchestrator wires it as `AuthModule` + `/auth/session` + guarded `/auth/me`.
+- **To land:** implement an `OidcVerifier` that fetches the issuer's JWKS and
+  verifies RS256 (e.g. with `jose`), wired by env (`AUTH_OIDC_ISSUER` /
+  `AUTH_OIDC_AUDIENCE`, JWKS from discovery) — a one-line provider swap in
+  `AuthModule`, nothing downstream changes. Real signing secrets come from the
+  vault (#2), not the dev fallbacks. Tenant isolation (HELIX-143) and RBAC
+  enforcement (HELIX-144) build on the `AuthPrincipal` this produces.
+- **Trigger / sequencing:** when sign-in must work against a real IdP / in a
+  deployed environment.
+
 ---
 
 ## Why we defer (the rule)
