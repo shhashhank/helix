@@ -41,15 +41,41 @@ const progress = (over: Partial<WorkflowProgress> = {}): WorkflowProgress => ({
 });
 
 describe('WorkflowRunService', () => {
-  it('start validates, dispatches executeWorkflow, and returns the ids', async () => {
+  it('start validates, dispatches executeWorkflow, and returns the ids + trace context', async () => {
     const { client, start } = mockClient();
     const r = await new WorkflowRunService(client).start(validDef, 'run-1');
 
-    expect(r).toEqual({ workflowId: 'run-1', runId: 'rid-1' });
+    expect(r).toEqual(
+      expect.objectContaining({
+        workflowId: 'run-1',
+        runId: 'rid-1',
+        traceId: expect.stringMatching(/^[0-9a-f]{32}$/),
+        traceparent: expect.stringMatching(/^00-/),
+      }),
+    );
     expect(start).toHaveBeenCalledWith(
       'executeWorkflow',
       expect.objectContaining({ workflowId: 'run-1', taskQueue: 'helix-workflows', args: [validDef] }),
     );
+  });
+
+  it('attaches the run correlation as a Temporal memo and returns its trace id', async () => {
+    const { client, start } = mockClient();
+    const correlation = {
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+      spanId: '00f067aa0ba902b7',
+      sampled: true,
+      traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+    };
+    const r = await new WorkflowRunService(client).start(validDef, 'run-1', correlation);
+
+    expect(r.traceId).toBe(correlation.traceId);
+    expect(r.traceparent).toBe(correlation.traceparent);
+    expect(start.mock.calls[0][1].memo).toEqual({
+      traceId: correlation.traceId,
+      traceparent: correlation.traceparent,
+      spanId: correlation.spanId,
+    });
   });
 
   it('auto-generates a workflowId when omitted', async () => {
@@ -77,6 +103,24 @@ describe('WorkflowRunService', () => {
       startTime: '2026-01-01T00:00:00.000Z',
       closeTime: undefined,
     });
+  });
+
+  it('get surfaces the run trace id/traceparent recorded in the memo', async () => {
+    const { client, handle } = mockClient();
+    handle.describe.mockResolvedValue({
+      workflowId: 'run-1',
+      runId: 'rid-1',
+      status: { name: 'RUNNING', code: 1 },
+      startTime: new Date('2026-01-01T00:00:00Z'),
+      closeTime: undefined,
+      memo: {
+        traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+        traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+      },
+    });
+    const r = await new WorkflowRunService(client).get('run-1');
+    expect(r.traceId).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+    expect(r.traceparent).toBe('00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01');
   });
 
   it('cancel requests cancellation on the handle', async () => {

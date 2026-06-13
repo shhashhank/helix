@@ -17,5 +17,6 @@ export default {
     '^@helix/approvals$': '<rootDir>/../../libs/approvals/src/index.ts',
     '^@helix/notifications$': '<rootDir>/../../libs/notifications/src/index.ts',
     '^@helix/audit$': '<rootDir>/../../libs/audit/src/index.ts',
+    '^@helix/telemetry$': '<rootDir>/../../libs/telemetry/src/index.ts',
   },
 };
