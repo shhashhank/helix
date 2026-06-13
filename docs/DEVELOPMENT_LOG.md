@@ -1994,6 +1994,32 @@ then confirm the connection actually works (HELIX-149).
 
 ---
 
+## Epic: Agent Executor  🛠️ in progress
+
+Forward scope after the MVP backlog: replace the worker's **stub** step executor with one that runs the
+real per-role agents, turning simulated runs into real planning → coding → review → testing → deployment.
+Built seam-first (a scripted LLM keeps it CI-testable; the real one runs locally behind an env key). Full
+plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
+
+### Story: Agent executor runtime  🛠️ in progress
+
+#### HELIX-152 — Executor dispatch seam  ✅
+- **What it is:** the **switchboard** a run uses to pick the right agent for each step. A step says "I'm a
+  `coding` step"; the dispatcher routes it to whatever executor is registered for `coding`.
+- **Why it matters:** it's the clean plug-point the real agents slot into one at a time, without touching the
+  workflow engine. Until an agent is wired, an unknown role falls back to a **simulated** executor (the dev
+  worker's old stub, now just a registered executor) so runs still progress; with no fallback, an unknown
+  role is a tidy **business failure** (returned, not thrown) so the run fails visibly instead of crashing.
+  The lib is deliberately **dependency-free** (its own minimal step/result shapes) so the workflow engine can
+  use it with no circular dependency.
+- **Where it lives:** the new [../libs/executor](../libs/executor) library (`@helix/executor`) —
+  [executor.ts](../libs/executor/src/lib/executor.ts): `RoleDispatcher` (register by `agentRole`, dispatch,
+  optional fallback) + `simulatedStepExecutor`. The [dev worker](../libs/workflow/src/dev-worker.ts) now
+  dispatches through it (behaviour preserved; real executors register in HELIX-155…158). Wired into
+  `tsconfig.base` + CI; `ARCHITECTURE.md` updated. 8 tests.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -2135,6 +2161,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-147 | Artifact views — PR/tests/deploy from run step outputs | ✅ | #111 |
 | HELIX-148 | GitHub onboarding — App connect flow, vault-stored credential | ✅ | #112 |
 | HELIX-149 | GitHub onboarding — connection health check (verify seam) | ✅ | #113 |
+| HELIX-152 | Executor — role-dispatch seam (`@helix/executor`) | ✅ | #115 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

@@ -50,6 +50,7 @@ flowchart TB
     an["@helix/analytics<br/>Run analytics rollups<br/>success rate · latency p50/p95/p99 · cost<br/>grouping · daily buckets · source seam"]
     au["@helix/auth<br/>OIDC sign-in + app sessions<br/>HS256 JWT · OidcVerifier seam · SessionService<br/>AuthPrincipal · Auth0/Cognito stand-in<br/>RBAC roles + rank hierarchy · authorize"]
     tn["@helix/tenancy<br/>Row-level tenant isolation<br/>TenantScope · scopedWhere · assertTenant<br/>org-scoped data access"]
+    ex["@helix/executor<br/>Agent executor dispatch seam<br/>RoleDispatcher · StepExecutor by agentRole<br/>simulated executor · real per-role agents (HELIX-150)"]
   end
 
   subgraph dat["Data & external"]
@@ -202,6 +203,7 @@ resumes it. Idempotency keys ensure a retried step doesn't repeat side effects.
 | Run analytics | [libs/analytics](../libs/analytics) (`@helix/analytics`) |
 | Auth & sessions | [libs/auth](../libs/auth) (`@helix/auth`) |
 | Tenant isolation | [libs/tenancy](../libs/tenancy) (`@helix/tenancy`) |
+| Agent executor (dispatch) | [libs/executor](../libs/executor) (`@helix/executor`) |
 | Registry service | [apps/registry](../apps/registry) |
 | Orchestrator service | [apps/orchestrator](../apps/orchestrator) |
 | Local worker (dev) | [libs/workflow/src/dev-worker.ts](../libs/workflow/src/dev-worker.ts) |
