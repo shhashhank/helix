@@ -27,3 +27,13 @@ export class GithubConnectionStatusDto {
   @ApiPropertyOptional() accountLogin?: string;
   @ApiPropertyOptional() connectedAt?: string;
 }
+
+/** Result of a connection health check (HELIX-149). */
+export class VerifyResultDto {
+  @ApiProperty() ok!: boolean;
+  @ApiProperty({ enum: ['verified', 'not_connected', 'not_configured', 'error'] }) status!: string;
+  @ApiPropertyOptional() installationId?: string;
+  @ApiProperty() checkedAt!: string;
+  @ApiPropertyOptional({ description: 'Token expiry (epoch ms) when access was verified' }) tokenExpiresAtMs?: number;
+  @ApiPropertyOptional() error?: string;
+}

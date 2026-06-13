@@ -233,23 +233,24 @@ else it's tracked.
 - **Trigger / sequencing:** HELIX-146 / HELIX-147 (the dashboard + artifact views)
   consume this API; the UI push delivers the screens.
 
-### 14. GitHub onboarding — real install verification & connect wizard
-- **Deferred from:** HELIX-148 (Integration connect wizard) — in progress.
-- **What's deferred:** the rendered **connect wizard** (API-first), and confirming a
-  connection against **real GitHub** — fetching the installation's account, listing
-  repos, minting an installation token from the App key. Those are network hops the
-  GitHub client (#1) and the real KMS-backed vault (#2) cover.
-- **In place instead:** `POST/GET/DELETE /api/integrations/github*` — an org-scoped,
-  auth-guarded connect flow (install URL → single-use, tenant-bound `state` →
-  callback) that stores the connection **encrypted in the vault** (`@helix/secrets`,
-  `EncryptedSecretStore` + `LocalKms`, in-memory record repo). The `@helix/github-mcp`
-  App-token machinery (`GitHubAppTokenProvider`) is ready to mint tokens once wired.
-- **To land:** on callback, use the App credentials to fetch the installation's
-  account/repos (GitHub client #1); back the secret repo with a DB / AWS Secrets
-  Manager (#2); build the wizard UI. **HELIX-149** adds the connection health check
-  (verify access) on top.
-- **Trigger / sequencing:** HELIX-149 verifies the connection; the UI push + the live
-  GitHub/AWS bindings make it real.
+### 14. GitHub onboarding — live token mint & connect wizard
+- **Deferred from:** HELIX-148 (connect flow) / HELIX-149 (connection health check).
+- **What's deferred:** the rendered **connect wizard** (API-first), and the one live
+  step of the health check — **minting an installation token from the App key and
+  reaching GitHub** to confirm access (and fetching the installation's account/repos).
+  Those are network hops the GitHub client (#1) and the real KMS-backed vault (#2) cover.
+- **In place instead:** the full connect API (`POST/GET/DELETE /api/integrations/github*`,
+  + `POST /test`), org-scoped + auth-guarded, storing the connection **encrypted in the
+  vault** (`@helix/secrets`). The health check (HELIX-149) is a `GithubConnectionVerifier`
+  **seam**: it reports `not_connected` / `not_configured` / `verified` / `error`, with
+  `UnconfiguredGithubVerifier` the honest default until an App is wired. `@helix/github-mcp`'s
+  `GitHubAppTokenProvider` is ready to back the real verifier.
+- **To land:** implement a `GithubConnectionVerifier` over `GitHubAppTokenProvider`
+  (mint a token for the installation → `verified`), wired from the App credentials; on
+  callback, fetch the installation's account/repos (GitHub client #1); back the secret
+  repo with a DB / AWS Secrets Manager (#2); build the wizard UI.
+- **Trigger / sequencing:** when sign-in/onboarding must work against real GitHub in a
+  deployed environment; the UI push delivers the wizard screen.
 
 ---
 

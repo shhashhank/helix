@@ -5,7 +5,8 @@ import { AuthModule } from '../auth/auth.module';
 import { GithubIntegrationController } from './github-integration.controller';
 import { GithubIntegrationService } from './github-integration.service';
 import { InMemoryPendingInstallStore } from './pending-install.store';
-import { GITHUB_APP_CONFIG, PENDING_INSTALL_STORE, SECRETS_MANAGER } from './integration.tokens';
+import { UnconfiguredGithubVerifier } from './github.verify';
+import { GITHUB_APP_CONFIG, GITHUB_CONNECTION_VERIFIER, PENDING_INSTALL_STORE, SECRETS_MANAGER } from './integration.tokens';
 
 /** A 32-byte AES master key for the local KMS, from config or an ephemeral dev key. */
 function localKms(): LocalKms {
@@ -28,6 +29,9 @@ function localKms(): LocalKms {
     { provide: PENDING_INSTALL_STORE, useClass: InMemoryPendingInstallStore },
     { provide: GITHUB_APP_CONFIG, useFactory: () => ({ appSlug: process.env.GITHUB_APP_SLUG ?? 'helix-dev' }) },
     { provide: SECRETS_MANAGER, useFactory: () => new EncryptedSecretStore(localKms(), new InMemorySecretRecordRepository()) },
+    // Live access verification (token mint against the real GitHub API) is the deferred
+    // binding (#14) — until an App is wired, the health check honestly reports not_configured.
+    { provide: GITHUB_CONNECTION_VERIFIER, useClass: UnconfiguredGithubVerifier },
   ],
 })
 export class IntegrationModule {}

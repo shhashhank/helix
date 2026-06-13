@@ -177,11 +177,14 @@ curl -s -X POST localhost:3100/api/integrations/github/callback -H "Authorizatio
   -H 'Content-Type: application/json' -d '{ "installationId": "12345678", "state": "<state from step 1>" }'
 
 curl -s localhost:3100/api/integrations/github -H "Authorization: Bearer $TOKEN"           # status: connected?
+curl -s -X POST localhost:3100/api/integrations/github/test -H "Authorization: Bearer $TOKEN"  # health-check (HELIX-149)
 curl -s -X DELETE localhost:3100/api/integrations/github -H "Authorization: Bearer $TOKEN"  # disconnect
 ```
 
-The `state` is single-use and tenant-bound (a callback for another org's state is **400**). Verifying the
-install actually works against GitHub is **HELIX-149**; minting tokens against the real GitHub API is deferred.
+The `state` is single-use and tenant-bound (a callback for another org's state is **400**). The **health
+check** (`/test`) reports a status: `not_connected` (connect first), `verified` (access confirmed), or
+`not_configured` — locally there's no GitHub App, so it honestly returns `not_configured`. Actually minting
+a token against the real GitHub API (the `verified` path) is the deferred binding (DEFERRED.md #14).
 
 ---
 

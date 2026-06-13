@@ -1822,7 +1822,7 @@ Turn the raw telemetry into **numbers people read**: aggregate runs into success
 
 ---
 
-## Epic: SaaS Platform  🛠️ in progress
+## Epic: SaaS Platform  ✅ done
 
 The last epic — turn the engine into a product people can sign into and use: accounts and
 orgs (HELIX-47), a way to submit requests and watch runs (HELIX-48), and guided GitHub
@@ -1953,7 +1953,7 @@ build the endpoints now, defer the rendered screens to a UI push (same call as t
   `WorkflowRunService.progress()`. 8 new tests (6 extractor + service + controller). **Closes the Request
   Submission & Run Dashboard story.**
 
-### Story: Onboarding & GitHub Integration Setup  🛠️ in progress
+### Story: Onboarding & GitHub Integration Setup  ✅ done
 
 A new org gets set up: connect GitHub via the App install flow with credentials kept safe (HELIX-148),
 then confirm the connection actually works (HELIX-149).
@@ -1975,6 +1975,22 @@ then confirm the connection actually works (HELIX-149).
   **first time the vault is wired into a running service**. 10 tests (encryption-at-rest, tenant isolation,
   single-use/tenant-bound state, disconnect, controller auth). Documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
   HELIX-149 (verify access) builds on this.
+
+#### HELIX-149 — Connection health check  ✅
+- **What it is:** a **"test connection"** button's backend — does the org's GitHub link still actually work?
+- **Why it matters:** a stored connection can silently go stale (the app uninstalled, access revoked), so
+  onboarding isn't done until you can *confirm* it. `POST /api/integrations/github/test` reports a plain
+  status: **not_connected** (connect first), **verified** (access confirmed), **not_configured**, or
+  **error** — friendly enough for a UI to act on, and it never throws. The actual "prove it" step — minting
+  an installation token against live GitHub — is a **swappable seam** (`GithubConnectionVerifier`); locally
+  there's no GitHub App so the honest default reports `not_configured`, and the real token-minting verifier
+  (wrapping `@helix/github-mcp`'s `GitHubAppTokenProvider`) is the deferred binding ([../DEFERRED.md](../DEFERRED.md) #14).
+  Kept the MCP SDK out of the orchestrator build by leaving the live verifier behind the seam.
+- **Where it lives:** [github.verify.ts](../apps/orchestrator/src/integration/github.verify.ts) (the verifier
+  seam + `UnconfiguredGithubVerifier`) and the integration service/controller `verify` / `POST /test`
+  (auth-guarded, tenant-scoped). 5 new tests (15 in the integration module). Documented in
+  [LOCAL_TESTING.md](LOCAL_TESTING.md) §2. **Closes the Onboarding & GitHub Integration story — and the
+  SaaS Platform epic.**
 
 ---
 
@@ -2118,6 +2134,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-146 | Run dashboard API — overview + per-run status + live SSE | ✅ | #110 |
 | HELIX-147 | Artifact views — PR/tests/deploy from run step outputs | ✅ | #111 |
 | HELIX-148 | GitHub onboarding — App connect flow, vault-stored credential | ✅ | #112 |
+| HELIX-149 | GitHub onboarding — connection health check (verify seam) | ✅ | #113 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
