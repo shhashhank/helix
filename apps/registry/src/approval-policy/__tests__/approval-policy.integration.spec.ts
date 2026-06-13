@@ -1,7 +1,9 @@
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { tenantScope } from '@helix/tenancy';
 import { ApprovalPolicyRepository } from '../approval-policy.repository';
 import { ApprovalPolicyService } from '../approval-policy.service';
 
@@ -65,7 +67,7 @@ describe('ApprovalPolicyService — integration (real Postgres via testcontainer
 
   it('update appends the next version and findLatest follows it', async () => {
     const v1 = await service.create({ orgId: null, document: policyDoc() });
-    const v2 = await service.update({ id: v1.id, document: policyDoc({ version: 99 }) });
+    const v2 = await service.update({ id: v1.id, scope: tenantScope(null), document: policyDoc({ version: 99 }) });
 
     expect(v2.version).toBe(2);
     const latest = await service.findLatest(null, 'default');
@@ -74,18 +76,31 @@ describe('ApprovalPolicyService — integration (real Postgres via testcontainer
 
   it('soft-delete hides the row from findLatest', async () => {
     const v1 = await service.create({ orgId: null, document: policyDoc() });
-    await service.softDelete(v1.id);
+    await service.softDelete(v1.id, tenantScope(null));
     await expect(service.findLatest(null, 'default')).rejects.toThrow(/no active approval policy/);
   });
 
   it('findAll returns the latest version per policy id by default', async () => {
     const a1 = await service.create({ orgId: null, document: policyDoc({ id: 'alpha' }) });
-    await service.update({ id: a1.id, document: policyDoc({ id: 'alpha' }) });
+    await service.update({ id: a1.id, scope: tenantScope(null), document: policyDoc({ id: 'alpha' }) });
     await service.create({ orgId: null, document: policyDoc({ id: 'beta' }) });
 
     const all = await service.findAll(null);
     expect(all).toHaveLength(2);
     const alpha = all.find((p) => p.policyId === 'alpha');
     expect(alpha?.version).toBe(2);
+  });
+
+  it('row-level isolation: a policy is invisible and unmodifiable from another tenant', async () => {
+    const orgA = tenantScope('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    const orgB = tenantScope('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    const row = await service.create({ orgId: orgA.orgId, document: policyDoc() });
+
+    expect((await service.findById(row.id, orgA)).id).toBe(row.id);
+    await expect(service.findById(row.id, orgB)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      service.update({ id: row.id, scope: orgB, document: policyDoc() }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.softDelete(row.id, orgB)).rejects.toBeInstanceOf(NotFoundException);
   });
 });

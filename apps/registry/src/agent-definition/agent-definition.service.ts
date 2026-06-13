@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { AgentDefinition, Prisma } from '@prisma/client';
+import type { TenantScope } from '@helix/tenancy';
 import { AgentDefinitionValidator } from '../validators/agent-definition.validator';
 import { AgentDefinitionRepository, FindAllOptions } from './agent-definition.repository';
 import {
@@ -26,9 +27,9 @@ export class AgentDefinitionService {
     return this.repo.create(buildRow({ orgId, payload, version: 1 }));
   }
 
-  async update({ id, payload }: UpdateAgentDefinitionInput): Promise<AgentDefinition> {
+  async update({ id, scope, payload }: UpdateAgentDefinitionInput): Promise<AgentDefinition> {
     this.validator.assertValid(payload);
-    const current = await this.repo.findById(id, true);
+    const current = await this.repo.findById(id, scope, true);
     if (!current) throw new NotFoundException(`agent definition ${id} not found`);
     if (current.role !== payload.role) {
       throw new ConflictException(
@@ -41,8 +42,8 @@ export class AgentDefinitionService {
     );
   }
 
-  async findById(id: string, includeDeleted = false): Promise<AgentDefinition> {
-    const row = await this.repo.findById(id, includeDeleted);
+  async findById(id: string, scope: TenantScope, includeDeleted = false): Promise<AgentDefinition> {
+    const row = await this.repo.findById(id, scope, includeDeleted);
     if (!row) throw new NotFoundException(`agent definition ${id} not found`);
     return row;
   }
@@ -61,7 +62,11 @@ export class AgentDefinitionService {
     return this.repo.findAll(orgId, opts);
   }
 
-  softDelete(id: string): Promise<AgentDefinition> {
+  async softDelete(id: string, scope: TenantScope): Promise<AgentDefinition> {
+    // Verify the row is in the caller's tenant before deleting — a cross-tenant id
+    // is a 404, not a silent delete of someone else's definition (HELIX-143).
+    const row = await this.repo.findById(id, scope, false);
+    if (!row) throw new NotFoundException(`agent definition ${id} not found`);
     return this.repo.softDelete(id);
   }
 }

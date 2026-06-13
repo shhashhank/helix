@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ApprovalPolicy, Prisma } from '@prisma/client';
+import { type TenantScope, scopedWhere } from '@helix/tenancy';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface FindAllOptions {
@@ -23,9 +24,10 @@ export class ApprovalPolicyRepository {
     return this.prisma.approvalPolicy.create({ data });
   }
 
-  findById(id: string, includeDeleted = false): Promise<ApprovalPolicy | null> {
+  /** Look up a row by id **within a tenant** — returns null for another org's row (HELIX-143). */
+  findById(id: string, scope: TenantScope, includeDeleted = false): Promise<ApprovalPolicy | null> {
     return this.prisma.approvalPolicy.findFirst({
-      where: { id, ...(includeDeleted ? {} : { deletedAt: null }) },
+      where: scopedWhere(scope, { id, ...(includeDeleted ? {} : { deletedAt: null }) }),
     });
   }
 

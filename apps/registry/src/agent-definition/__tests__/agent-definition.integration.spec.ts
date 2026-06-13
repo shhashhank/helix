@@ -1,7 +1,9 @@
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { tenantScope } from '@helix/tenancy';
 import { AgentDefinitionValidationError, AgentDefinitionValidator } from '../../validators/agent-definition.validator';
 import { AgentDefinitionRepository } from '../agent-definition.repository';
 import { AgentDefinitionService } from '../agent-definition.service';
@@ -65,12 +67,12 @@ describe('AgentDefinitionService — integration (real Postgres via testcontaine
 
   it('update bumps version, prior version remains queryable by id', async () => {
     const v1 = await service.create({ orgId: null, payload: validPayload() });
-    const v2 = await service.update({ id: v1.id, payload: validPayload({ name: 'Planning Agent v2' }) });
+    const v2 = await service.update({ id: v1.id, scope: tenantScope(null), payload: validPayload({ name: 'Planning Agent v2' }) });
 
     expect(v2.version).toBe(2);
     expect(v2.id).not.toBe(v1.id);
 
-    const fetchedV1 = await service.findById(v1.id);
+    const fetchedV1 = await service.findById(v1.id, tenantScope(null));
     expect(fetchedV1.version).toBe(1);
 
     const latest = await service.findLatest(null, 'planning');
@@ -79,9 +81,9 @@ describe('AgentDefinitionService — integration (real Postgres via testcontaine
 
   it('softDelete on latest version surfaces previous version as latest', async () => {
     const v1 = await service.create({ orgId: null, payload: validPayload() });
-    const v2 = await service.update({ id: v1.id, payload: validPayload() });
+    const v2 = await service.update({ id: v1.id, scope: tenantScope(null), payload: validPayload() });
 
-    await service.softDelete(v2.id);
+    await service.softDelete(v2.id, tenantScope(null));
 
     const latest = await service.findLatest(null, 'planning');
     expect(latest.id).toBe(v1.id);
@@ -108,5 +110,25 @@ describe('AgentDefinitionService — integration (real Postgres via testcontaine
     });
     expect(orgRow.version).toBe(1);
     expect(orgRow.orgId).toBe('33333333-3333-4333-8333-333333333333');
+  });
+
+  it('row-level isolation: a row is invisible and unmodifiable from another tenant', async () => {
+    const orgA = tenantScope('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    const orgB = tenantScope('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+    const row = await service.create({ orgId: orgA.orgId, payload: validPayload() });
+
+    // The owning tenant can read it; another tenant gets a 404 (not someone else's data).
+    expect((await service.findById(row.id, orgA)).id).toBe(row.id);
+    await expect(service.findById(row.id, orgB)).rejects.toBeInstanceOf(NotFoundException);
+
+    // Another tenant can neither version nor delete it.
+    await expect(
+      service.update({ id: row.id, scope: orgB, payload: validPayload({ name: 'hijack' }) }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.softDelete(row.id, orgB)).rejects.toBeInstanceOf(NotFoundException);
+
+    // The row is untouched and the owner can still delete it.
+    expect((await service.findById(row.id, orgA)).version).toBe(1);
+    await expect(service.softDelete(row.id, orgA)).resolves.toBeDefined();
   });
 });

@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ApprovalPolicy } from '@prisma/client';
+import { tenantScope } from '@helix/tenancy';
 import { ApprovalPolicyRepository } from '../approval-policy.repository';
 import { ApprovalPolicyService } from '../approval-policy.service';
 
@@ -77,7 +78,7 @@ describe('ApprovalPolicyService', () => {
       repo.findMaxVersion.mockResolvedValue(2);
       repo.create.mockResolvedValue(fakeRow({ version: 3 }));
 
-      const row = await service.update({ id: 'row-id', document: validDoc() });
+      const row = await service.update({ id: 'row-id', scope: tenantScope(null), document: validDoc() });
 
       expect(row.version).toBe(3);
       expect(repo.create).toHaveBeenCalledWith(expect.objectContaining({ version: 3, policyId: 'default' }));
@@ -85,23 +86,23 @@ describe('ApprovalPolicyService', () => {
 
     it('404s when the target row is missing', async () => {
       repo.findById.mockResolvedValue(null);
-      await expect(service.update({ id: 'missing', document: validDoc() })).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.update({ id: 'missing', scope: tenantScope(null), document: validDoc() }),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('409s on a policy-id mismatch', async () => {
       repo.findById.mockResolvedValue(fakeRow({ policyId: 'other' }));
-      await expect(service.update({ id: 'row-id', document: validDoc() })).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.update({ id: 'row-id', scope: tenantScope(null), document: validDoc() }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 
   describe('reads', () => {
     it('findById 404s when absent', async () => {
       repo.findById.mockResolvedValue(null);
-      await expect(service.findById('x')).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.findById('x', tenantScope(null))).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('findLatest 404s when no active policy', async () => {

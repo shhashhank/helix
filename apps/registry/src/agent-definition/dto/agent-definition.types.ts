@@ -1,3 +1,5 @@
+import type { TenantScope } from '@helix/tenancy';
+
 /**
  * In-memory shape of an agent definition body, validated against
  * the HELIX-50 JSON Schema before persistence.
@@ -60,5 +62,7 @@ export interface CreateAgentDefinitionInput {
 
 export interface UpdateAgentDefinitionInput {
   id: string;
+  /** Tenant the update is scoped to — a cross-tenant id is treated as not found. */
+  scope: TenantScope;
   payload: AgentDefinitionPayload;
 }

@@ -13,6 +13,7 @@ export default {
   // validator), so map the workspace import to source (tsconfig paths aren't read by jest).
   moduleNameMapper: {
     '^@helix/approvals$': '<rootDir>/../../libs/approvals/src/index.ts',
+    '^@helix/tenancy$': '<rootDir>/../../libs/tenancy/src/index.ts',
   },
   // testcontainers spin-up can take time on first run
   testTimeout: 60_000,

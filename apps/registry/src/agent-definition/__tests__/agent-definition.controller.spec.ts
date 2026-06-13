@@ -128,11 +128,18 @@ describe('AgentDefinitionController', () => {
     expect(service.findById).not.toHaveBeenCalled();
   });
 
-  it('GET /agents/:id forwards id and includeDeleted', async () => {
+  it('GET /agents/:id forwards id, tenant scope, and includeDeleted', async () => {
     service.findById.mockResolvedValue(fakeRow({ id: 'abc' }));
 
     await request(app.getHttpServer()).get('/agents/abc?includeDeleted=true').expect(200);
-    expect(service.findById).toHaveBeenCalledWith('abc', true);
+    expect(service.findById).toHaveBeenCalledWith('abc', { orgId: null }, true);
+  });
+
+  it('GET /agents/:id scopes to the x-org-id tenant (row-level isolation)', async () => {
+    service.findById.mockResolvedValue(fakeRow({ id: 'abc', orgId: 'acme' }));
+
+    await request(app.getHttpServer()).get('/agents/abc').set('x-org-id', 'acme').expect(200);
+    expect(service.findById).toHaveBeenCalledWith('abc', { orgId: 'acme' }, false);
   });
 
   it('GET /agents/:id surfaces NotFoundException as 404', async () => {
@@ -146,7 +153,11 @@ describe('AgentDefinitionController', () => {
     const res = await request(app.getHttpServer()).put('/agents/row-id').send(body).expect(200);
     expect(res.body.version).toBe(2);
     expect(service.update).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'row-id', payload: expect.objectContaining({ role: 'planning' }) }),
+      expect.objectContaining({
+        id: 'row-id',
+        scope: { orgId: null },
+        payload: expect.objectContaining({ role: 'planning' }),
+      }),
     );
   });
 
@@ -155,6 +166,6 @@ describe('AgentDefinitionController', () => {
 
     const res = await request(app.getHttpServer()).delete('/agents/row-id').expect(200);
     expect(res.body.deletedAt).not.toBeNull();
-    expect(service.softDelete).toHaveBeenCalledWith('row-id');
+    expect(service.softDelete).toHaveBeenCalledWith('row-id', { orgId: null });
   });
 });
