@@ -1994,14 +1994,14 @@ then confirm the connection actually works (HELIX-149).
 
 ---
 
-## Epic: Agent Executor  🛠️ in progress
+## Epic: Agent Executor  ✅ done
 
 Forward scope after the MVP backlog: replace the worker's **stub** step executor with one that runs the
 real per-role agents, turning simulated runs into real planning → coding → review → testing → deployment.
 Built seam-first (a scripted LLM keeps it CI-testable; the real one runs locally behind an env key). Full
 plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
 
-### Story: Agent executor runtime  🛠️ in progress
+### Story: Agent executor runtime  ✅ done
 
 #### HELIX-152 — Executor dispatch seam  ✅
 - **What it is:** the **switchboard** a run uses to pick the right agent for each step. A step says "I'm a
@@ -2082,6 +2082,26 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   deployed URL shows up there once a real run produces it.
 - **Where it lives:** [deployment-role.ts](../libs/executor/src/lib/deployment-role.ts) in `@helix/executor` —
   `deploymentExecutor`, the `DeploymentRunner` seam, and `registerDeploymentRole`. 4 tests.
+
+#### HELIX-158 — Worker wiring (config-driven LLM seam)  ✅
+- **What it is:** the **finale** — the worker stops simulating and actually **runs the agents**. Start
+  `pnpm dev:worker` and each step now drives the real role executor; with an API key it calls the real model,
+  without one it uses a scripted offline stand-in so a run still completes end to end.
+- **Why it matters:** this is the line between "backlog of parts" and "the thing runs." The **LLM is
+  config-driven** — `ANTHROPIC_API_KEY` set → the real `AnthropicProvider` (wrapped for retries/backoff/
+  timeouts); unset → a **scripted provider** that returns canned completions, so CI and a keyless dev box
+  still execute the whole pipeline (the key is read from the environment only, never logged or committed).
+  The five role executors are assembled onto one dispatcher and handed to the Temporal worker. Kept runnable
+  offline by **deferring** the genuinely external bits — real repo checkout + file/test tools in the sandbox,
+  and real AWS deployment — behind their seams (a throwaway temp-dir workspace, no tools yet, a stubbed
+  deploy); the agents are wired in *behind* those, so landing each binding lights it up with no executor
+  changes.
+- **Where it lives:** `@helix/llm` — [scripted.provider.ts](../libs/llm/src/lib/scripted.provider.ts)
+  (`ScriptedLlmProvider`) + [provider-env.ts](../libs/llm/src/lib/provider-env.ts) (`providerFromEnv`);
+  `@helix/executor` — [pipeline.ts](../libs/executor/src/lib/pipeline.ts) (`buildPipelineDispatcher`); and the
+  rewired [dev worker](../libs/workflow/src/dev-worker.ts). Documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
+  9 new tests; the workflow suite (66) stays green. **Closes the Agent Executor runtime story — and the
+  Agent Executor epic.**
 
 ---
 
@@ -2232,6 +2252,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-155 | Executor — planning + code_review role executors | ✅ | #118 |
 | HELIX-156 | Executor — coding + testing role executors (sandbox) | ✅ | #119 |
 | HELIX-157 | Executor — deployment role executor (build/deploy seam) | ✅ | #120 |
+| HELIX-158 | Executor — worker wiring + config-driven LLM seam | ✅ | #121 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
