@@ -1953,6 +1953,29 @@ build the endpoints now, defer the rendered screens to a UI push (same call as t
   `WorkflowRunService.progress()`. 8 new tests (6 extractor + service + controller). **Closes the Request
   Submission & Run Dashboard story.**
 
+### Story: Onboarding & GitHub Integration Setup  🛠️ in progress
+
+A new org gets set up: connect GitHub via the App install flow with credentials kept safe (HELIX-148),
+then confirm the connection actually works (HELIX-149).
+
+#### HELIX-148 — GitHub App connect flow  ✅
+- **What it is:** **"Connect GitHub."** A signed-in org kicks off installing the Helix GitHub App, and once
+  installed we remember the connection — kept **encrypted in the vault**, scoped to that org.
+- **Why it matters:** the platform needs access to your repos to actually build things, and that access is
+  sensitive, so two things matter: it must be **safely stored** and **isolated per tenant**. The credential
+  goes through the **encrypted secret vault** (envelope encryption — it's only ever ciphertext at rest, and
+  a test asserts the raw record contains no plaintext), keyed by org so one tenant can never read another's.
+  The flow is the standard install dance — start (get the "Install on GitHub" URL + an unguessable,
+  single-use **state**), then a callback that records the installation — with the `state` making sure an
+  installation can't be attached to the wrong org. Built **API-first**: the wizard screen, and confirming
+  the install against real GitHub (fetching the account, minting tokens), are deferred ([../DEFERRED.md](../DEFERRED.md) #14).
+- **Where it lives:** the new [integration module](../apps/orchestrator/src/integration) in the orchestrator —
+  `POST /api/integrations/github/connect` + `/callback`, `GET` (status), `DELETE` (disconnect), all behind the
+  `AuthGuard`; the connection is persisted through `@helix/secrets` (`EncryptedSecretStore` + `LocalKms`) — the
+  **first time the vault is wired into a running service**. 10 tests (encryption-at-rest, tenant isolation,
+  single-use/tenant-bound state, disconnect, controller auth). Documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
+  HELIX-149 (verify access) builds on this.
+
 ---
 
 ## Fixes & hardening
@@ -2094,6 +2117,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-145 | Requests — submit→run API, org-scoped (`/api/requests`) | ✅ | #109 |
 | HELIX-146 | Run dashboard API — overview + per-run status + live SSE | ✅ | #110 |
 | HELIX-147 | Artifact views — PR/tests/deploy from run step outputs | ✅ | #111 |
+| HELIX-148 | GitHub onboarding — App connect flow, vault-stored credential | ✅ | #112 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
