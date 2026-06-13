@@ -65,13 +65,20 @@ In two more terminals:
 # Terminal A — the run API
 pnpm dev:orchestrator              # http://localhost:3100/api/docs
 
-# Terminal B — the worker that actually runs steps (stub executor for now)
-pnpm dev:worker
+# Terminal B — the worker that actually runs steps (the agent executor)
+pnpm dev:worker                          # offline: scripted LLM, agents finish with canned text
+ANTHROPIC_API_KEY=sk-… pnpm dev:worker    # real agent runs (planning → coding → review → testing → deploy)
 ```
 
-> The worker uses a **stub** step executor that just simulates work (logs, waits,
-> succeeds) — real per-role agent execution arrives with the agent epics (HELIX-4..8).
-> Tunables: `STEP_DELAY_MS` (default 1500), `TEMPORAL_ADDRESS` (default localhost:7233).
+> The worker runs each step through the **agent executor** (`@helix/executor`, HELIX-150): the five pipeline
+> roles on a dispatcher driven by the real `runAgent`. The LLM is **config-driven** — with
+> `ANTHROPIC_API_KEY` set it calls the real model; without one it uses the **scripted** provider, so a run
+> still executes end-to-end offline (agents finish with canned text). Unknown roles fall back to the
+> simulated executor; a step still "fails" on `config.fail = true`.
+>
+> Deferred (so it stays runnable offline): real repo checkout + file/test tools in the sandbox, and real
+> build/ECR/CDK deployment — the workspace is a throwaway temp dir and deployment is stubbed until those
+> bindings land (DEFERRED.md). Tunables: `STEP_DELAY_MS` (default 1500), `TEMPORAL_ADDRESS` (default localhost:7233).
 
 ### Start a run and watch it
 
