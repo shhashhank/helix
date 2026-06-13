@@ -19,5 +19,6 @@ export default {
     '^@helix/audit$': '<rootDir>/../../libs/audit/src/index.ts',
     '^@helix/telemetry$': '<rootDir>/../../libs/telemetry/src/index.ts',
     '^@helix/auth$': '<rootDir>/../../libs/auth/src/index.ts',
+    '^@helix/tenancy$': '<rootDir>/../../libs/tenancy/src/index.ts',
   },
 };

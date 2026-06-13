@@ -7,5 +7,6 @@ import { WorkflowRunService } from './workflow-run.service';
   imports: [TemporalModule],
   controllers: [WorkflowRunController],
   providers: [WorkflowRunService],
+  exports: [WorkflowRunService],
 })
 export class WorkflowRunModule {}

@@ -1895,6 +1895,30 @@ model with isolation (HELIX-143), and roles that are actually enforced (HELIX-14
   4 HTTP enforcement: admin 200, owner-via-hierarchy 200, lesser role 403, no session 401). **Closes the
   Auth, Orgs & RBAC story.**
 
+### Story: Request Submission & Run Dashboard  🛠️ in progress
+
+The user-facing loop: submit a request and watch it run. Submit → start a run (HELIX-145), a live
+run dashboard (HELIX-146), and views of the artifacts it produces (HELIX-147). **Decision:** API-first —
+build the endpoints now, defer the rendered screens to a UI push (same call as the approval inbox UI).
+
+#### HELIX-145 — Request submission API  ✅
+- **What it is:** the **"start a build" button's backend.** A signed-in user submits a request — a title and
+  *what they want built* in plain words — and the platform kicks off a workflow run for it and remembers the
+  link, so they (and only their org) can find it again.
+- **Why it matters:** this is the product's front door — the thing a user actually *does*. It ties together
+  everything underneath: it requires a **session** (HELIX-142), stamps the request with the caller and their
+  **org** and only ever shows them their org's requests (HELIX-143), and starts the run through the same path
+  that gives every run a **trace id** (HELIX-139), so a request is traceable end-to-end. Per the **API-first**
+  decision for this epic, the submission *form* is deferred — turning the free-text prompt into a *custom*
+  workflow via the Planning Agent (needs the LLM) and a durable store are deferred too ([../DEFERRED.md](../DEFERRED.md) #13);
+  for now a request runs the **standard pipeline** (plan→code→review→test→deploy) or an explicit workflow.
+- **Where it lives:** the new [request module](../apps/orchestrator/src/request) in the orchestrator —
+  `POST /api/requests` (submit → run), `GET /api/requests` (your org's, newest-first, `?mine`), `GET
+  /api/requests/:id` (tenant-scoped — 404 across orgs); a `BuildRequest` model, an `InMemoryRequestStore`
+  seam, and `requestToWorkflow` (the default pipeline). The whole controller is behind the `AuthGuard`.
+  9 tests; documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2. The run dashboard (HELIX-146) and artifact
+  views (HELIX-147) consume this.
+
 ---
 
 ## Fixes & hardening
@@ -2033,6 +2057,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-142 | Auth — OIDC sign-in + Helix app sessions (`@helix/auth`) | ✅ | #106 |
 | HELIX-143 | Tenancy — row-level org isolation (`@helix/tenancy`) + registry | ✅ | #107 |
 | HELIX-144 | Auth — RBAC roles + `RolesGuard` enforcement (`@helix/auth`) | ✅ | #108 |
+| HELIX-145 | Requests — submit→run API, org-scoped (`/api/requests`) | ✅ | #109 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
