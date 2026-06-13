@@ -59,6 +59,11 @@ export class WorkflowRunService {
     return describeWorkflowRun(this.client, workflowId);
   }
 
+  /** One-shot read of a run's per-step progress (incl. each step's output) — feeds artifact views (HELIX-147). */
+  progress(workflowId: string): Promise<WorkflowProgress> {
+    return getWorkflowProgress(this.client, workflowId);
+  }
+
   cancel(workflowId: string): Promise<void> {
     return cancelWorkflowRun(this.client, workflowId);
   }

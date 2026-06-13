@@ -8,9 +8,10 @@ import type { RunStatus } from '@helix/workflow/temporal-client';
 import { AuthGuard } from '../auth/auth.guard';
 import { Principal } from '../auth/principal.decorator';
 import { RunStatusDto } from '../workflow-run/dto/workflow-run.dto';
+import { RunArtifacts } from './artifacts';
 import { BuildRequest } from './request.model';
 import { DashboardItem, RequestService } from './request.service';
-import { BuildRequestDto, DashboardItemDto, SubmitRequestDto } from './dto/request.dto';
+import { BuildRequestDto, DashboardItemDto, RunArtifactsDto, SubmitRequestDto } from './dto/request.dto';
 
 /**
  * Build-request API (HELIX-145). The whole controller requires a session — every
@@ -63,6 +64,13 @@ export class RequestController {
   @ApiOkResponse({ type: RunStatusDto })
   runStatus(@Param('id') id: string, @Principal() principal: AuthPrincipal): Promise<RunStatus> {
     return this.service.runStatus(id, principal);
+  }
+
+  @Get(':id/artifacts')
+  @ApiOperation({ summary: "Artifacts a request's run produced — PR, tests, deploy (tenant-scoped)" })
+  @ApiOkResponse({ type: RunArtifactsDto })
+  artifacts(@Param('id') id: string, @Principal() principal: AuthPrincipal): Promise<RunArtifacts> {
+    return this.service.artifacts(id, principal);
   }
 
   @Sse(':id/stream')

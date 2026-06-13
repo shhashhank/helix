@@ -31,6 +31,7 @@ describe('RequestService', () => {
       start: jest.fn().mockResolvedValue(startedRun),
       get: jest.fn(),
       streamProgress: jest.fn(),
+      progress: jest.fn(),
     } as unknown as jest.Mocked<WorkflowRunService>;
     service = new RequestService(store, runs);
   });
@@ -121,6 +122,21 @@ describe('RequestService', () => {
         lastValueFrom(service.streamProgress(req.id, principal({ orgId: 'globex' }))),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(runs.streamProgress).not.toHaveBeenCalled();
+    });
+
+    it('artifacts extracts the run outputs for a request, tenant-scoped', async () => {
+      const req = await service.submit({ title: 't', prompt: 'p' }, principal({ orgId: 'acme' }));
+      runs.progress.mockResolvedValue({
+        steps: { deploy: { id: 'deploy', ran: true, status: 'success', output: { liveUrl: 'https://app' } } },
+        completed: ['deploy'],
+        skipped: [],
+        levels: [['deploy']],
+        done: true,
+      });
+
+      expect(await service.artifacts(req.id, principal({ orgId: 'acme' }))).toEqual({ deployment: { url: 'https://app' } });
+      expect(runs.progress).toHaveBeenCalledWith('run-1');
+      await expect(service.artifacts(req.id, principal({ orgId: 'globex' }))).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });
