@@ -46,6 +46,20 @@ const stringify = (v: unknown): string => {
   }
 };
 
+/** A compact, human-readable digest of prior step outputs (the step-to-step context). */
+export function priorOutputsDigest(ctx: RunContext): string {
+  const prior = Object.entries(ctx.results ?? {})
+    .filter(([, r]) => r.output !== undefined)
+    .map(([id, r]) => `- ${id}: ${stringify(r.output)}`);
+  return prior.join('\n');
+}
+
+/** Append the prior-outputs digest to a prompt (under a "Context from prior steps" header), if any. */
+export function withPriorContext(prompt: string, ctx: RunContext): string {
+  const digest = priorOutputsDigest(ctx);
+  return digest ? `${prompt}\n\nContext from prior steps:\n${digest}` : prompt;
+}
+
 /**
  * Default input: the step's `config.prompt` (or a generic instruction) plus a compact
  * digest of prior step outputs — so e.g. the coding step sees the plan, review sees
@@ -56,10 +70,7 @@ export function defaultBuildInput(step: ExecutableStep, ctx: RunContext): string
     typeof step.config?.['prompt'] === 'string'
       ? (step.config['prompt'] as string)
       : `Perform the "${step.agentRole}" step (${step.id}).`;
-  const prior = Object.entries(ctx.results ?? {})
-    .filter(([, r]) => r.output !== undefined)
-    .map(([id, r]) => `- ${id}: ${stringify(r.output)}`);
-  return prior.length ? `${prompt}\n\nContext from prior steps:\n${prior.join('\n')}` : prompt;
+  return withPriorContext(prompt, ctx);
 }
 
 /** Map a finished agent run to a step outcome. */
