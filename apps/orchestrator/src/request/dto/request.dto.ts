@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { RunStatusDto } from '../../workflow-run/dto/workflow-run.dto';
 
 /** Body for submitting a build request. */
 export class SubmitRequestDto {
@@ -27,4 +28,10 @@ export class BuildRequestDto {
   @ApiProperty() runId!: string;
   @ApiProperty({ description: 'W3C trace id for the run (paste into Grafana/Tempo)' }) traceId!: string;
   @ApiProperty() createdAt!: string;
+}
+
+/** A run-dashboard row: a request joined with its run's current status (HELIX-146). */
+export class DashboardItemDto {
+  @ApiProperty({ type: BuildRequestDto }) request!: BuildRequestDto;
+  @ApiProperty({ type: RunStatusDto }) run!: RunStatusDto;
 }

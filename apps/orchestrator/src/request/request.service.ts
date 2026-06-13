@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Observable, from } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import type { AuthPrincipal } from '@helix/auth';
 import { type TenantScope, belongsToTenant, tenantScope } from '@helix/tenancy';
-import type { WorkflowDefinition } from '@helix/workflow';
+import type { WorkflowDefinition, WorkflowProgress } from '@helix/workflow';
+import type { RunStatus } from '@helix/workflow/temporal-client';
 import { WorkflowRunService } from '../workflow-run/workflow-run.service';
 import { BuildRequest } from './request.model';
 import { REQUEST_STORE, RequestStore } from './request.store';
@@ -13,6 +16,12 @@ export interface SubmitBuildRequest {
   prompt: string;
   /** Optional explicit workflow DSL; defaults to the standard delivery pipeline. */
   workflow?: WorkflowDefinition;
+}
+
+/** A request joined with its run's current status — one row of the run dashboard (HELIX-146). */
+export interface DashboardItem {
+  request: BuildRequest;
+  run: RunStatus;
 }
 
 /**
@@ -64,5 +73,26 @@ export class RequestService {
       throw new NotFoundException(`request ${id} not found`); // cross-tenant → invisible
     }
     return request;
+  }
+
+  /** Current run status for a request (tenant-scoped) — the dashboard's per-run detail (HELIX-146). */
+  async runStatus(id: string, principal: AuthPrincipal): Promise<RunStatus> {
+    const request = await this.get(id, principal);
+    return this.runs.get(request.workflowId);
+  }
+
+  /** The caller org's requests joined with each run's current status — the dashboard overview. */
+  async overview(principal: AuthPrincipal, mineOnly = false): Promise<DashboardItem[]> {
+    const requests = await this.list(principal, mineOnly);
+    return Promise.all(requests.map(async (request) => ({ request, run: await this.runs.get(request.workflowId) })));
+  }
+
+  /**
+   * Live per-step progress for a request's run (HELIX-146) — the "SSE-driven" feed.
+   * Confirms the request is in the caller's tenant first, then defers to the run's
+   * progress stream; a cross-tenant id surfaces as an error on the stream.
+   */
+  streamProgress(id: string, principal: AuthPrincipal): Observable<WorkflowProgress> {
+    return from(this.get(id, principal)).pipe(switchMap((request) => this.runs.streamProgress(request.workflowId)));
   }
 }

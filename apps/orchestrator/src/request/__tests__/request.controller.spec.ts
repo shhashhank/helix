@@ -1,5 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { lastValueFrom, of } from 'rxjs';
+import { toArray } from 'rxjs/operators';
 import request from 'supertest';
 import { SessionService } from '@helix/auth';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -28,10 +30,18 @@ const fakeReq = (over: Partial<BuildRequest> = {}): BuildRequest => ({
 
 describe('RequestController', () => {
   let app: INestApplication;
+  let controller: RequestController;
   let service: jest.Mocked<RequestService>;
 
   beforeEach(async () => {
-    service = { submit: jest.fn(), list: jest.fn(), get: jest.fn() } as unknown as jest.Mocked<RequestService>;
+    service = {
+      submit: jest.fn(),
+      list: jest.fn(),
+      get: jest.fn(),
+      runStatus: jest.fn(),
+      overview: jest.fn(),
+      streamProgress: jest.fn(),
+    } as unknown as jest.Mocked<RequestService>;
     const moduleRef = await Test.createTestingModule({
       controllers: [RequestController],
       providers: [
@@ -40,6 +50,7 @@ describe('RequestController', () => {
         AuthGuard,
       ],
     }).compile();
+    controller = moduleRef.get(RequestController);
     app = moduleRef.createNestApplication();
     await app.init();
   });
@@ -78,5 +89,37 @@ describe('RequestController', () => {
     const res = await request(app.getHttpServer()).get('/requests/req-9').set('Authorization', `Bearer ${token()}`).expect(200);
     expect(res.body.id).toBe('req-9');
     expect(service.get).toHaveBeenCalledWith('req-9', expect.objectContaining({ userId: 'u1' }));
+  });
+
+  it('GET /requests/overview returns the dashboard join', async () => {
+    const run = { workflowId: 'run-1', runId: 'rid-1', status: 'RUNNING' };
+    service.overview.mockResolvedValue([{ request: fakeReq(), run }]);
+    const res = await request(app.getHttpServer()).get('/requests/overview').set('Authorization', `Bearer ${token()}`).expect(200);
+    expect(res.body[0].run.status).toBe('RUNNING');
+    expect(service.overview).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u1' }), false);
+  });
+
+  it("GET /requests/:id/run returns the request's run status", async () => {
+    service.runStatus.mockResolvedValue({ workflowId: 'run-1', runId: 'rid-1', status: 'COMPLETED' });
+    const res = await request(app.getHttpServer()).get('/requests/req-1/run').set('Authorization', `Bearer ${token()}`).expect(200);
+    expect(res.body.status).toBe('COMPLETED');
+    expect(service.runStatus).toHaveBeenCalledWith('req-1', expect.objectContaining({ userId: 'u1' }));
+  });
+
+  it('overview/run require a session (401 without one)', async () => {
+    await request(app.getHttpServer()).get('/requests/overview').expect(401);
+    await request(app.getHttpServer()).get('/requests/req-1/run').expect(401);
+  });
+
+  it('stream maps the run progress to SSE message events', async () => {
+    const p1 = { steps: {}, completed: ['plan'], skipped: [], levels: [['plan']], done: false };
+    const p2 = { ...p1, done: true };
+    service.streamProgress.mockReturnValue(of(p1, p2));
+    const principal = { userId: 'u1', roles: [], orgId: 'acme' };
+
+    const events = await lastValueFrom(controller.stream('req-1', principal).pipe(toArray()));
+
+    expect(events).toEqual([{ data: p1 }, { data: p2 }]);
+    expect(service.streamProgress).toHaveBeenCalledWith('req-1', principal);
   });
 });

@@ -1,4 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
+import { lastValueFrom, of } from 'rxjs';
+import { toArray } from 'rxjs/operators';
 import type { AuthPrincipal } from '@helix/auth';
 import { WorkflowRunService } from '../../workflow-run/workflow-run.service';
 import { RequestService } from '../request.service';
@@ -25,7 +27,11 @@ describe('RequestService', () => {
 
   beforeEach(() => {
     store = new InMemoryRequestStore();
-    runs = { start: jest.fn().mockResolvedValue(startedRun) } as unknown as jest.Mocked<WorkflowRunService>;
+    runs = {
+      start: jest.fn().mockResolvedValue(startedRun),
+      get: jest.fn(),
+      streamProgress: jest.fn(),
+    } as unknown as jest.Mocked<WorkflowRunService>;
     service = new RequestService(store, runs);
   });
 
@@ -74,5 +80,47 @@ describe('RequestService', () => {
     const req = await service.submit({ title: 't', prompt: 'p' }, principal({ orgId: 'acme' }));
     await expect(service.get(req.id, principal({ orgId: 'globex' }))).rejects.toBeInstanceOf(NotFoundException);
     await expect(service.get('req-nope', principal())).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  describe('dashboard (HELIX-146)', () => {
+    const runStatus = { workflowId: 'run-1', runId: 'rid-1', status: 'RUNNING' };
+
+    it('runStatus returns the request run status, tenant-scoped', async () => {
+      const req = await service.submit({ title: 't', prompt: 'p' }, principal({ orgId: 'acme' }));
+      runs.get.mockResolvedValue(runStatus);
+
+      expect(await service.runStatus(req.id, principal({ orgId: 'acme' }))).toEqual(runStatus);
+      expect(runs.get).toHaveBeenCalledWith('run-1');
+      await expect(service.runStatus(req.id, principal({ orgId: 'globex' }))).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('overview joins each org request with its run status', async () => {
+      await service.submit({ title: 'a', prompt: 'p' }, principal({ orgId: 'acme' }));
+      await service.submit({ title: 'b', prompt: 'p' }, principal({ orgId: 'acme' }));
+      runs.get.mockResolvedValue(runStatus);
+
+      const items = await service.overview(principal({ orgId: 'acme' }));
+      expect(items).toHaveLength(2);
+      expect(items[0]).toEqual({ request: expect.objectContaining({ orgId: 'acme' }), run: runStatus });
+    });
+
+    it('streamProgress emits the run progress for a valid request', async () => {
+      const req = await service.submit({ title: 't', prompt: 'p' }, principal({ orgId: 'acme' }));
+      const p1 = { steps: {}, completed: [], skipped: [], levels: [], done: false };
+      const p2 = { ...p1, done: true };
+      runs.streamProgress.mockReturnValue(of(p1, p2));
+
+      const emitted = await lastValueFrom(service.streamProgress(req.id, principal({ orgId: 'acme' })).pipe(toArray()));
+      expect(emitted).toEqual([p1, p2]);
+      expect(runs.streamProgress).toHaveBeenCalledWith('run-1');
+    });
+
+    it('streamProgress errors for a cross-tenant request (no stream)', async () => {
+      const req = await service.submit({ title: 't', prompt: 'p' }, principal({ orgId: 'acme' }));
+      await expect(
+        lastValueFrom(service.streamProgress(req.id, principal({ orgId: 'globex' }))),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(runs.streamProgress).not.toHaveBeenCalled();
+    });
   });
 });
