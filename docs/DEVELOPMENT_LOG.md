@@ -1828,7 +1828,7 @@ The last epic — turn the engine into a product people can sign into and use: a
 orgs (HELIX-47), a way to submit requests and watch runs (HELIX-48), and guided GitHub
 onboarding (HELIX-49).
 
-### Story: Auth, Orgs & RBAC  🛠️ in progress
+### Story: Auth, Orgs & RBAC  ✅ done
 
 Secure sign-in and org-scoped access: OIDC/SSO login + sessions (HELIX-142), an org/tenant
 model with isolation (HELIX-143), and roles that are actually enforced (HELIX-144).
@@ -1876,6 +1876,24 @@ model with isolation (HELIX-143), and roles that are actually enforced (HELIX-14
   Proven with **cross-tenant isolation tests against real Postgres** (owner sees the row; another tenant gets
   404 on read/update/delete). 6 tenancy-lib tests + the registry isolation suites; `ARCHITECTURE.md`
   refreshed. RBAC enforcement (HELIX-144) is the remaining piece of this story.
+
+#### HELIX-144 — RBAC roles + enforcement  ✅
+- **What it is:** **roles that actually mean something** — once we know who you are (HELIX-142), this decides
+  *what you're allowed to do*. A route can say "admins only", and a request without that role is turned away.
+- **Why it matters:** authentication answers "who are you"; **authorization** answers "may you do this", and a
+  SaaS needs both. The roles are **ranked** — `viewer < member < admin < owner` — so a higher role
+  automatically clears a lower bar (an `owner` passes an `admin`-only check) without listing every role
+  everywhere; genuinely separate, custom roles (say `billing`) match exactly. Enforcement is a **guard you
+  compose** with the auth guard: the auth guard establishes the principal, the roles guard checks it — so
+  protecting any route is a one-line `@Roles('admin')`, and existing routes are untouched until we choose to
+  gate them.
+- **Where it lives:** the pure logic is in [../libs/auth/src/lib/rbac.ts](../libs/auth/src/lib/rbac.ts)
+  (`satisfiesRole` / `satisfiesAnyRole` / `authorize`, the role ranks, `AuthorizationError`); the NestJS
+  glue is in the orchestrator — [@Roles()](../apps/orchestrator/src/auth/roles.decorator.ts) +
+  [RolesGuard](../apps/orchestrator/src/auth/roles.guard.ts), shown end-to-end on a guarded
+  `GET /api/auth/admin/ping` (admin-only). 12 tests (8 RBAC-logic incl. the hierarchy + custom-role cases,
+  4 HTTP enforcement: admin 200, owner-via-hierarchy 200, lesser role 403, no session 401). **Closes the
+  Auth, Orgs & RBAC story.**
 
 ---
 
@@ -2014,6 +2032,7 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-141 | Dashboards — provisioned Grafana run/cost + pipeline boards | ✅ | #105 |
 | HELIX-142 | Auth — OIDC sign-in + Helix app sessions (`@helix/auth`) | ✅ | #106 |
 | HELIX-143 | Tenancy — row-level org isolation (`@helix/tenancy`) + registry | ✅ | #107 |
+| HELIX-144 | Auth — RBAC roles + `RolesGuard` enforcement (`@helix/auth`) | ✅ | #108 |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
