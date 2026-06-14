@@ -14,6 +14,7 @@ export default {
     '^@helix/testing-agent$': '<rootDir>/../testing-agent/src/index.ts',
     '^@helix/agent$': '<rootDir>/../agent/src/index.ts',
     '^@helix/llm$': '<rootDir>/../llm/src/index.ts',
+    '^@helix/github-mcp/delivery$': '<rootDir>/../github-mcp/src/delivery.ts',
   },
   coverageDirectory: '../../coverage/libs/workflow',
   testMatch: ['<rootDir>/src/**/*.spec.ts'],

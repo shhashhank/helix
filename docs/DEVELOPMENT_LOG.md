@@ -2431,7 +2431,7 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
 
 ---
 
-## Epic: Real GitHub PR delivery (HELIX-180)  🛠️ in progress
+## Epic: Real GitHub PR delivery (HELIX-180)  ✅ done
 
 Forward scope after the Frontend epic: make a finished run **actually open a pull request** on the connected
 repo with the changes the coding agent produced, and show the **real** PR / tests / change-set as the run's
@@ -2441,7 +2441,7 @@ auth, the sandbox change-set diff, the artifacts API + run UI); this epic *wires
 seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan:
 [GITHUB_DELIVERY_PLAN.md](GITHUB_DELIVERY_PLAN.md).
 
-### Story: Run → real GitHub PR  🛠️ in progress
+### Story: Run → real GitHub PR  ✅ done
 
 #### HELIX-182 — Deliver a change-set as a GitHub PR  ✅
 - **What it is:** the reusable step that takes a set of changed files and turns them into a **pull request** —
@@ -2509,12 +2509,38 @@ seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan
   artifact extraction of the nested PR + change-set incl. the skipped case, the UI row); executor/orchestrator/web
   suites green.
 
+#### HELIX-186 — Target repo + wire delivery on  ✅
+- **What it is:** the keystone that **turns delivery on** — connects all the earlier pieces in the worker so a
+  finished run actually pushes its changes and opens a PR.
+- **Why it matters:** this closes the loop the whole epic was about. A request that names a target repo (on a
+  GitHub-connected org) now runs plan → code → review → test → **deliver** → deploy, and the deliver step opens
+  a real PR with the run's change-set. The product's core promise — *request → reviewable PR* — is now true.
+- **How it works (plain words):** a request can carry a `repo` (owner/repo/base + the org's installation); when
+  it does, the orchestrator inserts a **deliver** step after testing, carrying that target in its config. At the
+  worker, the delivery runner reads the target, captures the run's sandbox change-set (the files the agents
+  wrote), builds the per-run authenticated GitHub client (HELIX-184), and opens the PR (HELIX-182). It's
+  **config-gated**: no target / no GitHub App / no changes → it skips and the run still completes. Offline it's
+  fully tested with fakes; with a real App + repo it goes live.
+- **Where it lives:** `@helix/workflow` — [delivery-runner.ts](../libs/workflow/src/lib/delivery-runner.ts)
+  (`sandboxDeliveryRunner`) + `captureChangeSet` on
+  [sandbox-workspace.ts](../libs/workflow/src/lib/sandbox-workspace.ts) + the rewired
+  [dev worker](../libs/workflow/src/dev-worker.ts); the orchestrator's
+  [request.workflow.ts](../apps/orchestrator/src/request/request.workflow.ts) (the deliver step) +
+  request DTO/service carry the `repo`. A `@helix/github-mcp/delivery` subpath keeps the worker off the MCP SDK.
+  9 new tests (the runner: deliver / 3 skip cases / error / config parsing; the deliver-step DAG); workflow (79)
+  + orchestrator suites green. **Closes the Real GitHub PR delivery epic.**
+
 ---
 
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
 
+- **Worker/MCP run scripts couldn't resolve `@helix/*` paths** — `pnpm dev:worker` and
+  `pnpm github-mcp:stdio` run via `@swc-node/register`, which needs to be told the tsconfig
+  to read `paths` from; without it the worker failed to boot (`Cannot find module '@helix/agent'`).
+  Set `SWC_NODE_PROJECT=tsconfig.base.json` on both scripts — the worker now boots (verified it
+  loads and reaches the Temporal connect). A pre-existing gap, surfaced while wiring delivery on (HELIX-186).
 - **Orchestrator CORS for the web app** — the React app (dev server on `:4200`) calls the
   orchestrator (`:3100`) cross-origin; the browser blocked every call (incl. the auth
   header + the SSE stream). Enabled CORS on the orchestrator (`app.enableCors`, reflecting
@@ -2683,11 +2709,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | #138 |
 | HELIX-178 | Approval inbox | ✅ | #139 |
 | HELIX-179 | GitHub connect wizard | ✅ | #140 |
-| HELIX-180 | **Epic:** Real GitHub PR delivery | 🛠️ | #143 (plan) |
+| HELIX-180 | **Epic:** Real GitHub PR delivery | ✅ | #143 (plan) |
 | HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | #144 |
 | HELIX-183 | Delivery role executor | ✅ | #145 |
 | HELIX-184 | Authenticated per-run GitHub client at the worker | ✅ | #146 |
-| HELIX-185 | Surface real run artifacts (PR + change-set) | ✅ | — |
+| HELIX-185 | Surface real run artifacts (PR + change-set) | ✅ | #147 |
+| HELIX-186 | Target repo + wire delivery on | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

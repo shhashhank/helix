@@ -10,13 +10,15 @@ import { WorkflowRunService } from '../workflow-run/workflow-run.service';
 import { RunArtifacts, extractArtifacts } from './artifacts';
 import { BuildRequest } from './request.model';
 import { REQUEST_STORE, RequestStore } from './request.store';
-import { requestToWorkflow } from './request.workflow';
+import { type DeliveryRepo, requestToWorkflow } from './request.workflow';
 
 export interface SubmitBuildRequest {
   title: string;
   prompt: string;
   /** Optional explicit workflow DSL; defaults to the standard delivery pipeline. */
   workflow?: WorkflowDefinition;
+  /** Optional target repo — when set, the run opens a PR with its changes (HELIX-186). */
+  repo?: DeliveryRepo;
 }
 
 /** A request joined with its run's current status — one row of the run dashboard (HELIX-146). */
@@ -40,7 +42,7 @@ export class RequestService {
 
   async submit(input: SubmitBuildRequest, principal: AuthPrincipal): Promise<BuildRequest> {
     const id = `req-${randomUUID()}`;
-    const def = input.workflow ?? requestToWorkflow({ id });
+    const def = input.workflow ?? requestToWorkflow({ id, repo: input.repo });
     // start() validates the workflow (400 on a bad explicit one) and mints the run's trace context.
     const started = await this.runs.start(def);
     const request: BuildRequest = {

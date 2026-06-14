@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RunStatusDto } from '../../workflow-run/dto/workflow-run.dto';
 
+/** Target repo for a request's PR delivery (HELIX-186). */
+export class DeliveryRepoDto {
+  @ApiProperty({ description: 'Repo owner (org or user)' }) owner!: string;
+  @ApiProperty({ description: 'Repo name' }) repo!: string;
+  @ApiPropertyOptional({ description: 'Base branch (default: main)' }) base?: string;
+  @ApiProperty({ description: "The org's GitHub App installation id" }) installationId!: string;
+}
+
 /** Body for submitting a build request. */
 export class SubmitRequestDto {
   @ApiProperty({ description: 'Short human title for the request' })
@@ -14,6 +22,9 @@ export class SubmitRequestDto {
     description: 'Explicit workflow DSL ({ name, steps[], edges[] }); defaults to the standard pipeline',
   })
   workflow?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ type: DeliveryRepoDto, description: 'Target repo — when set, the run opens a PR with its changes' })
+  repo?: DeliveryRepoDto;
 }
 
 /** A recorded build request and the run it started. */
