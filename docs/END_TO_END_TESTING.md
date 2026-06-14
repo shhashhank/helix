@@ -1,5 +1,8 @@
 # End-to-end testing guide
 
+> **Just want to run it?** See the [E2E quickstart](E2E_QUICKSTART.md) — the minimal "start the services and
+> drive it through the UI" version. This page is the full reference (the curl flow, RBAC, tenancy, observability).
+
 How to stand up **everything Helix has today** and drive a request all the way through — sign in → submit a
 request → watch the agents run it (plan → code → review → test → deploy) → see status, artifacts, and the
 trace in Grafana. Plus the registry, RBAC, GitHub onboarding, and the automated suites.
