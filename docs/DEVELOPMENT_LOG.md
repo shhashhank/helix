@@ -1994,7 +1994,7 @@ then confirm the connection actually works (HELIX-149).
 
 ---
 
-## Epic: Agent Executor  ✅ done
+## Epic: Agent Executor (HELIX-150)  ✅ done
 
 Forward scope after the MVP backlog: replace the worker's **stub** step executor with one that runs the
 real per-role agents, turning simulated runs into real planning → coding → review → testing → deployment.
@@ -2102,6 +2102,41 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
   rewired [dev worker](../libs/workflow/src/dev-worker.ts). Documented in [LOCAL_TESTING.md](LOCAL_TESTING.md) §2.
   9 new tests; the workflow suite (66) stays green. **Closes the Agent Executor runtime story — and the
   Agent Executor epic.**
+
+---
+
+## Epic: Sandbox Tools & Repo Checkout (HELIX-159)  🛠️ in progress
+
+Forward scope after the Agent Executor epic: make the coding/testing agents **actually write files and run
+tests** in a real workspace, instead of thinking out loud in an empty temp dir. This is the "describe → do"
+jump. Mostly *wiring* pieces that already exist (`@helix/sandbox`, the coding-agent file tools, the
+testing-agent runner) into the two seams the executor already exposes. Full plan:
+[SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md).
+
+### Story: Sandbox-backed coding & testing  🛠️ in progress
+
+#### HELIX-161 — Run-scoped workspace + run-id threading  ✅
+- **What it is:** the plumbing that lets **one run's steps share a single workspace**. Before this, every
+  step got a brand-new empty folder that was thrown away the moment the step finished — so the **testing**
+  step never saw the files the **coding** step wrote. Now the folder is tied to the *run*, not the step: the
+  first step makes it, the rest reuse it.
+- **Why it matters:** it's the foundation the whole epic needs. There's no point giving coding a "write file"
+  tool if testing can't then see that file. This is the one structural change in the epic; the next sub-tasks
+  just hang the real file/test tools off this shared workspace.
+- **How it works (plain words):** every run already has a unique id (its Temporal "workflow id"). We carry
+  that id from the running workflow down to the step executor, and use it as the key for the workspace — same
+  id, same folder. A small registry hands out "make-or-reuse" folders per run and tidies up folders that have
+  sat unused past a timeout (an idle sweep), so nothing leaks. Disposing is now a *run-level* concern, not
+  done after each step. (Sharing across *different machines* is deliberately left for later — today's worker
+  runs a run's steps in one process.)
+- **Where it lives:** `@helix/executor` — [workspace-roles.ts](../libs/executor/src/lib/workspace-roles.ts)
+  (`WorkspaceFactory`, the run-scoped `WorkspaceProvider`, and `RunScopedWorkspaceProvider` with
+  `acquire`/`release`/`sweepIdle`) + the `runId` on [role-executor.ts](../libs/executor/src/lib/role-executor.ts)'s
+  `RunContext`; `@helix/workflow` — the run-id threading through
+  [workflows.ts](../libs/workflow/src/lib/temporal/workflows.ts) →
+  [activities.ts](../libs/workflow/src/lib/temporal/activities.ts) and the rewired
+  [dev worker](../libs/workflow/src/dev-worker.ts). 14 new executor tests + 1 activity test; executor (47) and
+  workflow (67) suites green.
 
 ---
 
@@ -2253,6 +2288,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-156 | Executor — coding + testing role executors (sandbox) | ✅ | #119 |
 | HELIX-157 | Executor — deployment role executor (build/deploy seam) | ✅ | #120 |
 | HELIX-158 | Executor — worker wiring + config-driven LLM seam | ✅ | #121 |
+| HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | 🛠️ | #123 (plan) |
+| HELIX-161 | Run-scoped workspace + run-id threading | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
