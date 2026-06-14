@@ -8,9 +8,12 @@ trace in Grafana. Plus the registry, RBAC, GitHub onboarding, and the automated 
 > starts a durable Temporal workflow and the worker executes each step through the **real agent executor**.
 > What's deferred (so it all runs offline) — see [REMAINING_WORK.md](REMAINING_WORK.md):
 > - **LLM:** with no `ANTHROPIC_API_KEY` the agents use a **scripted** provider (they finish with canned
->   text). Set the key for real model calls.
-> - **Coding/testing agents** run **tool-less in a throwaway temp dir** (real file/test tools + repo checkout
->   are deferred), so they don't yet write real files.
+>   text and don't call tools). Set the key for real model calls.
+> - **Coding/testing agents** now run with **real sandbox-backed tools** (HELIX-159): each run gets a
+>   `@helix/sandbox` workspace, the coding step gets file-edit tools and the testing step gets command/test
+>   tools, and a change-set diff is captured. So **with a key** a run genuinely writes files + runs tests;
+>   offline (scripted) the tools are simply unused. Real `git clone` of a target repo is still deferred —
+>   offline scaffolds a starter project.
 > - **Deployment** is **stubbed** (returns a placeholder live URL; real AWS build/deploy deferred).
 > - **Auth** uses a built-in HS256 stand-in for a real OIDC provider; **GitHub** connect records an
 >   installation but doesn't call GitHub yet.

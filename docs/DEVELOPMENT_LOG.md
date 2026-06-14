@@ -2105,7 +2105,7 @@ plan: [AGENT_EXECUTOR_PLAN.md](AGENT_EXECUTOR_PLAN.md).
 
 ---
 
-## Epic: Sandbox Tools & Repo Checkout (HELIX-159)  🛠️ in progress
+## Epic: Sandbox Tools & Repo Checkout (HELIX-159)  ✅ done
 
 Forward scope after the Agent Executor epic: make the coding/testing agents **actually write files and run
 tests** in a real workspace, instead of thinking out loud in an empty temp dir. This is the "describe → do"
@@ -2113,7 +2113,7 @@ jump. Mostly *wiring* pieces that already exist (`@helix/sandbox`, the coding-ag
 testing-agent runner) into the two seams the executor already exposes. Full plan:
 [SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md).
 
-### Story: Sandbox-backed coding & testing  🛠️ in progress
+### Story: Sandbox-backed coding & testing  ✅ done
 
 #### HELIX-161 — Run-scoped workspace + run-id threading  ✅
 - **What it is:** the plumbing that lets **one run's steps share a single workspace**. Before this, every
@@ -2196,6 +2196,28 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
   [scaffold.ts](../libs/coding-agent/src/lib/scaffold.ts) / [diff.ts](../libs/coding-agent/src/lib/diff.ts) and
   `@helix/sandbox`'s [repo-checkout.ts](../libs/sandbox/src/repo-checkout.ts). 6 new tests (scaffold + checkout
   baselines, conflict propagation, the change-set diff, no-op, markdown formatting); coding-agent suite (89) green.
+
+#### HELIX-165 — Worker wiring (flips it all on)  ✅
+- **What it is:** the keystone that connects everything from this epic into the running worker. The worker now
+  gives each run a **real sandbox workspace** (scaffolded), hands the **coding** step the file tools and the
+  **testing** step the command/test tools — so with a real model key, a run genuinely *writes files and runs
+  tests* instead of just describing them.
+- **Why it matters:** this is the "describe → do" moment for the whole platform. Up to now the agents could
+  reason but not act; from here a build request produces actual edited files in an isolated workspace and a
+  real test run, with a **change set** (the diff) captured for the PR. It closes the Sandbox Tools epic.
+- **How it works (plain words):** a small worker-side bridge (`createSandboxWorkspace`) provisions a sandbox
+  per run, fills it (HELIX-164), and keeps a registry mapping the run's workspace to its sandbox. It returns
+  the two halves the executor asks for — a **factory** (provision/populate/dispose, with the change set logged
+  on teardown) and a **tools** map (coding tools for the coding role, testing tools for the testing role).
+  The dev worker drops its old empty-tools + bare-temp-dir setup for this pair, still wrapped in the run-scoped
+  provider (HELIX-161). Offline (no key) the agents finish on canned text with the tools simply unused; set
+  `ANTHROPIC_API_KEY` and they actually use them.
+- **Where it lives:** `@helix/workflow` — [sandbox-workspace.ts](../libs/workflow/src/lib/sandbox-workspace.ts)
+  (`createSandboxWorkspace` + `populateSpecFromConfig`) and the rewired
+  [dev worker](../libs/workflow/src/dev-worker.ts), bridging `@helix/executor`'s workspace seams to
+  `@helix/sandbox` + the coding/testing tools (HELIX-162/163) + populate (HELIX-164). 5 new integration tests
+  (scaffold + bind, shared-sandbox reuse, role/unknown-workspace tool gating, change-set capture on release);
+  workflow suite (72) green. **Closes the Sandbox Tools & Repo Checkout epic.**
 
 ---
 
@@ -2347,11 +2369,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-156 | Executor — coding + testing role executors (sandbox) | ✅ | #119 |
 | HELIX-157 | Executor — deployment role executor (build/deploy seam) | ✅ | #120 |
 | HELIX-158 | Executor — worker wiring + config-driven LLM seam | ✅ | #121 |
-| HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | 🛠️ | #123 (plan) |
+| HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | ✅ | #123 (plan) |
 | HELIX-161 | Run-scoped workspace + run-id threading | ✅ | #124 |
 | HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | #125 |
 | HELIX-163 | Testing command + test-run tools | ✅ | #126 |
-| HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | — |
+| HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | #127 |
+| HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
