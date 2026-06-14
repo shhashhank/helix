@@ -24,6 +24,7 @@
       "@helix/github-mcp/app-auth": ["libs/github-mcp/src/app-auth.ts"],
       "@helix/secrets": ["libs/secrets/src/index.ts"],
       "@helix/secrets/aws-kms": ["libs/secrets/src/aws-kms.ts"],
+      "@helix/secrets/aws-secrets-store": ["libs/secrets/src/aws-secrets-store.ts"],
       "@helix/planning": ["libs/planning/src/index.ts"],
       "@helix/sandbox": ["libs/sandbox/src/index.ts"],
       "@helix/coding-agent": ["libs/coding-agent/src/index.ts"],

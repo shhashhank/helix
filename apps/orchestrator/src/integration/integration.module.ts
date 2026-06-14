@@ -1,7 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { Module } from '@nestjs/common';
-import { EncryptedSecretStore, InMemorySecretRecordRepository, type KeyManagementService, LocalKms } from '@helix/secrets';
+import {
+  EncryptedSecretStore,
+  InMemorySecretRecordRepository,
+  type KeyManagementService,
+  LocalKms,
+  type SecretRecordRepository,
+} from '@helix/secrets';
 import { awsKmsFromEnv } from '@helix/secrets/aws-kms';
+import { secretsManagerRepoFromEnv } from '@helix/secrets/aws-secrets-store';
 import { AuthModule } from '../auth/auth.module';
 import { GithubIntegrationController } from './github-integration.controller';
 import { GithubIntegrationService } from './github-integration.service';
@@ -25,6 +32,14 @@ function kms(): KeyManagementService {
 }
 
 /**
+ * Where encrypted secret records live: AWS Secrets Manager when configured
+ * (`USE_AWS_SECRETS_MANAGER`, HELIX-172), else the in-memory repository (dev / CI).
+ */
+function secretRepo(): SecretRecordRepository {
+  return secretsManagerRepoFromEnv() ?? new InMemorySecretRecordRepository();
+}
+
+/**
  * GitHub onboarding (HELIX-148). Wires the connect flow over the **encrypted secret
  * vault** (`@helix/secrets`), the auth guard, and the in-memory pending-install +
  * secret repositories (durable stores / AWS KMS are the deferred bindings).
@@ -36,7 +51,7 @@ function kms(): KeyManagementService {
     GithubIntegrationService,
     { provide: PENDING_INSTALL_STORE, useClass: InMemoryPendingInstallStore },
     { provide: GITHUB_APP_CONFIG, useFactory: () => ({ appSlug: process.env.GITHUB_APP_SLUG ?? 'helix-dev' }) },
-    { provide: SECRETS_MANAGER, useFactory: () => new EncryptedSecretStore(kms(), new InMemorySecretRecordRepository()) },
+    { provide: SECRETS_MANAGER, useFactory: () => new EncryptedSecretStore(kms(), secretRepo()) },
     // Live access verification (HELIX-170): the real verifier mints an installation token
     // against GitHub when the App credentials are configured (GITHUB_APP_ID + private key);
     // otherwise the health check honestly reports not_configured (dev / CI default).
