@@ -2138,6 +2138,23 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
   [dev worker](../libs/workflow/src/dev-worker.ts). 14 new executor tests + 1 activity test; executor (47) and
   workflow (67) suites green.
 
+#### HELIX-162 — Coding file-edit tools (sandbox-bound)  ✅
+- **What it is:** the coding agent's actual **read / write / patch a file** tools, packaged so the agent loop
+  can call them — each one wired to a specific run's workspace folder.
+- **Why it matters:** this is the first half of giving the agents real *hands*. The tool definitions and the
+  logic that runs them already existed (HELIX-103); this turns them into the exact shape the executor hands an
+  agent (`toolsFor('coding')` → a `name → executor` map), so the next step (worker wiring, HELIX-165) can just
+  plug them in. On its own it changes no behaviour yet — it's a ready-to-use building block.
+- **How it works (plain words):** given a sandbox (an isolated folder with a guard that blocks paths trying to
+  escape it), we build three callable tools — `read_file`, `write_file`, `patch_file` — each forwarding the
+  model's request to the existing handler. Expected problems (file missing, snippet not found, a path that
+  climbs out of the folder, bad input) come back as polite error results the agent can read and fix, never as
+  crashes.
+- **Where it lives:** `@helix/coding-agent` — [coding-tools.ts](../libs/coding-agent/src/lib/coding-tools.ts)
+  (`codingFileEditTools(sandbox)` + `codingToolDefs`), over the existing
+  [file-edit-tools.ts](../libs/coding-agent/src/lib/file-edit-tools.ts). 5 new tests (write/read/patch against a
+  real local sandbox, on-disk landing, error + path-escape cases); coding-agent suite (83) green.
+
 ---
 
 ## Fixes & hardening
@@ -2289,7 +2306,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-157 | Executor — deployment role executor (build/deploy seam) | ✅ | #120 |
 | HELIX-158 | Executor — worker wiring + config-driven LLM seam | ✅ | #121 |
 | HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | 🛠️ | #123 (plan) |
-| HELIX-161 | Run-scoped workspace + run-id threading | ✅ | — |
+| HELIX-161 | Run-scoped workspace + run-id threading | ✅ | #124 |
+| HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
