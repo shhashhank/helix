@@ -18,8 +18,8 @@ const runAgent = jest.fn(async (_o: RunAgentOptions): Promise<AgentRunResult> =>
   totals: { tokens: 0, costUsd: 0 },
 }));
 const workspaces: WorkspaceProvider = {
-  provision: async (_s: ExecutableStep) => ({ id: 'w', dir: '/tmp/w' }) as Workspace,
-  dispose: async (_w: Workspace) => undefined,
+  acquire: async (_runId: string, _s: ExecutableStep) => ({ id: 'w', dir: '/tmp/w' }) as Workspace,
+  release: async (_runId: string) => undefined,
 };
 const tools: WorkspaceTools = { toolsFor: () => ({}) };
 const runner: DeploymentRunner = { deploy: async () => ({ ok: true, liveUrl: 'https://live' }) };

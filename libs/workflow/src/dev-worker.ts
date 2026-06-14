@@ -11,7 +11,8 @@
  *
  * Deferred (so this stays runnable offline): real repo checkout + file/test tools in
  * the sandbox, and real build/ECR/CDK deployment — wired as their bindings land
- * (DEFERRED.md). The workspace here is a throwaway temp dir; deployment is stubbed.
+ * (DEFERRED.md). The workspace here is a temp dir, **run-scoped** so a run's steps share
+ * it (HELIX-161) and reclaimed by an idle-TTL sweep; deployment is stubbed.
  *
  * Run it with a Temporal dev server on :7233:
  *   pnpm dev:worker                      # offline (scripted LLM)
@@ -25,8 +26,9 @@ import { runAgent } from '@helix/agent';
 import {
   DefaultAgentSpecResolver,
   type DeploymentRunner,
+  RunScopedWorkspaceProvider,
   type StepExecutor,
-  type WorkspaceProvider,
+  type WorkspaceFactory,
   type WorkspaceTools,
   buildPipelineDispatcher,
   simulatedStepExecutor,
@@ -38,17 +40,26 @@ import { createWorkflowWorker } from './lib/temporal/worker';
 import { HELIX_TASK_QUEUE } from './lib/temporal/shared';
 
 const STEP_DELAY_MS = Number(process.env.STEP_DELAY_MS ?? 1500);
+/** Dispose a run's workspace after this long with no step touching it (HELIX-161). */
+const WORKSPACE_IDLE_MS = Number(process.env.WORKSPACE_IDLE_MS ?? 10 * 60 * 1000);
+/** How often to sweep for idle workspaces. */
+const WORKSPACE_SWEEP_MS = Number(process.env.WORKSPACE_SWEEP_MS ?? 60 * 1000);
 
-/** Local temp-dir workspaces — real repo checkout is deferred (DEFERRED.md #3). */
-const workspaces: WorkspaceProvider = {
-  async provision(step) {
+/**
+ * Local temp-dir workspace provisioning — real repo checkout is deferred (DEFERRED.md #3).
+ * Wrapped in a {@link RunScopedWorkspaceProvider} so a run's steps share one dir (coding's
+ * files reach testing, HELIX-161); the dir is named after the run's first step.
+ */
+const workspaceFactory: WorkspaceFactory = {
+  async create(step) {
     const dir = await mkdtemp(join(tmpdir(), `helix-${step.id}-`));
     return { id: dir, dir };
   },
-  async dispose(workspace) {
+  async destroy(workspace) {
     await rm(workspace.dir, { recursive: true, force: true });
   },
 };
+const workspaces = new RunScopedWorkspaceProvider(workspaceFactory);
 
 /** No file/test tools yet (deferred) — agents run tool-less for now. */
 const tools: WorkspaceTools = { toolsFor: () => ({}) };
@@ -83,6 +94,15 @@ async function bootstrap(): Promise<void> {
     return result;
   };
 
+  // Idle-TTL cleanup: dispose run workspaces no step has touched recently. This is the
+  // single-worker disposal policy (HELIX-161) — there's no run-end signal here, so a
+  // run's workspace lives until it's been idle past the TTL. unref so it can't keep the
+  // process alive on its own.
+  const sweep = setInterval(() => {
+    void workspaces.sweepIdle(WORKSPACE_IDLE_MS).catch((err) => console.error('[worker] workspace sweep failed:', err));
+  }, WORKSPACE_SWEEP_MS);
+  sweep.unref?.();
+
   const address = process.env.TEMPORAL_ADDRESS ?? 'localhost:7233';
   console.log(`[worker] connecting to Temporal at ${address} …`);
   const connection = await NativeConnection.connect({ address });
@@ -91,6 +111,8 @@ async function bootstrap(): Promise<void> {
 
   const stop = async () => {
     console.log('\n[worker] shutting down …');
+    clearInterval(sweep);
+    await workspaces.releaseAll().catch(() => undefined);
     worker.shutdown();
   };
   process.once('SIGINT', stop);

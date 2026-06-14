@@ -23,6 +23,12 @@ export interface StepOutcome {
 export interface WorkflowRunContext {
   /** Results of steps that actually ran, keyed by step id. */
   results: Record<string, StepRunResult>;
+  /**
+   * The run's id (the Temporal workflow id). Set by the durable runner so a step
+   * executor can scope per-run resources (e.g. a shared sandbox workspace, HELIX-161);
+   * the in-process runner leaves it undefined.
+   */
+  runId?: string;
 }
 
 /** Executes one workflow step (e.g. by invoking the agent loop). Throwing = failure. */

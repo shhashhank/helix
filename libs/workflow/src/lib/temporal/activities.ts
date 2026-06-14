@@ -25,8 +25,10 @@ export interface StepActivities {
  */
 export function createStepActivities(execute: WorkflowStepRunner): StepActivities {
   return {
-    async runStep({ step, ctx }: RunStepInput): Promise<StepRunResult> {
-      return await execute(step, ctx);
+    async runStep({ step, ctx, runId }: RunStepInput): Promise<StepRunResult> {
+      // Thread the run id (the workflow id) into the executor context so a step can
+      // scope per-run resources — e.g. a workspace shared across the run (HELIX-161).
+      return await execute(step, runId === undefined ? ctx : { ...ctx, runId });
     },
   };
 }
