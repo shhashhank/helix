@@ -69,7 +69,8 @@ Also deferred under #13: turning a request's free-text prompt into a **planning-
 ## Suggested order
 
 1. **Sandbox tools + repo checkout (Theme A)** — turns the agents from "describe" to "do". Biggest jump in
-   product realism, and mostly local (testable offline-ish).
+   product realism, and mostly local (testable offline-ish). **Planned:**
+   [SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md) (epic HELIX-159 → HELIX-161…165).
 2. **Real LLM run-through** — set `ANTHROPIC_API_KEY` and validate a full request end-to-end (see
    [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs.
 3. **The frontend (Theme D)** — a thin web app over the existing APIs; the fastest path to a demoable product.
