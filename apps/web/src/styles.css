@@ -88,3 +88,48 @@ button {
 button:hover {
   border-color: var(--helix-accent);
 }
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.helix-muted {
+  color: var(--helix-muted);
+}
+
+.helix-error {
+  color: #b91c1c;
+}
+
+.helix-signin {
+  max-width: 360px;
+  margin: 3rem auto;
+  background: #fff;
+  padding: 1.5rem;
+  border: 1px solid var(--helix-border);
+  border-radius: 10px;
+}
+
+.helix-signin form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.helix-signin label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--helix-muted);
+}
+
+.helix-signin input,
+.helix-signin select {
+  padding: 0.5rem;
+  border: 1px solid var(--helix-border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--helix-fg);
+}

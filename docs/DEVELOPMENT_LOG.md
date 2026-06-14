@@ -2359,6 +2359,25 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
   [app/layout.tsx](../apps/web/src/app/layout.tsx); CI gained typecheck + build + test steps for `web`. 12 new
   tests (client, auth context, shell) with a mocked `fetch` — fully offline; web suite (12) green.
 
+#### HELIX-176 — Sign-in screen (dev sign-in) + protected routes  ✅
+- **What it is:** the actual **log-in page**. You enter an email, an organization, and a role, click sign in,
+  and you're in — with the rest of the app gated behind it.
+- **Why it matters:** nothing in the app is reachable without a session, so this is the front door. It also
+  solves a practical local problem: there's no real identity provider running, so the browser can't produce a
+  proper login token on its own.
+- **How it works (plain words):** the browser can't safely mint a sign-in token (that needs a secret it
+  shouldn't hold), so the orchestrator gained a small **dev-only** endpoint — `POST /api/auth/dev-login` — that
+  takes an email/org/role, mints a stand-in token server-side, and exchanges it for a real Helix session (the
+  exact same path a real identity-provider token would take). It's switched **off in production** (returns 403
+  unless explicitly opted in). The page calls it, stores the session, and sends you to the dashboard; an
+  already-signed-in visitor skips straight past. A real OIDC redirect stays deferred (DEFERRED #12).
+- **Where it lives:** orchestrator — [auth.controller.ts](../apps/orchestrator/src/auth/auth.controller.ts)
+  (`POST /auth/dev-login`, guarded) + the shared OIDC config extracted in
+  [auth.module.ts](../apps/orchestrator/src/auth/auth.module.ts); web —
+  [pages/sign-in.tsx](../apps/web/src/app/pages/sign-in.tsx) + `signInWithDevLogin` on the
+  [auth context](../apps/web/src/auth/auth-context.tsx). 5 new tests (3 backend: mint+exchange, roles override,
+  403 in production; 2 frontend: sign-in → dashboard, error on rejection); orchestrator (108) + web (14) green.
+
 ---
 
 ## Fixes & hardening
@@ -2522,7 +2541,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-171 | AWS KMS adapter | ✅ | #133 |
 | HELIX-172 | AWS Secrets Manager record store | ✅ | #134 |
 | HELIX-173 | **Epic:** Frontend web app (React) | 🛠️ | #135 (plan) |
-| HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | — |
+| HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | #136 |
+| HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

@@ -9,12 +9,13 @@ import { Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth } from '../auth/auth-context';
 import { Layout } from './layout';
 import { Placeholder } from './pages/placeholder';
+import { SignIn } from './pages/sign-in';
 
 export function App(): ReactElement {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/sign-in" element={<Placeholder title="Sign in" note="The sign-in screen lands in HELIX-176." />} />
+        <Route path="/sign-in" element={<SignIn />} />
         <Route
           element={
             <RequireAuth>
