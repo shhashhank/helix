@@ -5,7 +5,7 @@
  * API — no I/O, no `Date.now`, no randomness. The actual step work happens in
  * activities (see {@link ./activities}), which run in the normal Node runtime.
  */
-import { ActivityOptions, defineQuery, proxyActivities, setHandler } from '@temporalio/workflow';
+import { ActivityOptions, defineQuery, proxyActivities, setHandler, workflowInfo } from '@temporalio/workflow';
 import type { Duration } from '@temporalio/common';
 import type { StepActivities } from './activities';
 import type { ApprovalActivities } from './approval-activities';
@@ -64,7 +64,8 @@ export async function executeWorkflow(def: WorkflowDefinition): Promise<Workflow
     (step, ctx) => {
       // Each step gets an activity proxy configured with its own retry policy.
       const { runStep } = proxyActivities<StepActivities>(stepActivityOptions(step));
-      return runStep({ step, ctx });
+      // Thread the run id so the executor can scope per-run resources (HELIX-161).
+      return runStep({ step, ctx, runId: workflowInfo().workflowId });
     },
     (p) => {
       progress = p;

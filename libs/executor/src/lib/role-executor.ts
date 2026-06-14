@@ -18,6 +18,12 @@ export type AgentRunner = (options: RunAgentOptions) => Promise<AgentRunResult>;
 /** The run context an executor reads prior step outputs from (structurally `WorkflowRunContext`). */
 export interface RunContext {
   results: Record<string, { status: string; output?: unknown; error?: string }>;
+  /**
+   * The run's id (the Temporal workflow id), threaded by the durable runner so an
+   * executor can scope per-run resources — e.g. a workspace shared by a run's steps
+   * (HELIX-161). Undefined under the in-process runner; executors fall back to per-step.
+   */
+  runId?: string;
 }
 
 export interface RoleExecutorDeps {

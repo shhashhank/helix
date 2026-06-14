@@ -20,4 +20,6 @@ export const WORKFLOW_PROGRESS_QUERY = 'workflowProgress';
 export interface RunStepInput {
   step: WorkflowStep;
   ctx: WorkflowRunContext;
+  /** The run's workflow id, threaded so the executor can scope per-run resources (HELIX-161). */
+  runId?: string;
 }
