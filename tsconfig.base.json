@@ -22,6 +22,7 @@
       "@helix/mcp": ["libs/mcp/src/index.ts"],
       "@helix/github-mcp": ["libs/github-mcp/src/index.ts"],
       "@helix/github-mcp/app-auth": ["libs/github-mcp/src/app-auth.ts"],
+      "@helix/github-mcp/worker-client": ["libs/github-mcp/src/worker-client.ts"],
       "@helix/secrets": ["libs/secrets/src/index.ts"],
       "@helix/secrets/aws-kms": ["libs/secrets/src/aws-kms.ts"],
       "@helix/secrets/aws-secrets-store": ["libs/secrets/src/aws-secrets-store.ts"],

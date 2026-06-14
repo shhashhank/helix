@@ -2475,6 +2475,23 @@ seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan
   pattern. 5 new tests (delivered → PR output, skip → benign success, error → failure, registration, pipeline
   opt-in); executor suite (52) green.
 
+#### HELIX-184 — Authenticated per-run GitHub client at the worker  ✅
+- **What it is:** the bit that hands the delivery step a **real, logged-in GitHub client** — scoped to the
+  specific org doing the run.
+- **Why it matters:** opening a PR needs to act as *that org's* GitHub App installation, and a run can be for
+  any org, so the client has to be built per run (unlike the always-on MCP server, whose org is fixed). This is
+  the credentials half of making delivery live.
+- **How it works (plain words):** given the App credentials (from env) + the run's installation id, it builds
+  an Octokit that fetches a **fresh short-lived token before every request** (so nothing long-lived is held),
+  wrapped in the real `OctokitGitHubClient`. The token-wiring is a plain function (unit-tested without loading
+  Octokit); the Octokit itself is ESM-only so it's loaded lazily — keeping it out of everything that doesn't
+  push. A `githubAppCredentialsFromEnv` helper lets the worker gate delivery off when no App is configured.
+- **Where it lives:** `@helix/github-mcp` — [worker-client.ts](../libs/github-mcp/src/worker-client.ts)
+  (`authedGitHubClient`, `createInstallationGitHubClient`, `githubAppCredentialsFromEnv`), over `app-auth` +
+  the HELIX-168 client. Kept out of the barrel; imported via the `@helix/github-mcp/worker-client` subpath so
+  consumers don't pull Octokit. 3 new tests (the auth hook sets a fresh token + adapts to a client; env gating);
+  github-mcp suite (41) green.
+
 ---
 
 ## Fixes & hardening
@@ -2651,7 +2668,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-179 | GitHub connect wizard | ✅ | #140 |
 | HELIX-180 | **Epic:** Real GitHub PR delivery | 🛠️ | #143 (plan) |
 | HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | #144 |
-| HELIX-183 | Delivery role executor | ✅ | — |
+| HELIX-183 | Delivery role executor | ✅ | #145 |
+| HELIX-184 | Authenticated per-run GitHub client at the worker | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
