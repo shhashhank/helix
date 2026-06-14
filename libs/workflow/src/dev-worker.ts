@@ -31,9 +31,11 @@ import {
   buildPipelineDispatcher,
   simulatedStepExecutor,
 } from '@helix/executor';
+import { createInstallationGitHubClient, githubAppCredentialsFromEnv } from '@helix/github-mcp/worker-client';
 import { providerFromEnv } from '@helix/llm';
 import { NativeConnection } from '@temporalio/worker';
 import type { WorkflowRunContext } from './lib/runner';
+import { sandboxDeliveryRunner } from './lib/delivery-runner';
 import { createSandboxWorkspace } from './lib/sandbox-workspace';
 import { createWorkflowWorker } from './lib/temporal/worker';
 import { HELIX_TASK_QUEUE } from './lib/temporal/shared';
@@ -51,10 +53,27 @@ const WORKSPACE_SWEEP_MS = Number(process.env.WORKSPACE_SWEEP_MS ?? 60 * 1000);
  * so a run's steps share one sandbox (coding's files reach testing, HELIX-161); the change
  * set is logged when the workspace is disposed. Real `git clone` stays deferred (DEFERRED.md #1).
  */
-const { factory: workspaceFactory, tools } = createSandboxWorkspace({
+const { factory: workspaceFactory, tools, captureChangeSet } = createSandboxWorkspace({
   onChangeSet: (id, diff) => console.log(`[worker] change set for ${id}:\n${formatWorkspaceDiff(diff)}`),
 });
 const workspaces = new RunScopedWorkspaceProvider(workspaceFactory);
+
+/**
+ * GitHub PR delivery (HELIX-186): at the delivery step, push the run's change-set + open a
+ * PR. Config-gated — with the GitHub App creds in env it's live; otherwise it skips (the run
+ * still completes). The target repo + installation come from the delivery step config (the
+ * request's `repo`).
+ */
+const appCredentials = githubAppCredentialsFromEnv();
+const deliveryRunner = sandboxDeliveryRunner({
+  changeSet: async (step, ctx) => {
+    const workspace = await workspaces.acquire(ctx.runId ?? step.id, step);
+    return captureChangeSet(workspace.id);
+  },
+  createClient: appCredentials
+    ? (installationId) => createInstallationGitHubClient({ credentials: appCredentials, installationId })
+    : undefined,
+});
 
 /** Stub deployment — real build/ECR/CDK against AWS is deferred (DEFERRED.md #4). */
 const deployRunner: DeploymentRunner = {
@@ -74,6 +93,7 @@ async function bootstrap(): Promise<void> {
     workspaces,
     tools,
     runner: deployRunner,
+    deliveryRunner,
     context: {},
     fallback: simulatedStepExecutor({ delayMs: STEP_DELAY_MS }),
   });

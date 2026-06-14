@@ -31,7 +31,7 @@ export class RequestController {
   @ApiCreatedResponse({ type: BuildRequestDto })
   submit(@Body() body: SubmitRequestDto, @Principal() principal: AuthPrincipal): Promise<BuildRequest> {
     return this.service.submit(
-      { title: body.title, prompt: body.prompt, workflow: body.workflow as unknown as WorkflowDefinition | undefined },
+      { title: body.title, prompt: body.prompt, workflow: body.workflow as unknown as WorkflowDefinition | undefined, repo: body.repo },
       principal,
     );
   }

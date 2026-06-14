@@ -26,9 +26,11 @@ import {
   captureWorkspaceDiff,
   codingFileEditTools,
   populateWorkspace,
+  snapshotWorkspace,
 } from '@helix/coding-agent';
 import { LocalSandboxProvider, type Sandbox, type SandboxProvider } from '@helix/sandbox';
 import { testingTools } from '@helix/testing-agent';
+import type { RunChangeSet } from './delivery-runner';
 
 /** A minimal starter project so a brand-new build has a base + a detectable test setup. */
 const DEFAULT_SCAFFOLD: ScaffoldFile[] = [
@@ -67,6 +69,8 @@ export interface SandboxWorkspaceDeps {
 export interface SandboxWorkspace {
   factory: WorkspaceFactory;
   tools: WorkspaceTools;
+  /** A run's changed files (add/update) + summary, for the delivery step (HELIX-186). */
+  captureChangeSet(workspaceId: string): Promise<RunChangeSet | undefined>;
 }
 
 interface RegistryEntry {
@@ -117,5 +121,24 @@ export function createSandboxWorkspace(deps: SandboxWorkspaceDeps = {}): Sandbox
     },
   };
 
-  return { factory, tools };
+  /** Capture the run's change set as committable files (add/update) + a summary. */
+  async function captureChangeSet(workspaceId: string): Promise<RunChangeSet | undefined> {
+    const entry = registry.get(workspaceId);
+    if (!entry) return undefined;
+    const diff = await captureWorkspaceDiff(entry.sandbox, entry.baseline);
+    const after = await snapshotWorkspace(entry.sandbox);
+    const files = diff.changes
+      .filter((change) => change.status !== 'deleted')
+      .map((change) => ({ path: change.path, content: after[change.path] ?? '' }));
+    return {
+      files,
+      summary: {
+        filesChanged: diff.summary.added + diff.summary.modified + diff.summary.deleted,
+        additions: diff.summary.additions,
+        deletions: diff.summary.deletions,
+      },
+    };
+  }
+
+  return { factory, tools, captureChangeSet };
 }

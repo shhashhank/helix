@@ -7,8 +7,8 @@
     "nx": "nx",
     "dev:registry": "nx serve registry",
     "dev:orchestrator": "nx serve orchestrator",
-    "dev:worker": "node -r @swc-node/register libs/workflow/src/dev-worker.ts",
-    "github-mcp:stdio": "node -r @swc-node/register libs/github-mcp/src/stdio-server.ts"
+    "dev:worker": "SWC_NODE_PROJECT=tsconfig.base.json node -r @swc-node/register libs/workflow/src/dev-worker.ts",
+    "github-mcp:stdio": "SWC_NODE_PROJECT=tsconfig.base.json node -r @swc-node/register libs/github-mcp/src/stdio-server.ts"
   },
   "devDependencies": {
     "@babel/core": "^7.14.5",
