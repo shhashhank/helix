@@ -22,6 +22,18 @@ describe('deliveryExecutor', () => {
     expect(result).toEqual({ status: 'success', output: { delivered: false, skippedReason: 'no target repo configured' } });
   });
 
+  it('carries the change-set summary into the output (PR + change set as artifacts)', async () => {
+    const runner: GitHubDeliveryRunner = {
+      deliver: jest.fn(async () => ({
+        delivered: true,
+        pullRequest: { number: 9, url: 'https://gh/pr/9' },
+        changeSet: { filesChanged: 3, additions: 40, deletions: 5 },
+      })),
+    };
+    const result = await deliveryExecutor({ runner })(step, ctx);
+    expect(result.output).toEqual({ pullRequest: { number: 9, url: 'https://gh/pr/9' }, changeSet: { filesChanged: 3, additions: 40, deletions: 5 } });
+  });
+
   it('fails the step on a genuine delivery error', async () => {
     const runner: GitHubDeliveryRunner = { deliver: jest.fn(async () => ({ delivered: false, error: '422 PR already exists' })) };
     const result = await deliveryExecutor({ runner })(step, ctx);

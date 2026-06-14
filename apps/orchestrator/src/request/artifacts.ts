@@ -10,6 +10,7 @@ export interface RunArtifacts {
   pullRequest?: { url: string; title?: string };
   tests?: { passed: number; failed: number; coverage?: number };
   deployment?: { url: string; environment?: string };
+  changeSet?: { filesChanged: number; additions: number; deletions: number };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -46,10 +47,25 @@ export function extractArtifacts(progress: Pick<WorkflowProgress, 'steps'>): Run
     if (!out) continue;
 
     if (!artifacts.pullRequest) {
-      const url = pickString(out, ['pullRequestUrl', 'prUrl']);
+      // The delivery role (HELIX-183) emits a structured `pullRequest: { url, title? }`;
+      // older steps emit flat `pullRequestUrl` / `prUrl`. Accept both.
+      const nested = asRecord(out.pullRequest);
+      const url = (nested && pickString(nested, ['url', 'html_url'])) ?? pickString(out, ['pullRequestUrl', 'prUrl']);
       if (url) {
-        const title = pickString(out, ['pullRequestTitle', 'prTitle']);
+        const title = (nested && pickString(nested, ['title'])) ?? pickString(out, ['pullRequestTitle', 'prTitle']);
         artifacts.pullRequest = title ? { url, title } : { url };
+      }
+    }
+
+    if (!artifacts.changeSet) {
+      const cs = asRecord(out.changeSet);
+      if (cs) {
+        const filesChanged = pickNumber(cs, ['filesChanged', 'files']);
+        const additions = pickNumber(cs, ['additions']);
+        const deletions = pickNumber(cs, ['deletions']);
+        if (filesChanged !== undefined && additions !== undefined && deletions !== undefined) {
+          artifacts.changeSet = { filesChanged, additions, deletions };
+        }
       }
     }
 

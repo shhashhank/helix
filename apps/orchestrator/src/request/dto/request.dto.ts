@@ -49,10 +49,16 @@ class DeploymentArtifactDto {
   @ApiProperty() url!: string;
   @ApiPropertyOptional() environment?: string;
 }
+class ChangeSetArtifactDto {
+  @ApiProperty() filesChanged!: number;
+  @ApiProperty() additions!: number;
+  @ApiProperty() deletions!: number;
+}
 
 /** The outputs a run produced — each present only once its step has run (HELIX-147). */
 export class RunArtifactsDto {
   @ApiPropertyOptional({ type: PullRequestArtifactDto }) pullRequest?: PullRequestArtifactDto;
   @ApiPropertyOptional({ type: TestsArtifactDto }) tests?: TestsArtifactDto;
   @ApiPropertyOptional({ type: DeploymentArtifactDto }) deployment?: DeploymentArtifactDto;
+  @ApiPropertyOptional({ type: ChangeSetArtifactDto }) changeSet?: ChangeSetArtifactDto;
 }

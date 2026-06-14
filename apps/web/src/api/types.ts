@@ -54,6 +54,7 @@ export interface RunArtifacts {
   pullRequest?: { url: string; title?: string };
   tests?: { passed: number; failed: number; coverage?: number };
   deployment?: { url: string; environment?: string };
+  changeSet?: { filesChanged: number; additions: number; deletions: number };
 }
 
 /** A pending approval in an approver's inbox (most-urgent first). */
