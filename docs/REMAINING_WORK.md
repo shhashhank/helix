@@ -58,15 +58,19 @@ All have a working in-memory/local/stand-in implementation today; "to land" is t
 | **12** | Real OIDC provider (Auth0 / Cognito, RS256/JWKS) | `StaticKeyOidcVerifier` (HS256 stand-in) + app sessions |
 | **14** | GitHub onboarding — live install verification + token mint | connect flow + a `GithubConnectionVerifier` seam (`not_configured` default) |
 
-### D. The frontend (everything user-facing is API-first)
-HELIX-11 was built **API-first by design** — complete, tested APIs with **no rendered screens**. No frontend
-app exists in `apps/` yet.
+### D. The frontend — ✅ DONE (Frontend epic, HELIX-173)
+HELIX-11 was built **API-first by design**; the React SPA in `apps/web` now renders the screens over those APIs.
 
-| Screen | API that backs it |
+| Screen | Status |
 |---|---|
-| **Approval inbox** (DEFERRED #6) | `GET /api/approvals/inbox`, decisions, escalation |
-| **Request submission + run dashboard** (DEFERRED #13) | `POST /api/requests`, `/requests/overview`, `/:id/run`, `/:id/stream`, `/:id/artifacts` |
-| **GitHub connect wizard** (DEFERRED #14) | `POST /api/integrations/github/connect` + `/callback`, `GET`, `/test` |
+| App scaffold + API client + auth context/guard + shell | ✅ HELIX-175 |
+| **Sign-in** (dev-login) | ✅ HELIX-176 |
+| **Request submission + live run dashboard** (SSE) | ✅ HELIX-177 |
+| **Approval inbox** | ✅ HELIX-178 |
+| **GitHub connect wizard** (+ live Test connection) | ✅ HELIX-179 |
+
+**Still deferred (separate):** a real OIDC provider redirect (DEFERRED #12; dev-login stands in locally) and
+UX/theming polish.
 
 Also deferred under #13: turning a request's free-text prompt into a **planning-driven custom workflow**
 (today it runs the standard pipeline) and a **durable request store**.
@@ -77,8 +81,8 @@ Also deferred under #13: turning a request's free-text prompt into a **planning-
    [SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md)). The agents now write files + run tests in a real sandbox.
 2. **Real LLM run-through** (next) — set `ANTHROPIC_API_KEY` and validate a full request end-to-end (see
    [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs. Now genuinely produces edited files.
-3. **The frontend (Theme D)** — a thin web app over the existing APIs; the fastest path to a demoable product.
-   **In progress:** [FRONTEND_PLAN.md](FRONTEND_PLAN.md) (epic HELIX-173 → HELIX-175…179; React in `apps/web`).
+3. ~~**The frontend (Theme D)**~~ — ✅ **DONE** (epic HELIX-173 → HELIX-175…179; React SPA in `apps/web`;
+   [FRONTEND_PLAN.md](FRONTEND_PLAN.md)). Sign in → submit → watch the run live → approve → connect GitHub.
 4. **Real GitHub + Secrets/KMS (#1, #2, #14)** — so runs act on real repos with real credentials. **In
    progress:** [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md) (epic HELIX-166 → HELIX-168…172).
 5. **Real deployment (#4)** and the remaining durability/transport bindings (#5, #7, #8, #9, #11) as the

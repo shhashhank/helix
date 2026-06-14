@@ -85,3 +85,27 @@ export interface ApprovalRequest {
   approverRoles: string[];
   minApprovals: number;
 }
+
+/** The org's GitHub connection status. */
+export interface GithubConnectionStatus {
+  connected: boolean;
+  installationId?: string;
+  accountLogin?: string;
+  connectedAt?: string;
+}
+
+/** Returned by starting the connect flow — the App install URL + an opaque state. */
+export interface ConnectGithubResponse {
+  installUrl: string;
+  state: string;
+}
+
+/** The GitHub connection health-check result. */
+export interface VerifyResult {
+  ok: boolean;
+  status: 'verified' | 'not_connected' | 'not_configured' | 'error';
+  installationId?: string;
+  checkedAt: string;
+  tokenExpiresAtMs?: number;
+  error?: string;
+}

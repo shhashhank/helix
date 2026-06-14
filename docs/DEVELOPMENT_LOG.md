@@ -2330,7 +2330,7 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
 
 ---
 
-## Epic: Frontend web app (React) (HELIX-173)  🛠️ in progress
+## Epic: Frontend web app (React) (HELIX-173)  ✅ done
 
 Forward scope after the GitHub + Secrets/KMS epic: the **first user-facing app** — a React SPA in `apps/web`
 over the platform's already-tested APIs (sign-in → submit a request → watch the agents run it live → see
@@ -2338,7 +2338,7 @@ artifacts; plus the approval inbox and the GitHub connect wizard). HELIX-11 was 
 screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch` keep CI offline. Full plan:
 [FRONTEND_PLAN.md](FRONTEND_PLAN.md).
 
-### Story: The web app  🛠️ in progress
+### Story: The web app  ✅ done
 
 #### HELIX-175 — React app scaffold + shell + API client + auth context  ✅
 - **What it is:** the skeleton of the web app — the project itself, the page frame (header + navigation), the
@@ -2412,6 +2412,22 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
 - **Where it lives:** web — [pages/approvals.tsx](../apps/web/src/app/pages/approvals.tsx) (`ApprovalInbox` +
   the per-request card), over `GET /api/approvals/inbox` and `POST /api/approvals/:id/decisions`; shared
   [types](../apps/web/src/api/types.ts). 2 new tests (list → decide → refresh; empty state); web suite (21) green.
+
+#### HELIX-179 — GitHub connect wizard  ✅
+- **What it is:** the **onboarding screen** for hooking an org up to GitHub — connect, see the connection, and
+  health-check or disconnect it.
+- **Why it matters:** runs push code to real repos, which needs a GitHub App installed for the org. This is
+  the screen that gets you there, and lets you confirm it's working — closing the last of the API-first UIs and
+  the frontend epic.
+- **How it works (plain words):** if you're not connected, "Connect GitHub" starts the flow and gives you the
+  App install link; after installing, you paste the installation id back to finish (a real auto-redirect from
+  GitHub stays deferred, so the demo enters it by hand). Once connected, it shows the account + installation,
+  a **"Test connection"** button (which actually verifies access — the live check from HELIX-170), and a
+  disconnect. Each action talks to the existing integration API.
+- **Where it lives:** web — [pages/integrations.tsx](../apps/web/src/app/pages/integrations.tsx) over
+  `POST/GET/DELETE /api/integrations/github*` + `/connect`, `/callback`, `/test`; a `del` helper added to the
+  [API client](../apps/web/src/api/client.ts). The four screens now fully replace the route placeholders. 2 new
+  tests (connect → callback → connected; health-check); web suite (23) green. **Closes the Frontend epic.**
 
 ---
 
@@ -2575,11 +2591,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-170 | Live GitHub connection verifier | ✅ | #132 |
 | HELIX-171 | AWS KMS adapter | ✅ | #133 |
 | HELIX-172 | AWS Secrets Manager record store | ✅ | #134 |
-| HELIX-173 | **Epic:** Frontend web app (React) | 🛠️ | #135 (plan) |
+| HELIX-173 | **Epic:** Frontend web app (React) | ✅ | #135 (plan) |
 | HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | #136 |
 | HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | #137 |
 | HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | #138 |
-| HELIX-178 | Approval inbox | ✅ | — |
+| HELIX-178 | Approval inbox | ✅ | #139 |
+| HELIX-179 | GitHub connect wizard | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
