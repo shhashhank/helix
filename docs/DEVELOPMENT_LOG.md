@@ -2431,6 +2431,35 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
 
 ---
 
+## Epic: Real GitHub PR delivery (HELIX-180)  🛠️ in progress
+
+Forward scope after the Frontend epic: make a finished run **actually open a pull request** on the connected
+repo with the changes the coding agent produced, and show the **real** PR / tests / change-set as the run's
+artifacts (today they're placeholders). This turns "request → files in a throwaway sandbox" into "request → a
+PR you can review and merge" — the product's core promise. The pieces all exist (the Octokit client, App-token
+auth, the sandbox change-set diff, the artifacts API + run UI); this epic *wires* them. Config-gated +
+seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan:
+[GITHUB_DELIVERY_PLAN.md](GITHUB_DELIVERY_PLAN.md).
+
+### Story: Run → real GitHub PR  🛠️ in progress
+
+#### HELIX-182 — Deliver a change-set as a GitHub PR  ✅
+- **What it is:** the reusable step that takes a set of changed files and turns them into a **pull request** —
+  make a branch, commit the files onto it, open the PR.
+- **Why it matters:** it's the core action the whole epic is built around. Keeping it a small, pure function
+  (over the GitHub interface, not a live connection) means it's fully testable offline, and the later sub-tasks
+  just feed it a run's real files + a real authenticated client.
+- **How it works (plain words):** `deliverChangeSet` branches from a base (default `main`), commits the given
+  files onto the new branch, and opens a PR back to the base — returning the PR number + URL. It refuses to
+  open an empty PR (no files → error). It runs against the `GitHubClient` interface, so tests use a stub and the
+  real Octokit client (HELIX-168) makes it live. (Removing files in a commit is a noted follow-up — today it
+  adds/updates.)
+- **Where it lives:** `@helix/github-mcp` — [delivery.ts](../libs/github-mcp/src/delivery.ts)
+  (`deliverChangeSet`), over the existing [github-client.ts](../libs/github-mcp/src/github-client.ts) seam.
+  3 new tests (branch→commit→PR sequence, default base, empty-files guard); github-mcp suite (38) green.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -2602,7 +2631,9 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | #137 |
 | HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | #138 |
 | HELIX-178 | Approval inbox | ✅ | #139 |
-| HELIX-179 | GitHub connect wizard | ✅ | — |
+| HELIX-179 | GitHub connect wizard | ✅ | #140 |
+| HELIX-180 | **Epic:** Real GitHub PR delivery | 🛠️ | #143 (plan) |
+| HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
