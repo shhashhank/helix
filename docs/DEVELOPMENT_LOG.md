@@ -2250,6 +2250,25 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
   injected, installed at the entry point in HELIX-169). 12 new tests (read decode, tree mapping + filter,
   search scoping, branch resolution, the full commit dance, PR/comment/review); github-mcp suite (35) green.
 
+#### HELIX-169 — Runnable stdio MCP server entrypoint  ✅
+- **What it is:** the actual **launchable program** for the GitHub MCP server. Until now the server existed as
+  a function; this is the entrypoint that builds a real, authenticated GitHub client and serves the tools over
+  **stdio**, so the MCP registry can start it as a live process.
+- **Why it matters:** it turns the GitHub client (HELIX-168) from a class into something that *runs*. This is
+  the composition root where the real Octokit + the GitHub App auth come together — the first runnable that
+  talks to real GitHub.
+- **How it works (plain words):** it reads the GitHub App credentials from the environment, builds an Octokit
+  that fetches a fresh short-lived installation token before every request (so nothing long-lived is held),
+  wraps it in the `OctokitGitHubClient`, and connects the MCP server to stdio. Octokit is ESM-only, so it's
+  loaded with a dynamic `import()` — which keeps the rest of the lib plain-CJS and test-friendly (verified the
+  entry boots: missing creds fail fast with a clear message; with creds it reaches "server ready"). Added a
+  `pnpm github-mcp:stdio` run target. The first real dependency of the epic — `@octokit/rest` — lands here,
+  and only here (the entry isn't exported, so no consumer pulls it in).
+- **Where it lives:** `@helix/github-mcp` — [stdio-server.ts](../libs/github-mcp/src/stdio-server.ts), over the
+  existing [server.ts](../libs/github-mcp/src/server.ts) + [app-auth.ts](../libs/github-mcp/src/app-auth.ts)
+  (`GitHubAppTokenProvider`) + the HELIX-168 client; `github-mcp:stdio` script in `package.json`. Composition
+  glue (untested like the dev worker; the pieces it wires are each covered). github-mcp suite (35) stays green.
+
 ---
 
 ## Fixes & hardening
@@ -2407,7 +2426,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | #127 |
 | HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | #128 |
 | HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | 🛠️ | #129 (plan) |
-| HELIX-168 | Real Octokit GitHub client | ✅ | — |
+| HELIX-168 | Real Octokit GitHub client | ✅ | #130 |
+| HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
