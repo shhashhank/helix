@@ -3,7 +3,7 @@ import { SessionService, StaticKeyOidcVerifier } from '@helix/auth';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
 import { RolesGuard } from './roles.guard';
-import { OIDC_VERIFIER, SESSION_SERVICE } from './auth.tokens';
+import { OIDC_CONFIG, OIDC_VERIFIER, type OidcConfig, SESSION_SERVICE } from './auth.tokens';
 
 // Dev-only fallbacks so the service runs locally without an IdP. In any real
 // deployment these MUST come from the environment / secrets vault — the static
@@ -31,13 +31,17 @@ const DEV_OIDC_AUDIENCE = 'helix';
         }),
     },
     {
+      provide: OIDC_CONFIG,
+      useFactory: (): OidcConfig => ({
+        secret: process.env.AUTH_OIDC_SECRET ?? DEV_OIDC_SECRET,
+        issuer: process.env.AUTH_OIDC_ISSUER ?? DEV_OIDC_ISSUER,
+        audience: process.env.AUTH_OIDC_AUDIENCE ?? DEV_OIDC_AUDIENCE,
+      }),
+    },
+    {
       provide: OIDC_VERIFIER,
-      useFactory: () =>
-        new StaticKeyOidcVerifier({
-          secret: process.env.AUTH_OIDC_SECRET ?? DEV_OIDC_SECRET,
-          issuer: process.env.AUTH_OIDC_ISSUER ?? DEV_OIDC_ISSUER,
-          audience: process.env.AUTH_OIDC_AUDIENCE ?? DEV_OIDC_AUDIENCE,
-        }),
+      useFactory: (config: OidcConfig) => new StaticKeyOidcVerifier(config),
+      inject: [OIDC_CONFIG],
     },
     AuthGuard,
     RolesGuard,

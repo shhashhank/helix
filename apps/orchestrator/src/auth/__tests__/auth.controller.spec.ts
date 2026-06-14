@@ -5,7 +5,7 @@ import { SessionService, StaticKeyOidcVerifier, signJwt } from '@helix/auth';
 import { AuthController } from '../auth.controller';
 import { AuthGuard } from '../auth.guard';
 import { RolesGuard } from '../roles.guard';
-import { OIDC_VERIFIER, SESSION_SERVICE } from '../auth.tokens';
+import { OIDC_CONFIG, OIDC_VERIFIER, SESSION_SERVICE } from '../auth.tokens';
 
 const IDP_SECRET = 'test-idp-secret';
 const ISSUER = 'https://test-idp/';
@@ -25,6 +25,7 @@ describe('AuthController (sign-in + session)', () => {
       providers: [
         { provide: SESSION_SERVICE, useValue: sessions },
         { provide: OIDC_VERIFIER, useValue: new StaticKeyOidcVerifier({ secret: IDP_SECRET, issuer: ISSUER, audience: AUDIENCE }) },
+        { provide: OIDC_CONFIG, useValue: { secret: IDP_SECRET, issuer: ISSUER, audience: AUDIENCE } },
         AuthGuard,
         RolesGuard,
       ],
@@ -55,6 +56,36 @@ describe('AuthController (sign-in + session)', () => {
       .post('/auth/session')
       .send({ idToken: signJwt({ iss: 'https://evil/', aud: AUDIENCE, sub: 'u' }, IDP_SECRET, { expiresInSeconds: 300 }) })
       .expect(401);
+  });
+
+  describe('POST /auth/dev-login (dev-only sign-in)', () => {
+    it('mints + exchanges a session for the given email/org, defaulting to the admin role', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/dev-login')
+        .send({ email: 'dev@helix.local', org: 'acme' })
+        .expect(201);
+
+      expect(res.body.principal).toEqual({ userId: 'dev@helix.local', email: 'dev@helix.local', name: undefined, orgId: 'acme', roles: ['admin'] });
+      expect(sessions.verify(res.body.token).userId).toBe('dev@helix.local');
+    });
+
+    it('honours an explicit roles list', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/dev-login')
+        .send({ email: 'm@helix.local', org: 'acme', roles: ['member'] })
+        .expect(201);
+      expect(res.body.principal.roles).toEqual(['member']);
+    });
+
+    it('is 403 in production (no AUTH_DEV_LOGIN opt-in)', async () => {
+      const prev = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        await request(app.getHttpServer()).post('/auth/dev-login').send({ email: 'd@h.io', org: 'acme' }).expect(403);
+      } finally {
+        process.env.NODE_ENV = prev;
+      }
+    });
   });
 
   it('GET /auth/me returns the principal for a valid session', async () => {

@@ -6,6 +6,16 @@ export class CreateSessionDto {
   idToken!: string;
 }
 
+/** Body for the **dev-only** sign-in: mint + exchange a session for the given identity. */
+export class DevLoginDto {
+  @ApiProperty({ description: 'Email of the dev user to sign in as' })
+  email!: string;
+  @ApiProperty({ description: 'Org/tenant id to assert' })
+  org!: string;
+  @ApiPropertyOptional({ type: [String], description: 'Roles to assert (default: ["admin"])' })
+  roles?: string[];
+}
+
 /** The authenticated principal carried in a Helix session. */
 export class AuthPrincipalDto {
   @ApiProperty({ description: 'Stable user id (OIDC sub)' }) userId!: string;

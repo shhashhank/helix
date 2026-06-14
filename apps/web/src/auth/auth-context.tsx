@@ -27,6 +27,13 @@ export interface Principal {
   email?: string;
 }
 
+/** Identity to sign in as via the dev-login endpoint. */
+export interface DevLoginInput {
+  email: string;
+  org: string;
+  roles?: string[];
+}
+
 export interface AuthContextValue {
   token?: string;
   principal?: Principal;
@@ -37,6 +44,8 @@ export interface AuthContextValue {
   api: ApiClient;
   /** Exchange a dev OIDC ID token for a Helix session, then load the principal. */
   signInWithIdToken(idToken: string): Promise<void>;
+  /** Dev sign-in: mint + exchange a session for an email/org/roles (no real IdP needed). */
+  signInWithDevLogin(input: DevLoginInput): Promise<void>;
   /** Adopt an already-minted session token (e.g. a dev login), then load the principal. */
   setSession(token: string): Promise<void>;
   signOut(): void;
@@ -93,13 +102,18 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     await setSession(sessionToken);
   };
 
+  const signInWithDevLogin = async (input: DevLoginInput): Promise<void> => {
+    const { token: sessionToken } = await api.post<{ token: string }>('/api/auth/dev-login', input);
+    await setSession(sessionToken);
+  };
+
   const signOut = (): void => {
     adoptToken(undefined);
     setPrincipal(undefined);
   };
 
   const value = useMemo<AuthContextValue>(
-    () => ({ token, principal, isAuthenticated: !!token, loading, api, signInWithIdToken, setSession, signOut }),
+    () => ({ token, principal, isAuthenticated: !!token, loading, api, signInWithIdToken, signInWithDevLogin, setSession, signOut }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [token, principal, loading, api],
   );
