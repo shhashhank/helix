@@ -21,6 +21,13 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // CORS so the web app (apps/web, dev server on :4200) can call this API cross-origin.
+  // Dev: reflect any origin; production: restrict via CORS_ORIGIN (comma-separated allowlist).
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()) : true,
+    credentials: true,
+  });
+
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 

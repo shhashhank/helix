@@ -2435,6 +2435,12 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
 
+- **Orchestrator CORS for the web app** — the React app (dev server on `:4200`) calls the
+  orchestrator (`:3100`) cross-origin; the browser blocked every call (incl. the auth
+  header + the SSE stream). Enabled CORS on the orchestrator (`app.enableCors`, reflecting
+  any origin in dev, configurable via `CORS_ORIGIN`) — the one code change needed to run
+  the product end-to-end through the UI. Also refreshed [END_TO_END_TESTING.md](END_TO_END_TESTING.md)
+  with the web-app flow.
 - **Production build fix** (PR #5) — the app couldn't be packaged for production (a config
   mistake made the build try to compile the test files). Fixed, and the CI checks were
   upgraded to **typecheck + build + test** so this can't silently break again.
