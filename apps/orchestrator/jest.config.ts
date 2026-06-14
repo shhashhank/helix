@@ -22,6 +22,7 @@ export default {
     '^@helix/tenancy$': '<rootDir>/../../libs/tenancy/src/index.ts',
     '^@helix/secrets$': '<rootDir>/../../libs/secrets/src/index.ts',
     '^@helix/secrets/aws-kms$': '<rootDir>/../../libs/secrets/src/aws-kms.ts',
+    '^@helix/secrets/aws-secrets-store$': '<rootDir>/../../libs/secrets/src/aws-secrets-store.ts',
     // Subpath into github-mcp's App-auth only (node:crypto), so the live GitHub verifier
     // doesn't drag the MCP SDK into the orchestrator bundle/tests (HELIX-170).
     '^@helix/github-mcp/app-auth$': '<rootDir>/../../libs/github-mcp/src/app-auth.ts',
