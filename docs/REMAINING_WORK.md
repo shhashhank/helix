@@ -83,10 +83,13 @@ Also deferred under #13: turning a request's free-text prompt into a **planning-
    [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs. Now genuinely produces edited files.
 3. ~~**The frontend (Theme D)**~~ — ✅ **DONE** (epic HELIX-173 → HELIX-175…179; React SPA in `apps/web`;
    [FRONTEND_PLAN.md](FRONTEND_PLAN.md)). Sign in → submit → watch the run live → approve → connect GitHub.
-4. **Real GitHub + Secrets/KMS (#1, #2, #14)** — so runs act on real repos with real credentials. **In
-   progress:** [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md) (epic HELIX-166 → HELIX-168…172).
-5. **Real deployment (#4)** and the remaining durability/transport bindings (#5, #7, #8, #9, #11) as the
-   product hardens toward production.
+4. ~~**Real GitHub + Secrets/KMS (#1, #2, #14)**~~ — ✅ **DONE** (epic HELIX-166 → HELIX-168…172;
+   [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md)). Live Octokit client, MCP server, onboarding verifier, AWS vault.
+5. **Close the run → PR loop (required)** — wire the GitHub client into the worker so a finished run opens a
+   **real PR** + surfaces real artifacts. **In progress:** [GITHUB_DELIVERY_PLAN.md](GITHUB_DELIVERY_PLAN.md)
+   (epic HELIX-180 → HELIX-182…186). The highest-leverage gap — makes the product's core promise true.
+6. **Durable persistence** (request/approval/audit stores → Postgres; #13/#5/#9), **real deployment (#4)**,
+   **real OIDC (#12)**, then the remaining transport/ops bindings (#7, #8, #11) as the product hardens.
 
 Each is best run as its own **forward-scope epic** (the way HELIX-150 was added) — not original-backlog work.
 
