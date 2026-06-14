@@ -203,3 +203,20 @@ button:disabled {
   flex-direction: column;
   gap: 0.4rem;
 }
+
+.helix-approval select,
+.helix-approval input {
+  padding: 0.4rem;
+  border: 1px solid var(--helix-border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+.helix-approval-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.helix-small {
+  font-size: 0.8rem;
+}

@@ -2398,6 +2398,21 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
   [API client](../apps/web/src/api/client.ts). 5 new tests (SSE frame parsing, list + submit→navigate, the live
   run view) with a mocked `fetch`/stream; web suite (19) green.
 
+#### HELIX-178 — Approval inbox  ✅
+- **What it is:** the **approver's to-do list** — the human sign-off gate, on screen. Each pending request
+  shows what needs approval, who asked and why, how many approvals it still needs and its time limit, with
+  approve / reject buttons.
+- **Why it matters:** the pipeline pauses for a human before risky actions (e.g. a deploy). The approval logic
+  + APIs existed; this gives a person a place to actually *see and act on* those gates — closing the loop from
+  "the run is waiting" to "approved, carry on."
+- **How it works (plain words):** the page loads your inbox (most-urgent first), and each card lets you pick
+  which approver role you're acting as (from the roles still awaiting a vote), add an optional comment, and
+  approve or reject. Submitting records the decision for you; once enough approvals land, the backend resumes
+  the gated run. The inbox refreshes after each vote, so resolved items drop off.
+- **Where it lives:** web — [pages/approvals.tsx](../apps/web/src/app/pages/approvals.tsx) (`ApprovalInbox` +
+  the per-request card), over `GET /api/approvals/inbox` and `POST /api/approvals/:id/decisions`; shared
+  [types](../apps/web/src/api/types.ts). 2 new tests (list → decide → refresh; empty state); web suite (21) green.
+
 ---
 
 ## Fixes & hardening
@@ -2563,7 +2578,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-173 | **Epic:** Frontend web app (React) | 🛠️ | #135 (plan) |
 | HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | #136 |
 | HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | #137 |
-| HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | — |
+| HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | #138 |
+| HELIX-178 | Approval inbox | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
