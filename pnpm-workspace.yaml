@@ -9,6 +9,7 @@ allowBuilds:
   '@prisma/engines': true
   '@scarf/scarf': false
   '@swc/core': true
+  core-js-pure: false
   cpu-features: true
   esbuild: true
   less: true

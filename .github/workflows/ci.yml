@@ -96,6 +96,9 @@ jobs:
       - name: Typecheck (executor lib)
         run: pnpm exec tsc --noEmit -p libs/executor/tsconfig.spec.json
 
+      - name: Typecheck (web app)
+        run: pnpm exec tsc --noEmit -p apps/web/tsconfig.spec.json
+
       # Production build — catches issues jest never sees (e.g. test files
       # leaking into the app compile). Must run after prisma generate.
       - name: Build (registry)
@@ -103,6 +106,9 @@ jobs:
 
       - name: Build (orchestrator)
         run: pnpm exec nx build orchestrator
+
+      - name: Build (web)
+        run: pnpm exec nx build web
 
       - name: Unit + integration tests (registry)
         run: pnpm exec jest --config apps/registry/jest.config.ts --ci
@@ -118,6 +124,9 @@ jobs:
 
       - name: Unit tests (orchestrator)
         run: pnpm exec jest --config apps/orchestrator/jest.config.ts --ci
+
+      - name: Unit tests (web app)
+        run: pnpm exec jest --config apps/web/jest.config.cts --ci
 
       - name: Unit tests (mcp lib)
         run: pnpm exec jest --config libs/mcp/jest.config.js --ci
