@@ -2155,6 +2155,26 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
   [file-edit-tools.ts](../libs/coding-agent/src/lib/file-edit-tools.ts). 5 new tests (write/read/patch against a
   real local sandbox, on-disk landing, error + path-escape cases); coding-agent suite (83) green.
 
+#### HELIX-163 — Testing command + test-run tools  ✅
+- **What it is:** the testing agent's two tools — **run a command** (build / lint / anything) and **run the
+  tests** — bound to a run's workspace, with the test run parsed into a tidy pass/fail + coverage report.
+- **Why it matters:** the second half of giving the agents real hands (HELIX-162 was the coding half). Now the
+  testing step can actually *execute* the project's tests in the sandbox and hand back a structured result —
+  the **test artifact** that shows up on the run / PR — instead of just describing what it would do.
+- **How it works (plain words):** `run_command` runs an executable in the workspace and returns its exit code
+  and (size-capped) output; a non-zero exit comes back flagged so the agent notices and fixes it.
+  `run_tests` figures out the framework (peeking at `package.json` / `conftest.py`, or you can pass it),
+  runs the right test command, then parses the output into counts, failures, and coverage and returns a
+  markdown report. Everything that can go wrong (a failing build, failing tests, a timeout, bad input) comes
+  back as a readable error result, never a crash — all reusing the runner/parser/report pieces built in
+  HELIX-106/119/120.
+- **Where it lives:** `@helix/testing-agent` —
+  [testing-tools.ts](../libs/testing-agent/src/lib/testing-tools.ts) (`testingTools(sandbox)` + `TESTING_TOOLS`),
+  over the existing [test-runner.ts](../libs/testing-agent/src/lib/test-runner.ts) /
+  [test-results.ts](../libs/testing-agent/src/lib/test-results.ts) /
+  [report.ts](../libs/testing-agent/src/lib/report.ts). 10 new tests (command forwarding, non-zero-exit flag,
+  default timeout, pass/fail reports, framework auto-detection, explicit command); testing-agent suite (51) green.
+
 ---
 
 ## Fixes & hardening
@@ -2307,7 +2327,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-158 | Executor — worker wiring + config-driven LLM seam | ✅ | #121 |
 | HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | 🛠️ | #123 (plan) |
 | HELIX-161 | Run-scoped workspace + run-id threading | ✅ | #124 |
-| HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | — |
+| HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | #125 |
+| HELIX-163 | Testing command + test-run tools | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
