@@ -15,8 +15,9 @@ trace in Grafana. Plus the registry, RBAC, GitHub onboarding, and the automated 
 >   offline (scripted) the tools are simply unused. Real `git clone` of a target repo is still deferred —
 >   offline scaffolds a starter project.
 > - **Deployment** is **stubbed** (returns a placeholder live URL; real AWS build/deploy deferred).
-> - **Auth** uses a built-in HS256 stand-in for a real OIDC provider; **GitHub** connect records an
->   installation but doesn't call GitHub yet.
+> - **Auth** uses a built-in HS256 stand-in for a real OIDC provider (the web app signs in via a dev-login
+>   endpoint). **GitHub** connect stores the installation; with a real GitHub App configured, "Test connection"
+>   mints a real installation token (HELIX-170) — otherwise it reports `not_configured`.
 >
 > Everything else — durable runs, SSE status, tenancy, RBAC, the vault, tracing, the APIs — is real.
 
@@ -61,7 +62,7 @@ pnpm exec prisma generate --schema apps/registry/prisma/schema.prisma
 
 ## 2. Start the services
 
-Three more terminals (the worker is what executes the agents):
+Terminals (the worker is what executes the agents; the web app is the UI):
 
 ```bash
 # Terminal A — Agent Registry            http://localhost:3000/api/docs
@@ -74,16 +75,40 @@ OTEL_TRACE_EXPORTER=otlp pnpm dev:orchestrator      # OTLP on so runs show up in
 pnpm dev:worker                                     # offline (scripted LLM)
 #   …or, for REAL agent runs (never commit the key; rotate after):
 #   ANTHROPIC_API_KEY=sk-… pnpm dev:worker
+
+# Terminal D — the web app (React)        http://localhost:4200
+pnpm exec nx serve web                              # calls the orchestrator on :3100
 ```
 
 The worker logs which provider it picked (`[worker] LLM provider: scripted | anthropic`) and then each step
-as it runs.
+as it runs. The web app talks to the orchestrator cross-origin — the orchestrator enables **CORS** for this
+(set `CORS_ORIGIN` to lock it down in a real deployment). If the orchestrator isn't on `:3100`, point the web
+app at it by setting `window.__HELIX_API_BASE__` (e.g. in the browser console or `index.html`).
 
 ---
 
-## 3. The product flow (the main event)
+## 3. The product flow — two ways
 
-### 3a. Sign in → get a session
+**Either** drive it through the **web UI** (the quick path) **or** the **API** (curl, below) — both hit the same
+orchestrator.
+
+### 3·UI. Through the browser (the demo)
+
+1. Open **http://localhost:4200** → you're redirected to **Sign in**. Enter an email (e.g. `dev@helix.local`),
+   an org (`acme`), pick a role (`admin`), and sign in — this drives the dev-only `POST /api/auth/dev-login`.
+2. On the **dashboard**, submit a request (title + "what to build") → you land on the **run page** and watch
+   plan → code → review → test → deploy light up **live** (SSE), with artifacts (PR / tests / deploy URL)
+   appearing as steps finish.
+3. **Approvals** tab → act on any human-gate sign-offs; **Integrations** tab → the GitHub connect wizard +
+   "Test connection".
+
+With the scripted LLM the steps succeed on canned output; with `ANTHROPIC_API_KEY` on the worker the agents
+actually reason and (with the sandbox tools) write files + run tests. The API walkthrough below does the same
+thing with curl if you want to script it.
+
+### 3·API. Through the API (curl) — the same flow, scripted
+
+#### 3a. Sign in → get a session
 
 Locally there's no real IdP, so mint a **stand-in OIDC ID token** with the dev secret and exchange it for a
 Helix session (the role `admin` lets us also test RBAC later):
@@ -101,7 +126,7 @@ TOKEN=$(curl -s -X POST localhost:3100/api/auth/session -H 'Content-Type: applic
 curl -s localhost:3100/api/auth/me -H "Authorization: Bearer $TOKEN"   # → your principal (userId, org, roles)
 ```
 
-### 3b. Submit a build request → it starts a run
+#### 3b. Submit a build request → it starts a run
 
 ```bash
 REQ=$(curl -s -X POST localhost:3100/api/requests -H "Authorization: Bearer $TOKEN" \
@@ -112,7 +137,7 @@ ID=$(echo "$REQ" | python3 -c 'import sys,json;print(json.load(sys.stdin)["id"])
 TRACE=$(echo "$REQ" | python3 -c 'import sys,json;print(json.load(sys.stdin)["traceId"])')   # for Grafana
 ```
 
-### 3c. Watch the agents run it
+#### 3c. Watch the agents run it
 
 ```bash
 # Live per-step status over SSE — you'll see plan → code → review → test → deploy settle
@@ -127,16 +152,18 @@ In **Terminal C** the worker prints each step (`▶ step "plan"… ✓ step "pla
 **Temporal Web UI** (http://localhost:8233) shows the same run with full history. With the scripted LLM the
 steps succeed on canned output; with a real key the agents actually reason.
 
-### 3d. Artifacts
+#### 3d. Artifacts
 
 ```bash
 curl -s localhost:3100/api/requests/$ID/artifacts -H "Authorization: Bearer $TOKEN"
 ```
 
-Artifacts populate from the agents' step outputs (PR / tests / deploy URL). Today the deploy URL is the
-stubbed `https://deploy.stub.local`; PR/tests fill in once the real coding/testing tools land.
+Artifacts populate from the agents' step outputs (PR / tests / deploy URL). The deploy URL is the stubbed
+`https://deploy.stub.local` (real AWS deploy deferred). With `ANTHROPIC_API_KEY` set, the coding/testing agents
+write real files + run real tests in the sandbox (HELIX-159); the worker logs the change-set on workspace
+teardown (threading it into the artifacts API is a follow-up).
 
-### 3e. Tenant isolation + RBAC (quick checks)
+#### 3e. Tenant isolation + RBAC (quick checks)
 
 ```bash
 # Admin-only route: 200 for our admin session…
@@ -150,7 +177,7 @@ curl -s localhost:3100/api/requests/$ID -H "Authorization: Bearer $MTOK"     # 2
 
 A request id from another org returns **404** (row-level isolation).
 
-### 3f. GitHub onboarding
+#### 3f. GitHub onboarding
 
 ```bash
 curl -s -X POST localhost:3100/api/integrations/github/connect -H "Authorization: Bearer $TOKEN"        # install URL + state
