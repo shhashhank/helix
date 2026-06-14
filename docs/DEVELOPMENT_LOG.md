@@ -2492,6 +2492,23 @@ seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan
   consumers don't pull Octokit. 3 new tests (the auth hook sets a fresh token + adapts to a client; env gating);
   github-mcp suite (41) green.
 
+#### HELIX-185 — Surface real run artifacts (PR + change-set)  ✅
+- **What it is:** makes the run page's **artifacts** real — the pull request the delivery step opened and a
+  summary of **what changed** (files / lines), instead of placeholders.
+- **Why it matters:** it's the payoff visible to a person: after a run you see "here's the PR" and "here's the
+  diff." It also closes a gap from the sandbox epic, where the change-set was only logged — now it's shown on
+  the run, even when there's no repo to push to.
+- **How it works (plain words):** the run page already pulled artifacts out of each step's output by looking for
+  well-known fields. This teaches it to read the delivery step's **structured** pull-request output and a new
+  **change-set** summary, and surfaces both through the artifacts API to the run-detail UI. The change set is
+  shown even on a *skipped* delivery (no target repo), so you always see what the agents produced.
+- **Where it lives:** the executor's [delivery-role.ts](../libs/executor/src/lib/delivery-role.ts) carries the
+  change-set in its outcome; the orchestrator's [artifacts.ts](../apps/orchestrator/src/request/artifacts.ts)
+  + [request.dto.ts](../apps/orchestrator/src/request/dto/request.dto.ts) extract/expose it; and the web
+  [run-detail](../apps/web/src/app/pages/run-detail.tsx) renders it. 5 new/extended tests (delivery output,
+  artifact extraction of the nested PR + change-set incl. the skipped case, the UI row); executor/orchestrator/web
+  suites green.
+
 ---
 
 ## Fixes & hardening
@@ -2669,7 +2686,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-180 | **Epic:** Real GitHub PR delivery | 🛠️ | #143 (plan) |
 | HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | #144 |
 | HELIX-183 | Delivery role executor | ✅ | #145 |
-| HELIX-184 | Authenticated per-run GitHub client at the worker | ✅ | — |
+| HELIX-184 | Authenticated per-run GitHub client at the worker | ✅ | #146 |
+| HELIX-185 | Surface real run artifacts (PR + change-set) | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

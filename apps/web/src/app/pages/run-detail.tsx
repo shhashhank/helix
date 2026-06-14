@@ -133,6 +133,17 @@ export function RunDetail(): ReactElement {
             <span className="helix-muted">—</span>
           )}
         </li>
+        <li>
+          <strong>Change set:</strong>{' '}
+          {artifacts?.changeSet ? (
+            <span>
+              {artifacts.changeSet.filesChanged} file{artifacts.changeSet.filesChanged === 1 ? '' : 's'} changed (+
+              {artifacts.changeSet.additions} −{artifacts.changeSet.deletions})
+            </span>
+          ) : (
+            <span className="helix-muted">—</span>
+          )}
+        </li>
       </ul>
     </section>
   );

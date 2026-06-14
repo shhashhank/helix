@@ -56,4 +56,23 @@ describe('extractArtifacts', () => {
   it('ignores a malformed tests object (missing passed/failed)', () => {
     expect(extractArtifacts(steps({ test: { tests: { coverage: 90 } } })).tests).toBeUndefined();
   });
+
+  it('reads the delivery role’s structured pullRequest + change-set (HELIX-185)', () => {
+    const artifacts = extractArtifacts(
+      steps({
+        deliver: {
+          pullRequest: { number: 9, url: 'https://github.com/o/r/pull/9' },
+          changeSet: { filesChanged: 4, additions: 120, deletions: 7 },
+        },
+      }),
+    );
+    expect(artifacts.pullRequest).toEqual({ url: 'https://github.com/o/r/pull/9' });
+    expect(artifacts.changeSet).toEqual({ filesChanged: 4, additions: 120, deletions: 7 });
+  });
+
+  it('surfaces the change-set even on a skipped delivery (no PR)', () => {
+    const artifacts = extractArtifacts(steps({ deliver: { delivered: false, changeSet: { filesChanged: 2, additions: 10, deletions: 0 } } }));
+    expect(artifacts.pullRequest).toBeUndefined();
+    expect(artifacts.changeSet).toEqual({ filesChanged: 2, additions: 10, deletions: 0 });
+  });
 });

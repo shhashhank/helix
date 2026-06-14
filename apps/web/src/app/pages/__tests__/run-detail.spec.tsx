@@ -45,7 +45,7 @@ describe('RunDetail', () => {
     (global as { fetch: unknown }).fetch = jest.fn(async (input: string) => {
       const p = path(input);
       if (p.endsWith('/run')) return res({ workflowId: 'w', runId: 'r', status: 'RUNNING' });
-      if (p.endsWith('/artifacts')) return res({ pullRequest: { url: 'https://gh/pr/1', title: 'PR #1' }, tests: { passed: 3, failed: 0, coverage: 88 } });
+      if (p.endsWith('/artifacts')) return res({ pullRequest: { url: 'https://gh/pr/1', title: 'PR #1' }, tests: { passed: 3, failed: 0, coverage: 88 }, changeSet: { filesChanged: 4, additions: 50, deletions: 3 } });
       if (p.endsWith('/stream')) return sse([`data: ${JSON.stringify(progress)}\n\n`]);
       throw new Error(`unexpected ${p}`);
     });
@@ -69,5 +69,6 @@ describe('RunDetail', () => {
     // artifacts
     expect(await screen.findByText('PR #1')).toBeTruthy();
     expect(screen.getByText(/3 passed, 0 failed/)).toBeTruthy();
+    expect(screen.getByText(/4 files changed \(\+50 −3\)/)).toBeTruthy();
   });
 });

@@ -15,11 +15,19 @@ export interface DeliveryInput {
   ctx: RunContext;
 }
 
+export interface ChangeSetSummary {
+  filesChanged: number;
+  additions: number;
+  deletions: number;
+}
+
 export interface DeliveryOutcome {
   /** True when a PR was opened. */
   delivered: boolean;
   /** The opened pull request, when delivered. */
   pullRequest?: { number: number; url: string };
+  /** The run's change set (surfaced as an artifact even when delivery is skipped). */
+  changeSet?: ChangeSetSummary;
   /** Why nothing was delivered (e.g. no target repo / GitHub not connected) — a benign skip. */
   skippedReason?: string;
   /** A genuine delivery failure (the step fails). */
@@ -43,10 +51,11 @@ export function deliveryExecutor(deps: { runner: GitHubDeliveryRunner }): StepEx
     if (outcome.error) {
       return { status: 'failure', error: outcome.error };
     }
-    return {
-      status: 'success',
-      output: outcome.delivered ? { pullRequest: outcome.pullRequest } : { delivered: false, skippedReason: outcome.skippedReason },
-    };
+    // The change set is surfaced as an artifact either way (even a skipped delivery shows what changed).
+    const output = outcome.delivered
+      ? { pullRequest: outcome.pullRequest, changeSet: outcome.changeSet }
+      : { delivered: false, skippedReason: outcome.skippedReason, changeSet: outcome.changeSet };
+    return { status: 'success', output };
   };
 }
 
