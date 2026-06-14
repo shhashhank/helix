@@ -2269,6 +2269,26 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
   (`GitHubAppTokenProvider`) + the HELIX-168 client; `github-mcp:stdio` script in `package.json`. Composition
   glue (untested like the dev worker; the pieces it wires are each covered). github-mcp suite (35) stays green.
 
+#### HELIX-170 — Live GitHub connection verifier  ✅
+- **What it is:** makes the GitHub onboarding **health check** real. The "test connection" button
+  (`POST /api/integrations/github/test`) can now actually prove an org's GitHub install still works — by
+  minting a real installation token — instead of always answering "not configured".
+- **Why it matters:** it's the trust check for onboarding: before a run tries to push to a repo, the platform
+  can confirm it still has access. Combined with the GitHub client (HELIX-168/169), the GitHub side of the
+  epic is now genuinely live (when an App is configured).
+- **How it works (plain words):** the verifier was a swappable seam with an honest "not configured" default.
+  The new live verifier, given an installation id, signs a short-lived App token and exchanges it for an
+  installation token against GitHub (reusing the App-auth code from HELIX-89, so the private key never
+  leaves the process); success → `verified` (with the token's expiry), any failure → a clean `error`. It's
+  **config-gated**: a factory returns the live verifier when the App credentials are in the environment, else
+  the unconfigured default — so CI (no creds) keeps reporting `not_configured`. To avoid dragging the MCP SDK
+  into the orchestrator, it imports just the App-auth module via a narrow `@helix/github-mcp/app-auth` subpath.
+- **Where it lives:** `apps/orchestrator` — [github.verify.ts](../apps/orchestrator/src/integration/github.verify.ts)
+  (`AppCredentialsGithubVerifier` + `githubVerifierFromEnv`), wired in
+  [integration.module.ts](../apps/orchestrator/src/integration/integration.module.ts); subpath mapping added to
+  `tsconfig.base.json` + the orchestrator jest config. 5 new tests (verified-with-expiry, failure→error, the
+  env gating); orchestrator integration suite green, production build resolves the subpath (no MCP SDK pulled in).
+
 ---
 
 ## Fixes & hardening
@@ -2427,7 +2447,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | #128 |
 | HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | 🛠️ | #129 (plan) |
 | HELIX-168 | Real Octokit GitHub client | ✅ | #130 |
-| HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | — |
+| HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | #131 |
+| HELIX-170 | Live GitHub connection verifier | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

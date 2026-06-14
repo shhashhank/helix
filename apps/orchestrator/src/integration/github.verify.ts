@@ -7,6 +7,12 @@
  * network, which CI doesn't have), while {@link UnconfiguredGithubVerifier} is the
  * honest default when no App is configured.
  */
+import {
+  type GitHubAppCredentials,
+  type InstallationTokenExchanger,
+  createAppJwt,
+  fetchInstallationTokenExchanger,
+} from '@helix/github-mcp/app-auth';
 
 /** The outcome a verifier reports for one installation. */
 export interface VerifyOutcome {
@@ -45,4 +51,55 @@ export class UnconfiguredGithubVerifier implements GithubConnectionVerifier {
   async verify(_installationId: string): Promise<VerifyOutcome> {
     return { ok: false, status: 'not_configured', error: 'no GitHub App configured for this deployment' };
   }
+}
+
+/** Tunables for {@link AppCredentialsGithubVerifier} (injectable for offline tests). */
+export interface AppCredentialsGithubVerifierOptions {
+  /** The App-JWT → installation-token exchange (default: the real GitHub-API call). */
+  exchange?: InstallationTokenExchanger;
+  /** Clock, injectable for tests (default `Date.now`). */
+  now?: () => number;
+}
+
+/**
+ * Live verifier (HELIX-170, DEFERRED #14): proves access by minting an installation token
+ * for the given installation from the App credentials — a real network hop. Reuses
+ * `@helix/github-mcp`'s App-JWT signing + token exchange (the private key never leaves
+ * this process). `verified` on success (carrying the token expiry); any failure (bad key,
+ * revoked install, network) maps to `error` rather than throwing.
+ */
+export class AppCredentialsGithubVerifier implements GithubConnectionVerifier {
+  private readonly exchange: InstallationTokenExchanger;
+  private readonly now: () => number;
+
+  constructor(
+    private readonly credentials: GitHubAppCredentials,
+    options: AppCredentialsGithubVerifierOptions = {},
+  ) {
+    this.exchange = options.exchange ?? fetchInstallationTokenExchanger();
+    this.now = options.now ?? (() => Date.now());
+  }
+
+  async verify(installationId: string): Promise<VerifyOutcome> {
+    try {
+      const appJwt = createAppJwt(this.credentials, this.now());
+      const token = await this.exchange({ appJwt, installationId });
+      return { ok: true, status: 'verified', tokenExpiresAtMs: token.expiresAtMs };
+    } catch (err) {
+      return { ok: false, status: 'error', error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+}
+
+/**
+ * Build the verifier from the environment: the live {@link AppCredentialsGithubVerifier}
+ * when the GitHub App credentials (`GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY`) are present,
+ * else the honest {@link UnconfiguredGithubVerifier}. Mirrors `appTokenProviderFromEnv`'s
+ * env shape; the installation id is supplied per call.
+ */
+export function githubVerifierFromEnv(env: NodeJS.ProcessEnv = process.env): GithubConnectionVerifier {
+  const appId = env.GITHUB_APP_ID;
+  const privateKey = env.GITHUB_APP_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!appId || !privateKey) return new UnconfiguredGithubVerifier();
+  return new AppCredentialsGithubVerifier({ appId, privateKey });
 }
