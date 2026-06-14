@@ -78,7 +78,8 @@ Also deferred under #13: turning a request's free-text prompt into a **planning-
 2. **Real LLM run-through** (next) — set `ANTHROPIC_API_KEY` and validate a full request end-to-end (see
    [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs. Now genuinely produces edited files.
 3. **The frontend (Theme D)** — a thin web app over the existing APIs; the fastest path to a demoable product.
-4. **Real GitHub + Secrets/KMS (#1, #2, #14)** — so runs act on real repos with real credentials.
+4. **Real GitHub + Secrets/KMS (#1, #2, #14)** — so runs act on real repos with real credentials. **In
+   progress:** [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md) (epic HELIX-166 → HELIX-168…172).
 5. **Real deployment (#4)** and the remaining durability/transport bindings (#5, #7, #8, #9, #11) as the
    product hardens toward production.
 
