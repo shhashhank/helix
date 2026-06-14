@@ -34,6 +34,12 @@ describe('buildPipelineDispatcher', () => {
     }
   });
 
+  it('registers the delivery role only when a deliveryRunner is provided (HELIX-183)', () => {
+    expect(buildPipelineDispatcher(deps).has('delivery')).toBe(false);
+    const deliveryRunner = { deliver: jest.fn(async () => ({ delivered: false })) };
+    expect(buildPipelineDispatcher({ ...deps, deliveryRunner }).has('delivery')).toBe(true);
+  });
+
   it('routes an unknown role to the fallback when given', async () => {
     const fallback = jest.fn(async () => ({ status: 'success' as const, output: 'fb' }));
     const d = buildPipelineDispatcher({ ...deps, fallback });

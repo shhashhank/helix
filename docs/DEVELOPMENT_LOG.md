@@ -2458,6 +2458,23 @@ seam-mocked so CI stays offline; the live push is a manual smoke test. Full plan
   (`deliverChangeSet`), over the existing [github-client.ts](../libs/github-mcp/src/github-client.ts) seam.
   3 new tests (branch→commit→PR sequence, default base, empty-files guard); github-mcp suite (38) green.
 
+#### HELIX-183 — Delivery role executor  ✅
+- **What it is:** makes "open a PR" a **step the pipeline can run** — a `delivery` role that slots in after
+  testing, just like the deployment step.
+- **Why it matters:** HELIX-182 built the PR-opening *function*; this makes it a first-class pipeline step the
+  worker can execute, behind an injected seam (so it's offline-testable now and gets the real GitHub push wired
+  in later). It also gets the "nothing to deliver" case right — a run with no target repo still *succeeds*.
+- **How it works (plain words):** the role calls an injected `GitHubDeliveryRunner` (the real one, added at the
+  worker, captures the run's changed files and pushes them; offline it's a no-op). A genuine failure fails the
+  step; a **skip** (no repo configured / GitHub not connected) is a benign success, so the run completes either
+  way. On delivery, the step output carries the PR (`{ pullRequest }`) — the shape the artifact views read.
+  It's registered on the pipeline **only when a delivery runner is provided**, so existing setups are unchanged.
+- **Where it lives:** `@helix/executor` — [delivery-role.ts](../libs/executor/src/lib/delivery-role.ts)
+  (`deliveryExecutor` + the `GitHubDeliveryRunner` seam + `registerDeliveryRole`), wired into
+  [pipeline.ts](../libs/executor/src/lib/pipeline.ts) (optional `deliveryRunner`). Mirrors the deployment-role
+  pattern. 5 new tests (delivered → PR output, skip → benign success, error → failure, registration, pipeline
+  opt-in); executor suite (52) green.
+
 ---
 
 ## Fixes & hardening
@@ -2633,7 +2650,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-178 | Approval inbox | ✅ | #139 |
 | HELIX-179 | GitHub connect wizard | ✅ | #140 |
 | HELIX-180 | **Epic:** Real GitHub PR delivery | 🛠️ | #143 (plan) |
-| HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | — |
+| HELIX-182 | Deliver a change-set as a GitHub PR | ✅ | #144 |
+| HELIX-183 | Delivery role executor | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
