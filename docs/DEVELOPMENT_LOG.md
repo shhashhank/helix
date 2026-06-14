@@ -2330,6 +2330,37 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
 
 ---
 
+## Epic: Frontend web app (React) (HELIX-173)  🛠️ in progress
+
+Forward scope after the GitHub + Secrets/KMS epic: the **first user-facing app** — a React SPA in `apps/web`
+over the platform's already-tested APIs (sign-in → submit a request → watch the agents run it live → see
+artifacts; plus the approval inbox and the GitHub connect wizard). HELIX-11 was built API-first; this is the
+screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch` keep CI offline. Full plan:
+[FRONTEND_PLAN.md](FRONTEND_PLAN.md).
+
+### Story: The web app  🛠️ in progress
+
+#### HELIX-175 — React app scaffold + shell + API client + auth context  ✅
+- **What it is:** the skeleton of the web app — the project itself, the page frame (header + navigation), the
+  one helper that talks to the backend, and the "who's signed in" memory. No real screens yet; this is the
+  floor every screen stands on.
+- **Why it matters:** a frontend needs a consistent foundation before screens — how it calls the API, how it
+  remembers your session, how it keeps you out of pages you're not signed in for. Building this once, well,
+  means the next four sub-tasks are just *screens* over it.
+- **How it works (plain words):** a React app (generated with Nx, built with webpack, tested with Jest like
+  the rest of the repo). A small **API client** wraps `fetch` — it adds the server address, attaches your
+  session token to every call, and turns errors into clean failures. An **auth context** holds your session
+  (in memory + the browser's local storage), signs you in by exchanging a token, restores you on refresh, and
+  signs you out; a **`RequireAuth`** guard bounces you to the sign-in page if you're not logged in. The **shell**
+  is the top bar + nav that wraps every page. The four screens are placeholders for now (one per upcoming
+  sub-task). Run it with `pnpm exec nx serve web` (talks to the orchestrator on `:3100`).
+- **Where it lives:** `apps/web` — [api/client.ts](../apps/web/src/api/client.ts),
+  [auth/auth-context.tsx](../apps/web/src/auth/auth-context.tsx), [app/app.tsx](../apps/web/src/app/app.tsx) +
+  [app/layout.tsx](../apps/web/src/app/layout.tsx); CI gained typecheck + build + test steps for `web`. 12 new
+  tests (client, auth context, shell) with a mocked `fetch` — fully offline; web suite (12) green.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -2489,7 +2520,9 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | #131 |
 | HELIX-170 | Live GitHub connection verifier | ✅ | #132 |
 | HELIX-171 | AWS KMS adapter | ✅ | #133 |
-| HELIX-172 | AWS Secrets Manager record store | ✅ | — |
+| HELIX-172 | AWS Secrets Manager record store | ✅ | #134 |
+| HELIX-173 | **Epic:** Frontend web app (React) | 🛠️ | #135 (plan) |
+| HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
