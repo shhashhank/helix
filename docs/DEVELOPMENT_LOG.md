@@ -2221,7 +2221,7 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
 
 ---
 
-## Epic: Real GitHub + Secrets/KMS bindings (HELIX-166)  🛠️ in progress
+## Epic: Real GitHub + Secrets/KMS bindings (HELIX-166)  ✅ done
 
 Forward scope after the Sandbox Tools epic: bind three deferred seams to their real cloud services so runs act
 on **real GitHub repos** with **real credentials** — a live Octokit GitHub client + runnable MCP server
@@ -2229,7 +2229,7 @@ on **real GitHub repos** with **real credentials** — a live Octokit GitHub cli
 adapter ships **config-gated + mock-tested** so CI stays offline-green; live smoke tests stay manual. Full
 plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
 
-### Story: GitHub + Secrets/KMS real adapters  🛠️ in progress
+### Story: GitHub + Secrets/KMS real adapters  ✅ done
 
 #### HELIX-168 — Real Octokit GitHub client  ✅
 - **What it is:** the real client that actually talks to GitHub — reading files, listing trees, searching
@@ -2308,6 +2308,25 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
   AWS SDK only loads where it's wired; gated into the vault in
   [integration.module.ts](../apps/orchestrator/src/integration/integration.module.ts). 6 new tests; secrets
   suite (40) green; orchestrator build bundles the (CJS) AWS SDK cleanly.
+
+#### HELIX-172 — AWS Secrets Manager record store  ✅
+- **What it is:** the place the vault *stores* its encrypted secrets, swapped from an in-memory map to **AWS
+  Secrets Manager** — so credentials survive restarts and live in managed storage instead of process memory.
+- **Why it matters:** it's the other half of the production secrets home (HELIX-171 did the key, this does the
+  storage). Together they make the vault real: the master key in KMS, the encrypted records in Secrets Manager,
+  with the GitHub App key and other credentials safe across the platform.
+- **How it works (plain words):** it implements the same `SecretRecordRepository` interface (get / put / delete
+  / list) over Secrets Manager. Each record becomes one Secrets Manager secret named `helix/<scope>/<name>`,
+  with the encrypted blob + wrapped key stored as the secret's JSON value; `put` creates it (or updates in place
+  if it already exists), `list` filters by the scope prefix. It's **config-gated** by `USE_AWS_SECRETS_MANAGER`,
+  so CI keeps using the in-memory repo. Tested fully offline with `aws-sdk-client-mock`, including a stateful
+  set→get round-trip through the real `EncryptedSecretStore` to prove the swap is transparent. **Closes the
+  Real GitHub + Secrets/KMS epic.**
+- **Where it lives:** `@helix/secrets` — [aws-secrets-store.ts](../libs/secrets/src/aws-secrets-store.ts)
+  (`SecretsManagerSecretRecordRepository` + `secretsManagerRepoFromEnv`), kept out of the barrel and imported
+  via the `@helix/secrets/aws-secrets-store` subpath; gated into the vault in
+  [integration.module.ts](../apps/orchestrator/src/integration/integration.module.ts). 8 new tests; secrets
+  suite (48) green; orchestrator build bundles both AWS SDKs cleanly.
 
 ---
 
@@ -2465,11 +2484,12 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-163 | Testing command + test-run tools | ✅ | #126 |
 | HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | #127 |
 | HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | #128 |
-| HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | 🛠️ | #129 (plan) |
+| HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | ✅ | #129 (plan) |
 | HELIX-168 | Real Octokit GitHub client | ✅ | #130 |
 | HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | #131 |
 | HELIX-170 | Live GitHub connection verifier | ✅ | #132 |
-| HELIX-171 | AWS KMS adapter | ✅ | — |
+| HELIX-171 | AWS KMS adapter | ✅ | #133 |
+| HELIX-172 | AWS Secrets Manager record store | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |

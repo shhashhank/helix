@@ -15,6 +15,8 @@ else it's tracked.
 ## Open deferrals
 
 ### 1. Live Octokit GitHub client + runnable stdio server
+- **✅ Largely landed** (HELIX-166 epic): `OctokitGitHubClient` (HELIX-168) + the runnable stdio entry
+  (HELIX-169). **Residual:** a one-off live smoke test against a throwaway GitHub App + sandbox repo (manual).
 - **Deferred from:** HELIX-89 (GitHub App auth) — merged in PR #50.
 - **What's deferred:** a concrete `OctokitGitHubClient implements GitHubClient`
   that makes real HTTP calls to GitHub, plus a runnable **stdio** entrypoint
@@ -34,6 +36,9 @@ else it's tracked.
   "Still to wire" note).
 
 ### 2. Real AWS Secrets Manager / KMS adapter
+- **✅ Largely landed** (HELIX-166 epic): `AwsKms` (HELIX-171) + `SecretsManagerSecretRecordRepository`
+  (HELIX-172), both config-gated drop-ins behind the existing seams. **Residual:** a live smoke test against a
+  real AWS account (KMS key + Secrets Manager), run when deploying to AWS (manual).
 - **Deferred from:** HELIX-90 (Secrets manager integration) — in progress.
 - **What's deferred:** backing the secrets vault with **AWS Secrets Manager**
   (`@aws-sdk/client-secrets-manager`) for storage and **AWS KMS**
@@ -234,6 +239,9 @@ else it's tracked.
   consume this API; the UI push delivers the screens.
 
 ### 14. GitHub onboarding — live token mint & connect wizard
+- **◐ Partly landed** (HELIX-166 epic): the live token-mint verifier landed (HELIX-170 — `POST /test` now mints
+  a real installation token when an App is configured). **Residual:** the rendered **connect wizard UI** (the
+  frontend epic) and a live smoke test against a real GitHub App.
 - **Deferred from:** HELIX-148 (connect flow) / HELIX-149 (connection health check).
 - **What's deferred:** the rendered **connect wizard** (API-first), and the one live
   step of the health check — **minting an installation token from the App key and
