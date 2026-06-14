@@ -2221,6 +2221,37 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
 
 ---
 
+## Epic: Real GitHub + Secrets/KMS bindings (HELIX-166)  🛠️ in progress
+
+Forward scope after the Sandbox Tools epic: bind three deferred seams to their real cloud services so runs act
+on **real GitHub repos** with **real credentials** — a live Octokit GitHub client + runnable MCP server
+(DEFERRED #1), the live GitHub onboarding verifier (#14), and the AWS Secrets Manager / KMS adapter (#2). Every
+adapter ships **config-gated + mock-tested** so CI stays offline-green; live smoke tests stay manual. Full
+plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
+
+### Story: GitHub + Secrets/KMS real adapters  🛠️ in progress
+
+#### HELIX-168 — Real Octokit GitHub client  ✅
+- **What it is:** the real client that actually talks to GitHub — reading files, listing trees, searching
+  code, creating branches, committing files, opening PRs, commenting, requesting reviews. Until now those
+  operations existed only against a **stub** used in tests.
+- **Why it matters:** it's the concrete thing that lets a run push its work to a real repo and open a real PR.
+  The tools were all built against a `GitHubClient` interface (HELIX-86/87/88); this fills that interface in
+  for real, so nothing else has to change to go live.
+- **How it works (plain words):** to avoid dragging Octokit's ESM-only package into the test build, the client
+  takes an **injected** "Octokit-like" object (just the calls it needs) — the real Octokit is built later at
+  the entry point (HELIX-169) and passed in; tests pass a tiny fake. The fiddly bit is committing several
+  files at once: GitHub's low-level Git Data API needs a five-step dance (find the branch's current commit →
+  its file tree → build a new tree with the changed files → make a commit → move the branch to it), which the
+  client does atomically.
+- **Where it lives:** `@helix/github-mcp` — [octokit-client.ts](../libs/github-mcp/src/octokit-client.ts)
+  (`OctokitGitHubClient` + the `OctokitLike` seam + `createOctokitGitHubClient`), over the existing
+  [github-client.ts](../libs/github-mcp/src/github-client.ts) interface. No new dependency (Octokit is
+  injected, installed at the entry point in HELIX-169). 12 new tests (read decode, tree mapping + filter,
+  search scoping, branch resolution, the full commit dance, PR/comment/review); github-mcp suite (35) green.
+
+---
+
 ## Fixes & hardening
 
 Not Jira sub-tasks, but part of keeping the foundation solid:
@@ -2374,7 +2405,9 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | #125 |
 | HELIX-163 | Testing command + test-run tools | ✅ | #126 |
 | HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | #127 |
-| HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | — |
+| HELIX-165 | Worker wiring — sandbox-backed workspace + tools | ✅ | #128 |
+| HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | 🛠️ | #129 (plan) |
+| HELIX-168 | Real Octokit GitHub client | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
