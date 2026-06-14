@@ -20,18 +20,23 @@ them into themes and suggests an order.
 
 ## Remaining work, by theme
 
-### A. Make the agents do _real_ work (highest-leverage next step)
-The executor runs the agents, but the coding/testing agents currently run **tool-less in a throwaway temp
-dir**, so they think and write text but don't yet touch real files.
+### A. Make the agents do _real_ work — ✅ DONE (Sandbox Tools epic, HELIX-159)
+The coding/testing agents now run with **real sandbox-backed tools**: each run gets a `@helix/sandbox`
+workspace (run-scoped, scaffolded), the **coding** step gets file-edit tools and the **testing** step gets
+command/test tools, with the change set captured for the PR. With `ANTHROPIC_API_KEY` set, a request actually
+produces edited files + a real test run in a sandbox.
 
-| Gap | In place now | To make real |
-|---|---|---|
-| **Sandbox with a real workspace** (DEFERRED #3) | `LocalSandboxProvider` (temp dir) + a temp-dir `WorkspaceProvider` in the worker | repo checkout into the workspace; wire `@helix/sandbox`'s checkout + egress/limits |
-| **File-edit + test-run tools** (executor `WorkspaceTools`, currently `{}`) | the `WorkspaceTools` seam; `@helix/coding-agent` has the file tools, `@helix/testing-agent` the runner | implement `toolsFor(role, ws)` over those, bound to the workspace |
-| **Real LLM** | `ScriptedLlmProvider` + `providerFromEnv` (real Anthropic when keyed) | already swappable — just set `ANTHROPIC_API_KEY` |
+| Gap | Status |
+|---|---|
+| **Run-scoped workspace** (steps share one sandbox) | ✅ HELIX-161 |
+| **Coding file-edit tools** (sandbox-bound) | ✅ HELIX-162 |
+| **Testing command + test-run tools** | ✅ HELIX-163 |
+| **Populate the workspace** (scaffold / checkout) + change-set diff | ✅ HELIX-164 |
+| **Worker wiring** (swap empty tools + temp dir for the sandbox pair) | ✅ HELIX-165 |
+| **Real LLM** | ✅ swappable — set `ANTHROPIC_API_KEY` (`providerFromEnv`) |
 
-**Outcome:** a request actually produces edited files + run tests in a sandbox. This is the most direct
-follow-on to HELIX-150.
+**Still deferred (separate bindings, not this theme):** real `git clone` of a GitHub repo (DEFERRED #1; offline
+scaffolds a starter project) and real build/deploy (Theme B / DEFERRED #4).
 
 ### B. Real deployment (DEFERRED #4)
 | Gap | In place now | To make real |
@@ -68,11 +73,10 @@ Also deferred under #13: turning a request's free-text prompt into a **planning-
 
 ## Suggested order
 
-1. **Sandbox tools + repo checkout (Theme A)** — turns the agents from "describe" to "do". Biggest jump in
-   product realism, and mostly local (testable offline-ish). **Planned:**
-   [SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md) (epic HELIX-159 → HELIX-161…165).
-2. **Real LLM run-through** — set `ANTHROPIC_API_KEY` and validate a full request end-to-end (see
-   [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs.
+1. ~~**Sandbox tools + repo checkout (Theme A)**~~ — ✅ **DONE** (epic HELIX-159 → HELIX-161…165;
+   [SANDBOX_TOOLS_PLAN.md](SANDBOX_TOOLS_PLAN.md)). The agents now write files + run tests in a real sandbox.
+2. **Real LLM run-through** (next) — set `ANTHROPIC_API_KEY` and validate a full request end-to-end (see
+   [END_TO_END_TESTING.md](END_TO_END_TESTING.md)); tune prompts/specs. Now genuinely produces edited files.
 3. **The frontend (Theme D)** — a thin web app over the existing APIs; the fastest path to a demoable product.
 4. **Real GitHub + Secrets/KMS (#1, #2, #14)** — so runs act on real repos with real credentials.
 5. **Real deployment (#4)** and the remaining durability/transport bindings (#5, #7, #8, #9, #11) as the
