@@ -30,7 +30,10 @@ describe('App shell', () => {
 
   it('renders the dashboard shell + nav when a stored session restores', async () => {
     localStorage.setItem('helix.session.token', 'tok');
-    (global as { fetch: unknown }).fetch = jest.fn(async () => res({ userId: 'u1', org: 'acme', roles: ['admin'], email: 'a@acme.io' }));
+    (global as { fetch: unknown }).fetch = jest.fn(async (input: string) => {
+      if (new URL(input, 'http://x').pathname === '/api/requests/overview') return res([]);
+      return res({ userId: 'u1', org: 'acme', roles: ['admin'], email: 'a@acme.io' });
+    });
 
     render(
       <MemoryRouter initialEntries={['/']}>

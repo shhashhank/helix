@@ -2378,6 +2378,26 @@ screens. Webpack + Jest (repo-consistent); component tests with a mocked `fetch`
   [auth context](../apps/web/src/auth/auth-context.tsx). 5 new tests (3 backend: mint+exchange, roles override,
   403 in production; 2 frontend: sign-in → dashboard, error on rejection); orchestrator (108) + web (14) green.
 
+#### HELIX-177 — Request submission + live run dashboard (SSE)  ✅
+- **What it is:** the heart of the app — a page to **submit a build request** (a title + what to build) and a
+  page that shows that run **happening live**: each pipeline step lighting up as the agents work, plus the
+  artifacts (PR link, test results, deploy URL) as they appear.
+- **Why it matters:** this is the moment the whole platform becomes *watchable*. Everything built so far — the
+  durable workflow, the agents, the executor — finally has a face: you type what you want, hit submit, and
+  watch plan → code → review → test → deploy progress in real time.
+- **How it works (plain words):** the dashboard lists your requests (each with its run status) and has a submit
+  form; submitting starts a run and jumps to its detail page. The detail page loads the run's status +
+  artifacts, then **subscribes to a live feed** of per-step progress. Browsers' built-in live-feed reader
+  (`EventSource`) can't send the login token, so the app reads the stream with `fetch` instead — same effect,
+  but authenticated. As progress events arrive, the step list updates; when the run finishes, the status and
+  artifacts refresh.
+- **Where it lives:** web — [pages/dashboard.tsx](../apps/web/src/app/pages/dashboard.tsx) +
+  [pages/run-detail.tsx](../apps/web/src/app/pages/run-detail.tsx) + a
+  [status badge](../apps/web/src/app/components/status-badge.tsx); the auth-aware SSE reader
+  (`streamEvents`) + shared [types](../apps/web/src/api/types.ts) on the
+  [API client](../apps/web/src/api/client.ts). 5 new tests (SSE frame parsing, list + submit→navigate, the live
+  run view) with a mocked `fetch`/stream; web suite (19) green.
+
 ---
 
 ## Fixes & hardening
@@ -2542,7 +2562,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-172 | AWS Secrets Manager record store | ✅ | #134 |
 | HELIX-173 | **Epic:** Frontend web app (React) | 🛠️ | #135 (plan) |
 | HELIX-175 | React app scaffold + shell + API client + auth context | ✅ | #136 |
-| HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | — |
+| HELIX-176 | Sign-in screen (dev sign-in) + protected routes | ✅ | #137 |
+| HELIX-177 | Request submission + live run dashboard (SSE) | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
