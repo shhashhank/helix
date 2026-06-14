@@ -2289,6 +2289,26 @@ plan: [GITHUB_SECRETS_PLAN.md](GITHUB_SECRETS_PLAN.md).
   `tsconfig.base.json` + the orchestrator jest config. 5 new tests (verified-with-expiry, failure→error, the
   env gating); orchestrator integration suite green, production build resolves the subpath (no MCP SDK pulled in).
 
+#### HELIX-171 — AWS KMS adapter  ✅
+- **What it is:** a version of the secrets vault's "master key" that lives in **AWS KMS** instead of in the
+  app's memory. The vault encrypts each secret under a one-time data key; this asks KMS to mint and unwrap
+  those data keys, so the real master key never leaves AWS.
+- **Why it matters:** it's the production-grade home for the master key. The GitHub App private key and other
+  credentials are stored encrypted; backing the vault with KMS means a compromised app process can't reveal the
+  master key. It's a **drop-in swap** — because the envelope shape matches the local version exactly, nothing
+  that uses secrets has to change.
+- **How it works (plain words):** `AwsKms` implements the same `KeyManagementService` interface as the local
+  one. `generateDataKey` calls KMS for a fresh AES-256 key (returned in the clear for immediate use, plus a
+  KMS-wrapped copy to store); `decryptDataKey` asks KMS to unwrap a stored one. It's **config-gated**: the
+  orchestrator uses KMS when `AWS_KMS_KEY_ID` is set, else the local key — so CI (no AWS) keeps working. Tested
+  fully offline with `aws-sdk-client-mock` (no real AWS), including a complete encrypt→store→decrypt round-trip
+  through the real `EncryptedSecretStore` to prove the swap is transparent.
+- **Where it lives:** `@helix/secrets` — [aws-kms.ts](../libs/secrets/src/aws-kms.ts) (`AwsKms` +
+  `awsKmsFromEnv`), kept out of the barrel and imported via a narrow `@helix/secrets/aws-kms` subpath so the
+  AWS SDK only loads where it's wired; gated into the vault in
+  [integration.module.ts](../apps/orchestrator/src/integration/integration.module.ts). 6 new tests; secrets
+  suite (40) green; orchestrator build bundles the (CJS) AWS SDK cleanly.
+
 ---
 
 ## Fixes & hardening
@@ -2448,7 +2468,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-166 | **Epic:** Real GitHub + Secrets/KMS bindings | 🛠️ | #129 (plan) |
 | HELIX-168 | Real Octokit GitHub client | ✅ | #130 |
 | HELIX-169 | Runnable stdio MCP server entrypoint | ✅ | #131 |
-| HELIX-170 | Live GitHub connection verifier | ✅ | — |
+| HELIX-170 | Live GitHub connection verifier | ✅ | #132 |
+| HELIX-171 | AWS KMS adapter | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
