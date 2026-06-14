@@ -5,7 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { GithubIntegrationController } from './github-integration.controller';
 import { GithubIntegrationService } from './github-integration.service';
 import { InMemoryPendingInstallStore } from './pending-install.store';
-import { UnconfiguredGithubVerifier } from './github.verify';
+import { githubVerifierFromEnv } from './github.verify';
 import { GITHUB_APP_CONFIG, GITHUB_CONNECTION_VERIFIER, PENDING_INSTALL_STORE, SECRETS_MANAGER } from './integration.tokens';
 
 /** A 32-byte AES master key for the local KMS, from config or an ephemeral dev key. */
@@ -29,9 +29,10 @@ function localKms(): LocalKms {
     { provide: PENDING_INSTALL_STORE, useClass: InMemoryPendingInstallStore },
     { provide: GITHUB_APP_CONFIG, useFactory: () => ({ appSlug: process.env.GITHUB_APP_SLUG ?? 'helix-dev' }) },
     { provide: SECRETS_MANAGER, useFactory: () => new EncryptedSecretStore(localKms(), new InMemorySecretRecordRepository()) },
-    // Live access verification (token mint against the real GitHub API) is the deferred
-    // binding (#14) — until an App is wired, the health check honestly reports not_configured.
-    { provide: GITHUB_CONNECTION_VERIFIER, useClass: UnconfiguredGithubVerifier },
+    // Live access verification (HELIX-170): the real verifier mints an installation token
+    // against GitHub when the App credentials are configured (GITHUB_APP_ID + private key);
+    // otherwise the health check honestly reports not_configured (dev / CI default).
+    { provide: GITHUB_CONNECTION_VERIFIER, useFactory: () => githubVerifierFromEnv() },
   ],
 })
 export class IntegrationModule {}
