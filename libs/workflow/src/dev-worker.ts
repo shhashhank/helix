@@ -9,33 +9,32 @@
  * still executes (agents finish with canned text). Roles outside the standard
  * pipeline fall back to the simulated executor.
  *
- * Deferred (so this stays runnable offline): real repo checkout + file/test tools in
- * the sandbox, and real build/ECR/CDK deployment — wired as their bindings land
- * (DEFERRED.md). The workspace here is a temp dir, **run-scoped** so a run's steps share
- * it (HELIX-161) and reclaimed by an idle-TTL sweep; deployment is stubbed.
+ * The coding/testing agents now run with **real sandbox-backed tools** (HELIX-165): each
+ * run gets a `@helix/sandbox` workspace (run-scoped, HELIX-161; reclaimed by an idle-TTL
+ * sweep), scaffolded (HELIX-164), with the file-edit + command/test tools bound to it —
+ * so with a real key a run actually writes files and runs tests. Still deferred: real
+ * `git clone` (offline scaffolds a starter project) and real build/ECR/CDK deployment
+ * (stubbed) — wired as their bindings land (DEFERRED.md #1/#4).
  *
  * Run it with a Temporal dev server on :7233:
  *   pnpm dev:worker                      # offline (scripted LLM)
  *   ANTHROPIC_API_KEY=sk-… pnpm dev:worker   # real agent runs
  * Tunables: TEMPORAL_ADDRESS (default localhost:7233), STEP_DELAY_MS (default 1500).
  */
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { runAgent } from '@helix/agent';
+import { formatWorkspaceDiff } from '@helix/coding-agent';
 import {
   DefaultAgentSpecResolver,
   type DeploymentRunner,
   RunScopedWorkspaceProvider,
   type StepExecutor,
-  type WorkspaceFactory,
-  type WorkspaceTools,
   buildPipelineDispatcher,
   simulatedStepExecutor,
 } from '@helix/executor';
 import { providerFromEnv } from '@helix/llm';
 import { NativeConnection } from '@temporalio/worker';
 import type { WorkflowRunContext } from './lib/runner';
+import { createSandboxWorkspace } from './lib/sandbox-workspace';
 import { createWorkflowWorker } from './lib/temporal/worker';
 import { HELIX_TASK_QUEUE } from './lib/temporal/shared';
 
@@ -46,23 +45,16 @@ const WORKSPACE_IDLE_MS = Number(process.env.WORKSPACE_IDLE_MS ?? 10 * 60 * 1000
 const WORKSPACE_SWEEP_MS = Number(process.env.WORKSPACE_SWEEP_MS ?? 60 * 1000);
 
 /**
- * Local temp-dir workspace provisioning — real repo checkout is deferred (DEFERRED.md #3).
- * Wrapped in a {@link RunScopedWorkspaceProvider} so a run's steps share one dir (coding's
- * files reach testing, HELIX-161); the dir is named after the run's first step.
+ * Sandbox-backed workspaces + tools (HELIX-165): each run gets a real `@helix/sandbox`
+ * workspace, scaffolded/checked-out (HELIX-164), with the coding file-edit tools and the
+ * testing command/test tools bound to it. Wrapped in a {@link RunScopedWorkspaceProvider}
+ * so a run's steps share one sandbox (coding's files reach testing, HELIX-161); the change
+ * set is logged when the workspace is disposed. Real `git clone` stays deferred (DEFERRED.md #1).
  */
-const workspaceFactory: WorkspaceFactory = {
-  async create(step) {
-    const dir = await mkdtemp(join(tmpdir(), `helix-${step.id}-`));
-    return { id: dir, dir };
-  },
-  async destroy(workspace) {
-    await rm(workspace.dir, { recursive: true, force: true });
-  },
-};
+const { factory: workspaceFactory, tools } = createSandboxWorkspace({
+  onChangeSet: (id, diff) => console.log(`[worker] change set for ${id}:\n${formatWorkspaceDiff(diff)}`),
+});
 const workspaces = new RunScopedWorkspaceProvider(workspaceFactory);
-
-/** No file/test tools yet (deferred) — agents run tool-less for now. */
-const tools: WorkspaceTools = { toolsFor: () => ({}) };
 
 /** Stub deployment — real build/ECR/CDK against AWS is deferred (DEFERRED.md #4). */
 const deployRunner: DeploymentRunner = {
