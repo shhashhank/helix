@@ -2175,6 +2175,28 @@ testing-agent runner) into the two seams the executor already exposes. Full plan
   [report.ts](../libs/testing-agent/src/lib/report.ts). 10 new tests (command forwarding, non-zero-exit flag,
   default timeout, pass/fail reports, framework auto-detection, explicit command); testing-agent suite (51) green.
 
+#### HELIX-164 — Populate the workspace (scaffold / checkout) + change set  ✅
+- **What it is:** the step that puts *content* in a run's workspace before the coding agent starts — either
+  **scaffold** a brand-new project from a generated file set, or **check out** an existing repo — and then,
+  after the agent is done, produces the run's **change set** (which files were added / modified / deleted, with
+  line counts) for the PR.
+- **Why it matters:** the agents now have hands (HELIX-162/163), but an empty folder gives them nothing to work
+  on. This fills the folder, and — just as importantly — captures *what changed* so the run can show a real
+  diff on the PR instead of a vague "it did some stuff." This is the only genuinely new logic in the epic;
+  HELIX-165 then turns it all on in the worker.
+- **How it works (plain words):** `populateWorkspace` takes a hint — scaffold (with the files to write) or
+  checkout (with a repo + a "fetcher" that supplies the files) — writes everything safely inside the workspace,
+  then takes a **baseline snapshot**. Real `git clone` stays deferred; offline runs use an in-memory fetcher.
+  After the agent works, `captureWorkspaceDiff` re-snapshots and diffs against that baseline into a tidy change
+  set (ignoring `node_modules` etc.), and `formatWorkspaceDiff` renders it as a short markdown summary. All of
+  it reuses the scaffold / checkout / diff pieces built back in HELIX-100/101/103.
+- **Where it lives:** `@helix/coding-agent` —
+  [workspace-populate.ts](../libs/coding-agent/src/lib/workspace-populate.ts) (`populateWorkspace`,
+  `captureWorkspaceDiff`, `formatWorkspaceDiff`), over the existing
+  [scaffold.ts](../libs/coding-agent/src/lib/scaffold.ts) / [diff.ts](../libs/coding-agent/src/lib/diff.ts) and
+  `@helix/sandbox`'s [repo-checkout.ts](../libs/sandbox/src/repo-checkout.ts). 6 new tests (scaffold + checkout
+  baselines, conflict propagation, the change-set diff, no-op, markdown formatting); coding-agent suite (89) green.
+
 ---
 
 ## Fixes & hardening
@@ -2328,7 +2350,8 @@ Not Jira sub-tasks, but part of keeping the foundation solid:
 | HELIX-159 | **Epic:** Sandbox Tools & Repo Checkout | 🛠️ | #123 (plan) |
 | HELIX-161 | Run-scoped workspace + run-id threading | ✅ | #124 |
 | HELIX-162 | Coding file-edit tools (sandbox-bound) | ✅ | #125 |
-| HELIX-163 | Testing command + test-run tools | ✅ | — |
+| HELIX-163 | Testing command + test-run tools | ✅ | #126 |
+| HELIX-164 | Populate the workspace (scaffold / checkout) + change set | ✅ | — |
 | — | Production build fix + CI hardening | ✅ | #5 |
 | — | Duplicate `x-org-id` Swagger fix | ✅ | #6 |
 | — | Cost-meter dated-model pricing fix | ✅ | #12 |
