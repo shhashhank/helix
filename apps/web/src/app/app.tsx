@@ -10,6 +10,8 @@ import { AuthProvider, RequireAuth } from '../auth/auth-context';
 import { Layout } from './layout';
 import { Placeholder } from './pages/placeholder';
 import { SignIn } from './pages/sign-in';
+import { Dashboard } from './pages/dashboard';
+import { RunDetail } from './pages/run-detail';
 
 export function App(): ReactElement {
   return (
@@ -23,7 +25,8 @@ export function App(): ReactElement {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Placeholder title="Run dashboard" note="Request submission + the live run dashboard land in HELIX-177." />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/requests/:id" element={<RunDetail />} />
           <Route path="/approvals" element={<Placeholder title="Approval inbox" note="The approval inbox lands in HELIX-178." />} />
           <Route path="/integrations" element={<Placeholder title="GitHub integration" note="The connect wizard lands in HELIX-179." />} />
         </Route>

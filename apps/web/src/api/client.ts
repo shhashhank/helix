@@ -71,4 +71,47 @@ export class ApiClient {
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   }
+
+  /**
+   * Consume a Server-Sent Events stream, calling `onEvent` with each parsed `data:`
+   * payload. Uses `fetch` (not `EventSource`) so it can send the `Authorization` header.
+   * Resolves when the stream ends; pass an `AbortSignal` to stop early.
+   */
+  async streamEvents<T>(path: string, onEvent: (data: T) => void, signal?: AbortSignal): Promise<void> {
+    const token = this.getToken();
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      headers: { Accept: 'text/event-stream', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      signal,
+    });
+    if (!res.ok || !res.body) {
+      const error = new Error(`stream ${path} failed: ${res.status} ${res.statusText}`) as ApiError;
+      error.status = res.status;
+      throw error;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep: number;
+      while ((sep = buffer.indexOf('\n\n')) >= 0) {
+        const frame = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        const data = frame
+          .split('\n')
+          .filter((line) => line.startsWith('data:'))
+          .map((line) => line.slice(5).trim())
+          .join('\n');
+        if (!data) continue; // keepalive / comment frames
+        try {
+          onEvent(JSON.parse(data) as T);
+        } catch {
+          /* ignore non-JSON frames */
+        }
+      }
+    }
+  }
 }

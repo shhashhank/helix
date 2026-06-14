@@ -65,4 +65,38 @@ describe('ApiClient', () => {
     window.__HELIX_API_BASE__ = 'https://helix.example';
     expect(resolveApiBase()).toBe('https://helix.example');
   });
+
+  describe('streamEvents (SSE)', () => {
+    const sse = (frames: string[]) => {
+      const encoder = new TextEncoder();
+      let i = 0;
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          getReader: () => ({
+            read: async () => (i < frames.length ? { done: false, value: encoder.encode(frames[i++]) } : { done: true, value: undefined }),
+          }),
+        },
+      };
+    };
+
+    it('parses each data frame and calls onEvent (with auth + accept headers)', async () => {
+      const fetchMock = useFetch(
+        jest.fn().mockResolvedValue(sse(['data: {"step":"plan","done":false}\n\n', 'data: {"step":"code","done":true}\n\n'])),
+      );
+      const events: unknown[] = [];
+      await new ApiClient(() => 'tok', 'http://api.test').streamEvents('/stream', (e) => events.push(e));
+
+      expect(events).toEqual([{ step: 'plan', done: false }, { step: 'code', done: true }]);
+      const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>;
+      expect(headers.Authorization).toBe('Bearer tok');
+      expect(headers.Accept).toBe('text/event-stream');
+    });
+
+    it('throws an ApiError when the stream response is not ok', async () => {
+      useFetch(jest.fn().mockResolvedValue({ ok: false, status: 401, statusText: 'Unauthorized', body: null }));
+      await expect(new ApiClient(() => undefined, 'http://api.test').streamEvents('/stream', () => undefined)).rejects.toMatchObject({ status: 401 });
+    });
+  });
 });
