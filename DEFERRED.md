@@ -111,6 +111,7 @@ else it's tracked.
 - **Also tracked:** HELIX-131 PR "Out of scope".
 
 ### 6. Rendered approval inbox UI
+- **✅ Landed** in the Frontend epic (HELIX-178): the approval inbox screen in `apps/web`.
 - **Deferred from:** HELIX-132 (Approval inbox UI) — the repo has no frontend app yet.
 - **What's deferred:** the actual **rendered, clickable inbox** (a web page where an
   approver sees pending requests and clicks approve/reject).
@@ -221,6 +222,9 @@ else it's tracked.
   deployed environment.
 
 ### 13. Request → planning-driven workflow, durable store & submission UI
+- **◐ Partly landed:** the **submission UI + live run dashboard** shipped in the Frontend epic (HELIX-177).
+  **Residual:** turning a request's free-text prompt into a planning-driven custom workflow (today it runs the
+  standard pipeline) and a durable request store.
 - **Deferred from:** HELIX-145 (Request submission UI + API) — in progress.
 - **What's deferred:** (a) turning a request's free-text `prompt` into a **custom
   workflow** via the Planning Agent (`@helix/planning` → spec → task DAG → workflow)
@@ -239,9 +243,9 @@ else it's tracked.
   consume this API; the UI push delivers the screens.
 
 ### 14. GitHub onboarding — live token mint & connect wizard
-- **◐ Partly landed** (HELIX-166 epic): the live token-mint verifier landed (HELIX-170 — `POST /test` now mints
-  a real installation token when an App is configured). **Residual:** the rendered **connect wizard UI** (the
-  frontend epic) and a live smoke test against a real GitHub App.
+- **✅ Largely landed:** the live token-mint verifier (HELIX-170 — `POST /test` mints a real installation token
+  when an App is configured) and the **connect wizard UI** (HELIX-179, in `apps/web`). **Residual:** a live smoke
+  test against a real GitHub App, and the real OAuth redirect (today the callback id is entered by hand; #12).
 - **Deferred from:** HELIX-148 (connect flow) / HELIX-149 (connection health check).
 - **What's deferred:** the rendered **connect wizard** (API-first), and the one live
   step of the health check — **minting an installation token from the App key and

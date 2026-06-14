@@ -72,6 +72,10 @@ export class ApiClient {
     });
   }
 
+  del<T>(path: string): Promise<T> {
+    return this.request<T>(path, { method: 'DELETE' });
+  }
+
   /**
    * Consume a Server-Sent Events stream, calling `onEvent` with each parsed `data:`
    * payload. Uses `fetch` (not `EventSource`) so it can send the `Authorization` header.
