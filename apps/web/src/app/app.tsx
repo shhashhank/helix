@@ -12,6 +12,7 @@ import { Placeholder } from './pages/placeholder';
 import { SignIn } from './pages/sign-in';
 import { Dashboard } from './pages/dashboard';
 import { RunDetail } from './pages/run-detail';
+import { ApprovalInbox } from './pages/approvals';
 
 export function App(): ReactElement {
   return (
@@ -27,7 +28,7 @@ export function App(): ReactElement {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/requests/:id" element={<RunDetail />} />
-          <Route path="/approvals" element={<Placeholder title="Approval inbox" note="The approval inbox lands in HELIX-178." />} />
+          <Route path="/approvals" element={<ApprovalInbox />} />
           <Route path="/integrations" element={<Placeholder title="GitHub integration" note="The connect wizard lands in HELIX-179." />} />
         </Route>
       </Routes>

@@ -55,3 +55,33 @@ export interface RunArtifacts {
   tests?: { passed: number; failed: number; coverage?: number };
   deployment?: { url: string; environment?: string };
 }
+
+/** A pending approval in an approver's inbox (most-urgent first). */
+export interface InboxItem {
+  id: string;
+  action: string;
+  subjectId?: string;
+  requestedBy?: string;
+  reason?: string;
+  approverRoles: string[];
+  approvals: number;
+  required: number;
+  remaining: number;
+  rejections: number;
+  createdAt: string;
+  ageSeconds: number;
+  slaMinutes?: number;
+  expiresAt?: string;
+  slaRemainingSeconds?: number;
+  rolesDecided: string[];
+  /** Approver roles nobody has voted yet. */
+  awaitingRoles: string[];
+}
+
+/** An approval request's resolved state (returned after a decision). */
+export interface ApprovalRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
+  approverRoles: string[];
+  minApprovals: number;
+}
